@@ -12,6 +12,7 @@ pub struct Settings {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    
     // Читаем файл settings.yaml
     let content = fs::read_to_string("settings.yaml")?;
     let settings: Settings = serde_yaml::from_str(&content)?;
