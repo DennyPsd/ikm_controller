@@ -1,0 +1,52 @@
+
+[package]
+name = "hart_comm_server"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+ractor = { version = "0.15", features = ["async-trait", "output-port-v2"] }
+tokio = { version = "^1.44", features = [
+  "sync",
+  "time",
+  "signal",
+  "rt-multi-thread",
+  "process",
+  "net",
+  "macros",
+] }
+#  features = [
+#   "sync",
+#   "rt-multi-thread",
+#   "macros",
+#   "time",
+#   "fs",
+#   "signal",
+#   "net",
+#   "time",
+#   "io-util",
+# ] }
+axum = { version = "0.8.4", features = ["tokio"] }
+serde = { version = "1.0", features = ["derive"] }
+
+serde_json = "1.0"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+serialport = { version = "4.7.2", features = ["serde"] }
+anyhow = "1.0"
+parking_lot = "0.12"
+serde_yaml = "0.9"
+
+futures-util = "0.3.31"
+tokio-stream = { version = "0.1.17", features = ["sync"] }
+tokio-serial = { version = "5.4.5" }
+taxon-core = { path = "../taxon/crates/taxon_core", features = ["desktop"] }
+
+uuid = { version = "1", features = ["v5", "v4", "serde", "macro-diagnostics"] }
+
+linked_hash_set = "0.1.5"
+base64 = "0.22.1"
+smol_str = { version = "0.2.2", features = ["serde"] }
+thiserror = "2.0.17"
+clap = { version = "4.5.52", features = ["derive"] }
+chrono = "0.4.42"
