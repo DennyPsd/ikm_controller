@@ -3,7 +3,7 @@ mod actors;
 use actors::modbus_fabric_actor::{ModbusDevice, ModbusFabricActor, ModbusFabricMsg};
 use ractor::Actor;
 use serde::Deserialize;
-use std::{collections::HashMap, fs};
+use std::fs;
 
 use clap::Parser;
 use smol_str::SmolStr;
@@ -16,10 +16,6 @@ use taxon_core::prelude::IPCMessageCrate;
 use anyhow::anyhow;
 use tokio::signal;
 use tracing::info;
-
-
-
-
 
 
 #[derive(Debug, Deserialize)]
@@ -50,27 +46,12 @@ async fn main() -> anyhow::Result<()> {
     let settings: Settings = serde_yaml::from_str(&content)?;
     println!("Loaded devices from settings.yaml: {:?}", settings.devices);
 
-    let mut devices_map = HashMap::new();
-    for dev in settings.devices {
-        devices_map.insert(dev.id, dev);
-    }
-
     // Создаем актор ModbusFabricActor со списком прочтенных устройств
     let (modbus_fabric, _handle) =
-        Actor::spawn(Some("ModbusFabric".into()), ModbusFabricActor::new(HashMap::new()), devices_map).await?;
+        Actor::spawn(Some("ModbusFabric".into()), ModbusFabricActor::new(settings.devices.clone()), settings.devices).await?;
 
-    // Отправляем сообщение для вывода списка устройств
-     modbus_fabric.send_message(ModbusFabricMsg::PrintDevices)?;
-
-    // Записываем значение в устройство с id=1
-    modbus_fabric.send_message(ModbusFabricMsg::WriteDevice {
-        device_id: 1,
-        value: 42,
-    }).unwrap();
-
-    // Снова выводим список устройств
+    //выводим список устройств
     modbus_fabric.send_message(ModbusFabricMsg::PrintDevices).unwrap();
-    //modbus_fabric.cast(ModbusFabricMsg::PrintDevices)?;
 
 
     //Test 25.11 create IPC-Actor
@@ -91,6 +72,7 @@ async fn main() -> anyhow::Result<()> {
   let handler_state = IpcHandlerState {
     hart_fabric: modbus_fabric.clone(),
     ipc_router: ipc_router.clone(),
+    subscribers: vec![],
   };
 
   let (ipc_handler, _ipc_handler_handle) =

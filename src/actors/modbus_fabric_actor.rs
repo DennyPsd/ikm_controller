@@ -2,6 +2,7 @@
 // TODO: Сделать запрос в calc-модуль. Только хз какой calc будет
 use ractor::{Actor, ActorProcessingErr, ActorRef};
 use serde::{Deserialize, Serialize};
+use smol_str::SmolStr;
 use std::{collections::HashMap};
 
 use crate::actors::ipc_handler::IpcHandlerMsg;
@@ -9,25 +10,33 @@ use crate::actors::ipc_handler::IpcHandlerMsg;
 // Устройство ModBus
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModbusDevice {
-pub id: u32,
-pub value: u16,
+    pub port: String,
+    pub slave: u8,
+    pub addres: u16,
+    pub value: u16,
 }
 
 // Сообщения актору
 #[derive(Debug)]
 pub enum ModbusFabricMsg {
 PrintDevices,
-WriteDevice { device_id: u32, value: u16 },
+WriteDevice { port: String, slave: u8, addres: u16, value: u16 },
 GetDevices(ActorRef<IpcHandlerMsg>),
+AttachPort {port_name:SmolStr, stream: tokio_serial::SerialStream,},
+DetachPort {port_name:SmolStr},
 }
 
 pub struct ModbusFabricActor {
-devices: HashMap<u32, ModbusDevice>,
+    pub devices: HashMap<(String, u8, u16), ModbusDevice>,
 }
 
 impl ModbusFabricActor {
-pub fn new(devices: HashMap<u32, ModbusDevice>) -> Self {
-        Self { devices }
+    pub fn new(devices: Vec<ModbusDevice>) -> Self {
+        let mut map = HashMap::new();
+        for dev in devices {
+            map.insert((dev.port.clone(), dev.slave, dev.addres), dev);
+        }
+        Self { devices: map }
     }
 }
 
@@ -35,7 +44,7 @@ pub fn new(devices: HashMap<u32, ModbusDevice>) -> Self {
 impl Actor for ModbusFabricActor {
 type Msg = ModbusFabricMsg;
 type State = Self;
-type Arguments = HashMap<u32,ModbusDevice>;
+type Arguments = Vec<ModbusDevice>;
 
 async fn pre_start(
     &self,
@@ -54,22 +63,24 @@ async fn handle(
     match msg {
         ModbusFabricMsg::PrintDevices => {
             println!("--- Devices list ---");
-            for device in state.devices.values() {
-                println!("Device {} => value={}", device.id, device.value);
+            for dev in state.devices.values() {
+                println!("Device {:?} => value={}", dev, dev.value);
             }
         }
-        ModbusFabricMsg::WriteDevice { device_id, value } => {
-            if let Some(dev) = state.devices.get_mut(&device_id) {
-                dev.value = value;
-                println!("Device {} updated to {}", device_id, value);
-            } else {
-                println!("Device {} not found!", device_id);
+        ModbusFabricMsg::WriteDevice { port, slave, addres, value } => {
+                if let Some(dev) = state.devices.get_mut(&(port.clone(), slave, addres)) {
+                    dev.value = value;
+                    println!("Device {:?} updated to {}", dev, value);
+                }
             }
-        }
         ModbusFabricMsg::GetDevices(sender) => {
-        let list = state.devices.values().cloned().collect::<Vec<_>>();
+        let list = state.devices.values().cloned().collect();
         let _ = sender.send_message(IpcHandlerMsg::DevicesList(list));
         }
+        ModbusFabricMsg::AttachPort { port_name, stream } => {
+            print!("{}", port_name);
+        }
+        ModbusFabricMsg::DetachPort { port_name } => {}
 
     }
     Ok(())
