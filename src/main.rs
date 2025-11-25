@@ -1,6 +1,7 @@
 mod actors;
 
 use actors::modbus_fabric_actor::{ModbusDevice, ModbusFabricActor, ModbusFabricMsg};
+use actors::serial_scanner_modbus::{SerialScannerActor, SerialScannerMsg};
 use ractor::Actor;
 use serde::Deserialize;
 use std::fs;
@@ -48,7 +49,7 @@ async fn main() -> anyhow::Result<()> {
 
     // Создаем актор ModbusFabricActor со списком прочтенных устройств
     let (modbus_fabric, _handle) =
-        Actor::spawn(Some("ModbusFabric".into()), ModbusFabricActor::new(settings.devices.clone()), settings.devices).await?;
+        Actor::spawn(Some("ModbusFabric".into()), ModbusFabricActor::new(settings.devices.clone()), settings.devices.clone()).await?;
 
     //выводим список устройств
     modbus_fabric.send_message(ModbusFabricMsg::PrintDevices).unwrap();
@@ -86,6 +87,17 @@ async fn main() -> anyhow::Result<()> {
     .map_err(|e| anyhow!("Err to sub {e:?}"));
 
 //-------Test Serial Scanner--------
+
+let (serial_scanner, _ssc_handle) =
+        Actor::spawn(
+            Some("SerialScanner".into()),
+            SerialScannerActor::new(),    // твой новый сканер
+            modbus_fabric.clone()         // он должен слать события в fabric
+        ).await?;
+
+      // первый тик запускается в pre_start, можно вручную
+    // serial_scanner.cast(SerialScannerMsg::Tick).ok();
+
   signal::ctrl_c().await?;
   info!("Shutting down...");
 
