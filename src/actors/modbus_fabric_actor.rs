@@ -1,3 +1,5 @@
+// Работа со списком устройств ModBus (вывод, изменение)
+// TODO: Сделать запрос в calc-модуль. Только хз какой calc будет
 use ractor::{Actor, ActorProcessingErr, ActorRef};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap};
@@ -17,7 +19,6 @@ pub enum ModbusFabricMsg {
 PrintDevices,
 WriteDevice { device_id: u32, value: u16 },
 GetDevices(ActorRef<IpcHandlerMsg>),
-DevicesList(Vec<ModbusDevice>),
 }
 
 pub struct ModbusFabricActor {
@@ -68,10 +69,6 @@ async fn handle(
         ModbusFabricMsg::GetDevices(sender) => {
         let list = state.devices.values().cloned().collect::<Vec<_>>();
         let _ = sender.send_message(IpcHandlerMsg::DevicesList(list));
-        }
-
-        ModbusFabricMsg::DevicesList(_) => {
-        // Fabric сам не должен обрабатывать это сообщение — игнорируем
         }
 
     }

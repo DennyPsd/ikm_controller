@@ -55,7 +55,7 @@ async fn main() -> anyhow::Result<()> {
         devices_map.insert(dev.id, dev);
     }
 
-    // Создаем актор ModbusFabricActor
+    // Создаем актор ModbusFabricActor со списком прочтенных устройств
     let (modbus_fabric, _handle) =
         Actor::spawn(Some("ModbusFabric".into()), ModbusFabricActor::new(HashMap::new()), devices_map).await?;
 

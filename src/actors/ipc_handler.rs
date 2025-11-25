@@ -1,3 +1,4 @@
+//Отправка и получение сообщений из ModBus_fabric в Ws
 use ractor::{Actor, ActorProcessingErr, ActorRef};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -11,6 +12,7 @@ use crate::actors::modbus_fabric_actor::ModbusDevice;
 pub struct IpcHandler;
 
 #[derive(Debug)]
+//Позже переименовать статус hart в modbus
 pub struct IpcHandlerState {
     pub hart_fabric: ActorRef<ModbusFabricMsg>,
     #[allow(dead_code)]
@@ -28,7 +30,7 @@ pub struct SendToDeviceArgs {
     #[serde(default)]
     pub command: u8,
     #[serde(default)]
-    pub data: Option<SmolStr>, // base64 payload (optional)
+    pub data: Option<SmolStr>,
 }
 
 #[ractor::async_trait]
@@ -72,7 +74,7 @@ impl Actor for IpcHandler {
 
                 // Формируем ActionReply
                 let reply = IPCMessage::ActionReply {
-                    id: 0, // Можно взять id из исходного сообщения
+                    id: 0, // Можно взять id из исходного сообщения, но пока не разобрался
                     ok: Some(json!(args)),
                     error: None,
                     send_at: None,
