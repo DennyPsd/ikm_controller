@@ -2,6 +2,8 @@ use ractor::{Actor, ActorProcessingErr, ActorRef};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap};
 
+use crate::actors::ipc_handler::IpcHandlerMsg;
+
 // Устройство ModBus
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModbusDevice {
@@ -14,7 +16,7 @@ pub value: u16,
 pub enum ModbusFabricMsg {
 PrintDevices,
 WriteDevice { device_id: u32, value: u16 },
-GetDevices(ActorRef<ModbusFabricMsg>),
+GetDevices(ActorRef<IpcHandlerMsg>),
 DevicesList(Vec<ModbusDevice>),
 }
 
@@ -65,7 +67,7 @@ async fn handle(
         }
         ModbusFabricMsg::GetDevices(sender) => {
         let list = state.devices.values().cloned().collect::<Vec<_>>();
-        let _ = sender.send_message(ModbusFabricMsg::DevicesList(list));
+        let _ = sender.send_message(IpcHandlerMsg::DevicesList(list));
         }
 
         ModbusFabricMsg::DevicesList(_) => {

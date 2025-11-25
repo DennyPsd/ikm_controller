@@ -1,13 +1,8 @@
-use ractor::rpc::CallResult;
 use ractor::{Actor, ActorProcessingErr, ActorRef};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use smol_str::SmolStr;
-use std::time::{Duration, Instant};
-use taxon_core::actors::ipc::errors::IPCError;
-use taxon_core::infrastructure::device::FacilityDevice;
-use taxon_core::prelude::{IPCActionKind, IPCActorMsg, IPCMessageCrate};
-use tokio::time::sleep;
+use taxon_core::prelude::{IPCActorMsg, IPCMessage, IPCMessageCrate, IPCMsgEncoding};
 use tracing::{error, info};
 
 use crate::actors::modbus_fabric_actor::ModbusFabricMsg;
@@ -53,7 +48,7 @@ impl Actor for IpcHandler {
 
     async fn handle(
         &self,
-        _myself: ActorRef<Self::Msg>,
+        myself: ActorRef<Self::Msg>,
         msg: Self::Msg,
         state: &mut Self::State,
     ) -> Result<(), ActorProcessingErr> {
@@ -62,20 +57,40 @@ impl Actor for IpcHandler {
             IpcHandlerMsg::Ipc(ipc_msg) => {
                 println!("*Обработка сообщения по IPC*");
 
-            if let Some(reply_ipc_actor_msg) = ipc_msg.to_replay_msg(Some(("Сообщение обработано! ipc_handler")), None) {
-            // ipc_router — ActorRef<Option<IPCActorMsg>>
-            if let Err(e) = state.ipc_router.send_message(Some(reply_ipc_actor_msg)) {
-                error!("Не удалось отправить ActionReply через ipc_router: {:?}", e);
+                // Проверяем, что это Action с командой device_send
+                if let Some(action) = ipc_msg.as_action() {
+                    if action.name.as_deref() == Some("device_send") {
+                        // Запрашиваем список устройств у ModbusFabricActor
+                        let _ = state.hart_fabric.send_message(ModbusFabricMsg::GetDevices(myself.clone()));
+                    }
+                }
+            }
+
+            // Когда ModbusFabricActor вернёт список устройств отправим в Ws
+            IpcHandlerMsg::DevicesList(devices) => {
+                let args: Vec<u16> = devices.iter().map(|d| d.value).collect();
+
+                // Формируем ActionReply
+                let reply = IPCMessage::ActionReply {
+                    id: 0, // Можно взять id из исходного сообщения
+                    ok: Some(json!(args)),
+                    error: None,
+                    send_at: None,
+                };
+
+                // Отправляем через ipc_router в WS
+                if let Err(e) = state.ipc_router.send_message(Some(IPCActorMsg::SendActionReply(
+                    IPCMessageCrate {
+                        msg: reply,
+                        peer_from: uuid::Uuid::nil(), // Разобраться с uuid
+                        encoding: IPCMsgEncoding::Json,
+                        protocol: taxon_core::infrastructure::ExtModuleProtocol::WS,
+                    },
+                ))) {
+                    error!("Ошибка при отправке списка устройств: {:?}", e);
                 }
             }
         }
-            
-            IpcHandlerMsg::DevicesList(devs) => {
-                info!("Получили DevicesList из ModbusFabric, отправляем в WebSocket");
-            }
-        }
-
-
                 Ok(())
             }
         }
