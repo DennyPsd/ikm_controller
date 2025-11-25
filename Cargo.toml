@@ -2,7 +2,7 @@
 [package]
 name = "hart_comm_server"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 ractor = { version = "0.15", features = ["async-trait", "output-port-v2"] }

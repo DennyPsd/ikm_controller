@@ -3,7 +3,7 @@ use ractor::{Actor, ActorProcessingErr, ActorRef};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use smol_str::SmolStr;
-use taxon_core::infrastructure::ExtModuleProtocol;
+use taxon_core::prelude::IPCProtocol;
 use taxon_core::prelude::{IPCActorMsg, IPCMessage, IPCMessageCrate, IPCMsgEncoding};
 use tracing::{error, info};
 
@@ -13,7 +13,7 @@ use crate::actors::modbus_fabric_actor::ModbusDevice;
 #[derive(Clone)]
 pub struct Subscriber {
     pub peer: uuid::Uuid,
-    pub protocol: ExtModuleProtocol,
+    pub protocol: IPCProtocol,
 }
 
 //Позже переименовать статус hart в modbus
@@ -106,12 +106,12 @@ impl Actor for IpcHandler {
                     };
 
                 // Отправляем через ipc_router в WS
-                if let Err(e) = state.ipc_router.send_message(Some(IPCActorMsg::SendActionReply(
+                if let Err(e) = state.ipc_router.send_message(Some(IPCActorMsg::Send(
                     IPCMessageCrate {
                         msg: reply,
                         peer_from: uuid::Uuid::nil(), // Разобраться с uuid
                         encoding: IPCMsgEncoding::Json,
-                        protocol: taxon_core::infrastructure::ExtModuleProtocol::WS,
+                        protocol: taxon_core::actors::ipc::protocol::IPCProtocol::WS,
                     },
                 ))) {
                     error!("Ошибка при отправке списка устройств подписчику: {:?} {:?}",sub.peer, e);
