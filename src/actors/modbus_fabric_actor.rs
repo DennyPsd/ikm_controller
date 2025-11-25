@@ -14,6 +14,8 @@ pub value: u16,
 pub enum ModbusFabricMsg {
 PrintDevices,
 WriteDevice { device_id: u32, value: u16 },
+GetDevices(ActorRef<ModbusFabricMsg>),
+DevicesList(Vec<ModbusDevice>),
 }
 
 pub struct ModbusFabricActor {
@@ -61,6 +63,15 @@ async fn handle(
                 println!("Device {} not found!", device_id);
             }
         }
+        ModbusFabricMsg::GetDevices(sender) => {
+        let list = state.devices.values().cloned().collect::<Vec<_>>();
+        let _ = sender.send_message(ModbusFabricMsg::DevicesList(list));
+        }
+
+        ModbusFabricMsg::DevicesList(_) => {
+        // Fabric сам не должен обрабатывать это сообщение — игнорируем
+        }
+
     }
     Ok(())
 }

@@ -10,17 +10,14 @@ use taxon_core::prelude::{IPCActionKind, IPCActorMsg, IPCMessageCrate};
 use tokio::time::sleep;
 use tracing::{error, info};
 
-use crate::actors::hart::hart_fabric::HartFabricMsg;
-use crate::actors::hart::protocol::types::PortReply;
-use crate::actors::hart::protocol::utils::checksum;
-
-use crate::http::v3::transfer::{decode_addr, push_optional_data};
+use crate::actors::modbus_fabric_actor::ModbusFabricMsg;
+use crate::actors::modbus_fabric_actor::ModbusDevice;
 
 pub struct IpcHandler;
 
 #[derive(Debug)]
 pub struct IpcHandlerState {
-    pub hart_fabric: ActorRef<HartFabricMsg>,
+    pub hart_fabric: ActorRef<ModbusFabricMsg>,
     #[allow(dead_code)]
     pub ipc_router: ActorRef<Option<IPCActorMsg>>,
 }
@@ -28,6 +25,7 @@ pub struct IpcHandlerState {
 #[derive(Debug)]
 pub enum IpcHandlerMsg {
     Ipc(IPCMessageCrate),
+    DevicesList(Vec<ModbusDevice>),
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq, Hash)]
@@ -49,6 +47,7 @@ impl Actor for IpcHandler {
         _myself: ActorRef<Self::Msg>,
         args: Self::Arguments,
     ) -> Result<Self::State, ractor::ActorProcessingErr> {
+        info!("ipc_handler started");
         Ok(args)
     }
 
@@ -62,8 +61,22 @@ impl Actor for IpcHandler {
         match msg {
             IpcHandlerMsg::Ipc(ipc_msg) => {
                 println!("*Обработка сообщения по IPC*");
+
+            if let Some(reply_ipc_actor_msg) = ipc_msg.to_replay_msg(Some(("Сообщение обработано! ipc_handler")), None) {
+            // ipc_router — ActorRef<Option<IPCActorMsg>>
+            if let Err(e) = state.ipc_router.send_message(Some(reply_ipc_actor_msg)) {
+                error!("Не удалось отправить ActionReply через ipc_router: {:?}", e);
+                }
+            }
+        }
+            
+            IpcHandlerMsg::DevicesList(devs) => {
+                info!("Получили DevicesList из ModbusFabric, отправляем в WebSocket");
+            }
+        }
+
+
                 Ok(())
             }
         }
-    }
-}
+    
