@@ -78,7 +78,7 @@ async fn handle(
         let _ = sender.send_message(IpcHandlerMsg::DevicesList(list));
         }
         ModbusFabricMsg::AttachPort { port_name, stream } => {
-            print!("{}", port_name);
+            print!("{} {:?}", port_name, stream);
         }
         ModbusFabricMsg::DetachPort { port_name } => {}
 

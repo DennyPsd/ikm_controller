@@ -84,6 +84,8 @@ async fn main() -> anyhow::Result<()> {
   let _res = ipc_router
     .send_message(Some(IPCActorMsg::Subscribe(output_port)))
     .map_err(|e| anyhow!("Err to sub {e:?}"));
+
+//-------Test Serial Scanner--------
   signal::ctrl_c().await?;
   info!("Shutting down...");
 

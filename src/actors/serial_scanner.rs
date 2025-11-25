@@ -2,7 +2,7 @@ use crate::actors::modbus_fabric_actor::ModbusFabricMsg;
 use ractor::{Actor, ActorProcessingErr, ActorRef};
 use serialport::{SerialPortInfo, SerialPortType};
 use smol_str::SmolStr;
-use std::collections::{HashMap, HashSet};
+use std::{collections::{HashMap, HashSet}, time::Duration};
 use tokio_serial::SerialPortBuilderExt;
 use tracing::{error, info};
 
@@ -12,6 +12,9 @@ pub struct SerialScannerState {
 }
 
 pub struct SerialScannerActor;
+impl SerialScannerActor {
+    pub fn new() -> Self { Self }
+}
 
 #[derive(Debug)]
 pub enum SerialScannerMsg {
@@ -26,11 +29,9 @@ impl Actor for SerialScannerActor {
 
     async fn pre_start(
         &self,
-        myself: ActorRef<Self::Msg>,
+        _myself: ActorRef<Self::Msg>,
         fabric: Self::Arguments,
     ) -> Result<Self::State, ActorProcessingErr> {
-        let _ = myself.cast(SerialScannerMsg::Tick);
-
         Ok(SerialScannerState {
             fabric,
             known: HashMap::new(),
@@ -41,85 +42,48 @@ impl Actor for SerialScannerActor {
         &self,
         myself: ActorRef<Self::Msg>,
         msg: Self::Msg,
-        state: &mut SerialScannerState,
+        state: &mut Self::State,
     ) -> Result<(), ActorProcessingErr> {
         match msg {
             SerialScannerMsg::Tick => {
                 let ports = match serialport::available_ports() {
                     Ok(v) => v,
                     Err(e) => {
-                        error!("SerialScanner: available_ports() failed: {e}");
-                        let _ = myself.cast(SerialScannerMsg::Tick);
+                        tracing::error!("SerialScanner: available_ports() failed: {e}");
+                        let _ = myself.send_after(Duration::from_secs(5), || SerialScannerMsg::Tick);
                         return Ok(());
                     }
                 };
 
-                let mut seen: HashSet<SmolStr> = HashSet::new();
+                let mut seen: std::collections::HashSet<SmolStr> = std::collections::HashSet::new();
 
-                // обработка подключений
                 for p in ports {
-                    let full_path = &p.port_name;
-
-                    // только USB порты
-                    let SerialPortType::UsbPort(ref usb) = &p.port_type else {
-                        continue;
-                    };
-
-                    let key = SmolStr::from(full_path);
+                    let key = SmolStr::from(&p.port_name);
                     seen.insert(key.clone());
 
-                    // Новый порт
                     if !state.known.contains_key(&key) {
-                        info!(
-                            port = %full_path,
-                            vid = format_args!("{:04x}", usb.vid),
-                            pid = format_args!("{:04x}", usb.pid),
-                            "Modbus SerialScanner: USB attached"
-                        );
-
-                        // Открываем порт
-                        let builder = tokio_serial::new(full_path, 9600)
-                            .parity(tokio_serial::Parity::None)
-                            .stop_bits(tokio_serial::StopBits::One)
-                            .data_bits(tokio_serial::DataBits::Eight)
-                            .timeout(std::time::Duration::from_millis(100));
-
-                        match builder.open_native_async() {
-                            Ok(stream) => {
-                                let _ = state.fabric.cast(ModbusFabricMsg::AttachPort {
-                                    port_name: key.clone(),
-                                    stream,
-                                });
-
-                                state.known.insert(key.clone(), p.clone());
-                            }
-                            Err(e) => {
-                                error!(
-                                    port=%full_path,
-                                    error=%e,
-                                    "Modbus SerialScanner: failed to open serial stream"
-                                );
-                            }
+                        // Отправка AttachPort в ModbusFabricActor
+                        if let Ok(stream) = tokio_serial::new(&p.port_name, 9600).open_native_async() {
+                            let _ = state.fabric.cast(ModbusFabricMsg::AttachPort {
+                                port_name: key.clone(),
+                                stream,
+                            });
+                            state.known.insert(key.clone(), p.clone());
                         }
                     }
                 }
 
-                // обработка отключений
+                // Проверка отключений
                 let existing: Vec<SmolStr> = state.known.keys().cloned().collect();
                 for key in existing {
                     if !seen.contains(&key) {
-                        let _ = state.fabric.cast(ModbusFabricMsg::DetachPort {
-                            port_name: key.clone(),
-                        });
-
+                        let _ = state.fabric.cast(ModbusFabricMsg::DetachPort { port_name: key.clone() });
                         state.known.remove(&key);
-
-                        info!(port=%key, "Modbus SerialScanner: USB detached");
                     }
                 }
 
-                // перезапускаем цикл
-                let _ = myself.cast(SerialScannerMsg::Tick);
+                // Планируем следующий тик через 5 секунд
+                let _ = myself.send_after(Duration::from_secs(5), || SerialScannerMsg::Tick);
             }
         }
 
