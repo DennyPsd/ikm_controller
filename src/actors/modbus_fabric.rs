@@ -1,15 +1,25 @@
+// actors/modbus_fabric.rs
 use ractor::{Actor, ActorProcessingErr, ActorRef};
 use serde::{Deserialize, Serialize};
 use smol_str::SmolStr;
-use std::collections::HashMap;
+use std::collections::{HashMap, BTreeMap};
 use tokio_serial::SerialStream;
 use tracing::{info, warn};
+use uuid::Uuid;
 
 use crate::actors::modbus_types::ModbusTimings;
-use crate::actors::modbus_worker::{ModbusWorker, ModbusWorkerMsg, ModbusReplyBatchMsg};
+use crate::actors::modbus_worker::{ModbusWorker, ModbusWorkerMsg};
+use crate::actors::modbus_worker_job::*;
+use crate::actors::modbus_types::*;
 use crate::actors::ipc_handler::IpcHandlerMsg;
 
+// taxon types
+use taxon_core::infrastructure::device::{FacilityDevice, FacilityDeviceMeta, ModbusDeviceMeta, FacilityDeviceinfo, FacilityDeviceDocs};
+use smol_str::SmolStr as SS;
+use serde_json::json;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct ModbusDevice {
     pub port: String,
     pub slave: u8,
@@ -29,8 +39,13 @@ pub enum ModbusFabricMsg {
     GetDevices(ActorRef<IpcHandlerMsg>),
     WriteDevice { device_idx: usize, value: u16 },
     PrintDevices,
-    Tick,
-    ReadResult { device_idx: usize, value: u16 },
+    // New message from worker
+    WorkerReport {
+        port_name: SmolStr,
+        slave: u16,
+        addr: u16,
+        raw: Option<u16>,
+    },
 }
 
 pub struct ModbusFabricActor;
@@ -38,11 +53,11 @@ pub struct ModbusFabricActor;
 #[derive(Default)]
 pub struct ModbusFabricState {
     pub workers: HashMap<SmolStr, ActorRef<ModbusWorkerMsg>>,
-    pub devices: Vec<ModbusDevice>,
+    pub devices: Vec<FacilityDevice>, // теперь FacilityDevice
 }
 
 impl ModbusFabricActor {
-    pub fn new(devices: Vec<ModbusDevice>) -> Self {
+    pub fn new(devices: Vec<FacilityDevice>) -> Self {
         Self
     }
 }
@@ -51,15 +66,13 @@ impl ModbusFabricActor {
 impl Actor for ModbusFabricActor {
     type Msg = ModbusFabricMsg;
     type State = ModbusFabricState;
-    type Arguments = Vec<ModbusDevice>;
+    type Arguments = Vec<FacilityDevice>;
 
     async fn pre_start(
         &self,
         _myself: ActorRef<Self::Msg>,
         args: Self::Arguments,
     ) -> Result<Self::State, ActorProcessingErr> {
-        // стартуем тик, который можно затем перезапустить из IpcHandler
-        let _ = _myself_placeholder();
         Ok(ModbusFabricState {
             workers: HashMap::new(),
             devices: args,
@@ -74,186 +87,137 @@ impl Actor for ModbusFabricActor {
     ) -> Result<(), ActorProcessingErr> {
         match msg {
             ModbusFabricMsg::AttachPort { port_name, stream } => {
-                info!(port = %port_name, "ModbusFabric: AttachPort called");
-
-                if state.workers.contains_key(&port_name) {
-                    info!(port = %port_name, "ModbusFabric: worker already exists, skipping");
-                } else {
+                info!(port = %port_name, "ModBusFabric: AttachPort called");
+                if !state.workers.contains_key(&port_name) {
                     let timings = ModbusTimings {
                         first_byte_timeout: std::time::Duration::from_millis(200),
                         per_byte_timeout: std::time::Duration::from_millis(50),
                         max_preamble_ff: 0,
                     };
 
-                    // spawn worker actor (linked)
-                    let (worker_ref, _jh) = Actor::spawn_linked(
-                        Some(format!("modbus-worker:{}", port_name)),
+                    // spawn worker — передаем ссылку на Fabric (myself) чтобы воркер мог сообщать WorkerReport
+                    let (worker_ref, _jh) = ractor::Actor::spawn_linked(
+                        Some(format!("modbus_worker:{}", port_name)),
                         ModbusWorker::new(),
-                        (timings, stream),
+                        (timings, stream, myself.clone(), port_name.clone(), 1u16),
                         myself.get_cell(),
                     )
                     .await
                     .map_err(|e| ActorProcessingErr::from(e.to_string()))?;
 
-                    info!(port = %port_name, "ModbusFabric: worker spawned");
                     state.workers.insert(port_name.clone(), worker_ref);
+                    info!(port = %port_name, "ModBusFabric: worker spawned");
 
-                    // Add default device entry for this port (you may adjust default slave/address)
-                    state.devices.push(ModbusDevice {
-                        port: port_name.to_string(),
-                        slave: 1,    // default slave
-                        addres: 0,   // default address to read from
-                        value: 0,
-                    });
+                    // Create default FacilityDevice for this port (meta defaults can be adjusted later)
+                    let mut attrs = BTreeMap::new();
+                    attrs.insert(SS::from("value"), json!(0));
+                    attrs.insert(SS::from("mul"), json!(1.0));
+                    attrs.insert(SS::from("value_type"), json!("u16"));
+
+                    let device = FacilityDevice {
+                        device_id: Uuid::new_v4(),
+                        port_address: port_name.to_string().into(),
+                        meta: FacilityDeviceMeta::Modbus {
+                            meta: ModbusDeviceMeta {
+                                slave: 1,
+                                addr: 0,
+                                reg: 4,
+                            },
+                        },
+                        connected: true,
+                        attrs: Some(attrs),
+                        info: None,
+                        docs: None,
+                        events: None,
+                        active_events: [0; 8],
+                        diagnostic: None,
+                    };
+                    state.devices.push(device);
+                } else {
+                    info!(port = %port_name, "ModBusFabric: worker already exists — skipping");
                 }
             }
 
             ModbusFabricMsg::DetachPort { port_name } => {
-                info!(port = %port_name, "ModbusFabric: Вызвано отключение порта");
+                info!(port = %port_name, "ModBusFabric: DetachPort");
                 if let Some(wr) = state.workers.remove(&port_name) {
                     let _ = wr.cast(ModbusWorkerMsg::Stop);
+                    // remove devices from this port
+                    state.devices.retain(|d| d.port_address != port_name);
+                    info!(port = %port_name, "ModBusFabric: devices removed for port");
                 }
             }
 
             ModbusFabricMsg::GetDevices(reply_to) => {
                 let devices_clone = state.devices.clone();
-                let _ = reply_to.send_message(IpcHandlerMsg::DevicesList(devices_clone));
+                let _ = reply_to.send_message(crate::actors::ipc_handler::IpcHandlerMsg::DevicesList(
+                    devices_clone
+                ));
             }
 
             ModbusFabricMsg::WriteDevice { device_idx, value } => {
+                // For compatibility: update raw attrs.value if exists
                 if let Some(dev) = state.devices.get_mut(device_idx) {
-                    dev.value = value;
+                    if let Some(attrs) = dev.attrs.as_mut() {
+                        attrs.insert(SS::from("value"), json!(value));
+                    }
                     info!("ModbusFabric: device idx {} updated = {}", device_idx, value);
                 } else {
                     warn!("ModbusFabric: WriteDevice: index {} out of range", device_idx);
                 }
             }
 
-            ModbusFabricMsg::Tick => {
-                // Iterate devices and request read from relevant worker.
-                // We will create a small response actor for each request that will
-                // forward the result back to this Fabric as ModbusFabricMsg::ReadResult.
-                for (idx, dev) in state.devices.iter().enumerate() {
-                    let port = SmolStr::from(dev.port.clone());
-                    if let Some(worker) = state.workers.get(&port) {
-                        // Build Modbus read frame for function 0x04 (slave, func, addr hi, addr lo, cnt hi, cnt lo, CRC..)
-                        // TODO: build proper RTU frame with CRC. Here we assume worker expects complete frame bytes.
-                        // Example (without CRC): [slave, func, addr_hi, addr_lo, cnt_hi, cnt_lo]
-                        let addr = dev.addres;
-                        let count: u16 = 1; // reading 1 register by default
-                        let mut frame = vec![
-                            dev.slave,
-                            0x04,
-                            ((addr >> 8) & 0xFF) as u8,
-                            (addr & 0xFF) as u8,
-                            ((count >> 8) & 0xFF) as u8,
-                            (count & 0xFF) as u8,
-                        ];
-                        // NOTE: worker needs CRC handling (either here or inside worker/job)
-                        // If worker expects full RTU frame including CRC, compute and push CRC here.
-                        // For now, we assume worker.send_and_read knows how to handle APDU -> RTU.
-
-                        // Create small response handler actor to receive reply from worker
-                        // and forward to Fabric as ModbusFabricMsg::ReadResult
-                        let fabric_ref = myself.clone();
-                        let idx_copy = idx;
-                        // spawn a small one-off actor that expects ModbusReplyBatchMsg
-                        let (resp_actor, _jh) = ractor::Actor::spawn(
-                            None,
-                            ResponseActor::new(),
-                            (fabric_ref.clone(), idx_copy),
-                        )
-                        .await
-                        .map_err(|e| ActorProcessingErr::from(e.to_string()))?;
-
-                        // send ScanBatch to worker; worker will reply to resp_actor (ReplyBatch)
-                        let _ = worker.cast(ModbusWorkerMsg::ScanBatch {
-                            cmds: vec![frame],
-                            reply_to: resp_actor,
-                        });
-                    }
-                }
-
-                // re-schedule tick
-                let _ = myself.send_after(std::time::Duration::from_secs(2), || ModbusFabricMsg::Tick);
-            }
-
-            ModbusFabricMsg::ReadResult { device_idx, value } => {
-                if let Some(dev) = state.devices.get_mut(device_idx) {
-                    dev.value = value;
-                    info!(idx = device_idx, value = value, "ModbusFabric: read result applied");
-                }
-            }
-
             ModbusFabricMsg::PrintDevices => {
                 info!("--- Devices list ---");
                 for (i, d) in state.devices.iter().enumerate() {
-                    info!(idx = i, port = %d.port, slave = d.slave, addr = d.addres, value = d.value, "device");
+                    let value = d.attrs.as_ref().and_then(|m| m.get(&SS::from("value"))).cloned();
+                    info!(idx = i, port = %d.port_address, meta = ?d.meta, value = ?value, "device");
                 }
             }
-        }
 
-        Ok(())
-    }
-}
+            ModbusFabricMsg::WorkerReport { port_name, slave, addr, raw } => {
+                // Update devices that match port + slave + addr (if meta matches)
+                let mut updated = 0usize;
+                for dev in state.devices.iter_mut() {
+                    // match port address
+                    if dev.port_address != port_name.to_string() { continue; }
 
-pub struct ResponseActor {
-    // state: (fabric_ref, device_idx)
-}
+                    // match modbus meta
+                    match &dev.meta {
+                        FacilityDeviceMeta::Modbus { meta } => {
+                            if meta.slave as u16 == slave && meta.addr as u16 == addr {
+                                // compute final value with mul if present
+                                let raw_value = raw.unwrap_or(0u16);
+                                let mul = dev
+                                    .attrs
+                                    .as_ref()
+                                    .and_then(|m| m.get(&SS::from("mul")))
+                                    .and_then(|v| v.as_f64())
+                                    .unwrap_or(1.0);
+                                let final_value =serde_json::Value::from((raw_value as f64) * mul);
 
-impl ResponseActor {
-    pub fn new() -> Self {
-        Self {}
-    }
-}
-
-#[ractor::async_trait]
-impl Actor for ResponseActor {
-    type Msg = ModbusReplyBatchMsg;
-    type State = (ActorRef<ModbusFabricMsg>, usize);
-    type Arguments = (ActorRef<ModbusFabricMsg>, usize);
-
-    async fn pre_start(
-        &self,
-        _myself: ActorRef<Self::Msg>,
-        args: Self::Arguments,
-    ) -> Result<Self::State, ActorProcessingErr> {
-        Ok(args)
-    }
-
-    async fn handle(
-        &self,
-        _myself: ActorRef<Self::Msg>,
-        msg: Self::Msg,
-        state: &mut Self::State,
-    ) -> Result<(), ActorProcessingErr> {
-        match msg {
-            ModbusReplyBatchMsg::ReplyBatch(mut items) => {
-                // items: Vec<(cmd, data)>
-                // Parse first response into u16, if possible
-                if let Some((_cmd, data)) = items.pop() {
-                    // parse according to Modbus function 0x04 response format:
-                    // Byte 0: byte count (N), followed by N data bytes (registers hi-lo)
-                    // But actual format depends on device. Here we try to parse first two bytes as u16.
-                    if data.len() >= 2 {
-                        let val = ((data[0] as u16) << 8) | (data[1] as u16);
-                        let _ = state.0.send_message(ModbusFabricMsg::ReadResult {
-                            device_idx: state.1,
-                            value: val,
-                        });
-                    } else {
-                        // can't parse -> ignore or send zero
-                        let _ = state.0.send_message(ModbusFabricMsg::ReadResult {
-                            device_idx: state.1,
-                            value: 0,
-                        });
+                                if let Some(attrs) = dev.attrs.as_mut() {
+                                    attrs.insert(SS::from("value"), final_value);
+                                } else {
+                                    let mut map = BTreeMap::new();
+                                    map.insert(SS::from("value"), json!(final_value));
+                                    dev.attrs = Some(map);
+                                }
+                                dev.connected = raw.is_some();
+                                updated += 1;
+                            }
+                        }
+                        _ => {}
                     }
                 }
+                if updated > 0 {
+                    info!(port=%port_name, matched = updated, "ModbusFabric: updated device values from worker");
+                } else {
+                    info!(port=%port_name, "ModbusFabric: WorkerReport received but no matching device found");
+                }
             }
         }
+
         Ok(())
     }
 }
-
-// placeholder to satisfy borrow checker in pre_start (no-op)
-fn _myself_placeholder() {}

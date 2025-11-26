@@ -1,112 +1,59 @@
+// actors/modbus_worker.rs
 use crate::actors::modbus_types::{ModbusReply, ModbusTimings};
-use crate::actors::modbus_worker_job::{ModbusPortJob, ModbusPortJobArgs, send_and_read};
+use crate::actors::modbus_worker_job::send_and_read;
 use ractor::{Actor, ActorProcessingErr, ActorRef};
-use std::collections::HashMap;
-use linked_hash_set::LinkedHashSet;
+use std::time::Duration;
 use tokio_serial::SerialStream;
 use tracing::{error, info};
+use smol_str::SmolStr;
+use crate::actors::modbus_fabric::ModbusFabricMsg;
 
 #[derive(Debug)]
-pub struct Queues {
-    pub queue: LinkedHashSet<Vec<u8>>,
-    pub res_storage: HashMap<Vec<u8>, Result<Vec<u8>, String>>,
-}
-
-impl Queues {
-    pub fn new() -> Self {
-        Self {
-            queue: LinkedHashSet::new(),
-            res_storage: HashMap::new(),
-        }
-    }
-
-    pub fn q_head(&self) -> Option<&Vec<u8>> {
-        self.queue.iter().next()
-    }
-
-    pub fn q_remove(&mut self, cmd: &[u8]) -> bool {
-        self.queue.remove(cmd)
-    }
-
-    pub fn q_len(&self) -> usize {
-        self.queue.len()
-    }
-
-    pub fn res_put(&mut self, cmd: Vec<u8>, data: Result<Vec<u8>, String>) {
-        self.res_storage.insert(cmd, data);
-    }
+pub enum ModbusWorkerMsg {
+    Poll,
+    Stop,
 }
 
 #[derive(Debug)]
 pub struct ModbusWorkerState {
     pub stream: Option<SerialStream>,
-    pub queues: Queues,
-    pub busy: bool,
-    pub blocked: bool,
     pub timings: ModbusTimings,
-}
-
-#[derive(Debug)]
-pub enum ModbusWorkerMsg {
-    SendToDevice {
-        cmd: Vec<u8>,
-        reply_to: ActorRef<ModbusWorkerReplyMsg>,
-    },
-
-    ScanBatch {
-      cmds: Vec<Vec<u8>>,
-      reply_to: ActorRef<ModbusReplyBatchMsg>,
-    },
-
-    Process,
-
-    ProcessFinished {
-        cmd: Vec<u8>,
-        result: Result<Vec<u8>, String>,
-        port: SerialStream,
-    },
-
-    Block,
-    Unblock,
-    Stop,
-}
-
-#[derive(Debug)]
-pub enum ModbusWorkerReplyMsg {
-    Reply(ModbusReply),
-}
-
-#[derive(Debug)]
-pub enum ModbusReplyBatchMsg {
-    ReplyBatch(Vec<(Vec<u8>, Vec<u8>)>),
+    pub fabric: ActorRef<ModbusFabricMsg>,
+    pub port_name: SmolStr,
+    /// default slave if needed
+    pub default_slave: u16,
+    /// request template (function/reg/quantity) — for now simple: function 4, addr 0, qty 1
+    pub reg_addr: u16,
 }
 
 pub struct ModbusWorker;
 
 impl ModbusWorker {
-    pub fn new() -> Self {
-        Self
-    }
+    pub fn new() -> Self { Self }
 }
 
 #[ractor::async_trait]
 impl Actor for ModbusWorker {
     type Msg = ModbusWorkerMsg;
     type State = ModbusWorkerState;
-    type Arguments = (ModbusTimings, SerialStream);
+    // Arguments: (timings, stream, fabric_ref, port_name, default_slave)
+    type Arguments = (ModbusTimings, SerialStream, ActorRef<ModbusFabricMsg>, SmolStr, u16);
 
     async fn pre_start(
         &self,
-        _myself: ActorRef<Self::Msg>,
-        (timings, stream): Self::Arguments,
+        myself: ActorRef<Self::Msg>,
+        (timings, stream, fabric, port_name, default_slave): Self::Arguments,
     ) -> Result<Self::State, ActorProcessingErr> {
-        info!("ModbusWorker started (stream available)");
+        info!(port=%port_name, "ModbusWorker: started (stream available)");
+        // schedule first poll after 1s
+        let _ = myself.send_after(Duration::from_secs(1), || ModbusWorkerMsg::Poll);
         Ok(ModbusWorkerState {
             stream: Some(stream),
-            queues: Queues::new(),
-            busy: false,
-            blocked: false,
             timings,
+            fabric,
+            port_name,
+            default_slave,
+            reg_addr: 0,
         })
     }
 
@@ -117,134 +64,59 @@ impl Actor for ModbusWorker {
         state: &mut Self::State,
     ) -> Result<(), ActorProcessingErr> {
         match msg {
-            ModbusWorkerMsg::SendToDevice { cmd, reply_to } => {
-                if state.blocked {
-                    let _ = reply_to.cast(ModbusWorkerReplyMsg::Reply(ModbusReply::IoBlocked));
-                    return Ok(());
-                }
-
-                // existing cached result
-                if let Some(stored) = state.queues.res_storage.remove(&cmd) {
-                    match stored {
-                        Ok(data) => {
-                            let _ = reply_to.cast(ModbusWorkerReplyMsg::Reply(ModbusReply::Ok(data)));
-                        }
-                        Err(err) => {
-                            let _ = reply_to.cast(ModbusWorkerReplyMsg::Reply(ModbusReply::Err(err)));
-                        }
-                    }
-                    return Ok(());
-                }
-
-                if state.queues.queue.contains(&cmd) {
-                    let _ = reply_to.cast(ModbusWorkerReplyMsg::Reply(ModbusReply::InProgress));
-                    return Ok(());
-                }
-
-                state.queues.queue.insert(cmd);
-                if !state.busy {
-                    state.busy = true;
-                    let _ = myself.cast(ModbusWorkerMsg::Process);
-                }
-                let _ = reply_to.cast(ModbusWorkerReplyMsg::Reply(ModbusReply::InProgress));
-            }
-
-            ModbusWorkerMsg::ScanBatch { cmds, reply_to } => {
+            ModbusWorkerMsg::Poll => {
+                // If no stream — skip
                 if state.stream.is_none() {
-                    let _ = reply_to.cast(ModbusReplyBatchMsg::ReplyBatch(vec![]));
+                    let _ = myself.send_after(Duration::from_secs(2), || ModbusWorkerMsg::Poll);
                     return Ok(());
                 }
 
-                let mut port = match state.stream.take() {
-                    Some(p) => p,
-                    None => {
-                        let _ = reply_to.cast(ModbusReplyBatchMsg::ReplyBatch(vec![]));
-                        return Ok(());
+                // take stream to work with send_and_read
+                let mut port = state.stream.take().unwrap();
+
+                // Формируем "команду" — у нас заглушка, любая последовательность
+                let cmd = vec![0x01, 0x04, (state.reg_addr >> 8) as u8, (state.reg_addr & 0xFF) as u8, 0x00, 0x01];
+                let res = send_and_read(&mut port, &cmd, state.timings.first_byte_timeout, state.timings.per_byte_timeout).await;
+
+                match res {
+                    Ok(bytes) => {
+                        // Преобразуем первые два байта в u16 (Big-endian) — это просто пример
+                        let raw = if bytes.len() >= 2 {
+                            ((bytes[0] as u16) << 8) | bytes[1] as u16
+                        } else {
+                            0u16
+                        };
+
+                        // Отправляем Fabric отчёт о прочитанном значении
+                        let _ = state.fabric.send_message(ModbusFabricMsg::WorkerReport {
+                            port_name: state.port_name.clone(),
+                            slave: state.default_slave,
+                            addr: state.reg_addr,
+                            raw: Some(raw),
+                        });
                     }
-                };
-
-                let t = state.timings;
-                let mut out: Vec<(Vec<u8>, Vec<u8>)> = Vec::new();
-
-                for cmd in cmds.into_iter() {
-                    // send_and_read should write APDU/RTU to port and return raw data bytes (without CRC ideally)
-                    // TODO: ensure send_and_read is implemented to use RTU framing and CRC
-                    let res = send_and_read(&mut port, &cmd, t.first_byte_timeout, t.per_byte_timeout).await;
-                    match res {
-                        Ok(data) => {
-                            if !data.is_empty() {
-                                out.push((cmd.clone(), data));
-                            }
-                        }
-                        Err(err) => {
-                            error!("ScanBatch: cmd {:?} failed: {}", cmd, err);
-                        }
+                    Err(err) => {
+                        error!("ModbusWorker Poll error: {}", err);
+                        let _ = state.fabric.send_message(ModbusFabricMsg::WorkerReport {
+                            port_name: state.port_name.clone(),
+                            slave: state.default_slave,
+                            addr: state.reg_addr,
+                            raw: None,
+                        });
                     }
                 }
 
-                state.stream = Some(port);
-                let _ = reply_to.cast(ModbusReplyBatchMsg::ReplyBatch(out));
-            }
-
-            ModbusWorkerMsg::Process => {
-                if state.blocked || state.stream.is_none() {
-                    return Ok(());
-                }
-
-                if let Some(cmd) = state.queues.q_head() {
-                    let stream = match state.stream.take() {
-                        Some(p) => p,
-                        None => {
-                            state.busy = false;
-                            return Ok(());
-                        }
-                    };
-
-                    let args = ModbusPortJobArgs {
-                        worker: myself.clone(),
-                        cmd: cmd.clone(),
-                        timings: state.timings,
-                        stream,
-                    };
-
-                    ractor::Actor::spawn(None, ModbusPortJob::new(), args).await.map_err(|e| {
-                        error!("failed spawn job: {:?}", e);
-                        ActorProcessingErr::from("spawn job")
-                    })?;
-                } else {
-                    state.busy = false;
-                }
-            }
-
-            ModbusWorkerMsg::ProcessFinished { cmd, result, port } => {
-                let _ = state.queues.q_remove(&cmd);
-                state.queues.res_put(cmd, result.clone());
+                // return port to state
                 state.stream = Some(port);
 
-                if state.queues.q_len() > 0 && !state.blocked {
-                    let _ = myself.cast(ModbusWorkerMsg::Process);
-                } else {
-                    state.busy = false;
-                }
-            }
-
-            ModbusWorkerMsg::Block => {
-                state.blocked = true;
-            }
-
-            ModbusWorkerMsg::Unblock => {
-                state.blocked = false;
-                if state.queues.q_len() > 0 && !state.busy {
-                    state.busy = true;
-                    let _ = myself.cast(ModbusWorkerMsg::Process);
-                }
+                // schedule next poll after 2s
+                let _ = myself.send_after(Duration::from_secs(2), || ModbusWorkerMsg::Poll);
             }
 
             ModbusWorkerMsg::Stop => {
                 let _ = myself.stop(None);
             }
         }
-
         Ok(())
     }
 }

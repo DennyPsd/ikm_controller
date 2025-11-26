@@ -3,6 +3,7 @@ use ractor::{Actor, ActorProcessingErr, ActorRef};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use smol_str::SmolStr;
+use taxon_core::infrastructure::device::FacilityDevice;
 use taxon_core::prelude::IPCProtocol;
 use taxon_core::prelude::{IPCActorMsg, IPCMessage, IPCMessageCrate, IPCMsgEncoding};
 use tracing::{error, info};
@@ -27,7 +28,7 @@ pub struct IpcHandlerState {
 #[derive(Debug)]
 pub enum IpcHandlerMsg {
     Ipc(IPCMessageCrate),
-    DevicesList(Vec<ModbusDevice>),
+    DevicesList(Vec<FacilityDevice>),
     Tick,
 }
 
@@ -93,6 +94,10 @@ impl Actor for IpcHandler {
 
             IpcHandlerMsg::Tick => {
                 // Запрашиваем актуальные значения у Fabric
+                if state.subscribers.is_empty() {
+                    info!("Нет подписчиков, отправка отменена");
+                    return Ok(());
+                }
                 let _ = state.hart_fabric.send_message(ModbusFabricMsg::GetDevices(myself.clone()));
                 // Перезапускаем таймер через 2 секунды
                 let _ = myself.send_after(std::time::Duration::from_secs(2), || IpcHandlerMsg::Tick);
@@ -101,22 +106,28 @@ impl Actor for IpcHandler {
 
             // Когда ModbusFabricActor вернёт список устройств отправим в Ws
             IpcHandlerMsg::DevicesList(devices) => {
-                info!("Отправка значений устройств подписчикам");
+                info!("Отправка значений устройств подписчикам и по запросу");
                 //Тут сделать отправку значений подписчикам.
 
-                if state.subscribers.is_empty() {
-                    info!("Нет подписчиков, отправка отменена");
+                // if state.subscribers.is_empty() {
+                //     info!("Нет подписчиков, отправка отменена");
+                //     return Ok(());
+                // }
+                if devices.is_empty() {
                     return Ok(());
                 }
 
                 // собираем массив значений
-                let args: Vec<u16> = devices.iter().map(|d| d.value).collect();
+                    let values: Vec<serde_json::Value> = devices
+                    .iter()
+                    .map(|d| d.attrs.as_ref().and_then(|m| m.get(&SmolStr::from("value"))).cloned().unwrap_or(json!(0)))
+                    .collect();
 
                 // Формируем ActionReply для каждого подписчика
                 for sub in &state.subscribers {
                     let reply = IPCMessage::ActionReply {
                         id: 0,
-                        ok: Some(json!(args)),
+                        ok: Some(json!(values)),
                         error: None,
                         send_at: None,
                     };

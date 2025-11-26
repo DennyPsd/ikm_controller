@@ -2,12 +2,10 @@
 // value датчиков рандомно меняются 2с.
 mod actors;
 
-use actors::modbus_fabric::{ModbusDevice, ModbusFabricActor, ModbusFabricMsg};
+use actors::modbus_fabric::{ModbusFabricActor, ModbusFabricMsg};
 use actors::serial_scanner::{SerialScannerActor, SerialScannerMsg};
 use ractor::Actor;
-use rand::Rng;
-use serde::Deserialize;
-use std::fs;
+
 
 use clap::Parser;
 use smol_str::SmolStr;
@@ -21,12 +19,6 @@ use anyhow::anyhow;
 use tokio::signal;
 use tracing::info;
 
-
-
-#[derive(Debug, Deserialize)]
-pub struct Settings {
-    devices: Vec<ModbusDevice>,
-}
 
 //Настройки для ws
 #[derive(Parser)]
@@ -45,18 +37,10 @@ struct Cli {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+
     
-    // Читаем файл settings.yaml
-    let content = fs::read_to_string("settings.yaml")?;
-    let settings: Settings = serde_yaml::from_str(&content)?;
-    println!("Loaded devices from settings.yaml: {:?}", settings.devices);
-
-    // Создаем актор ModbusFabricActor со списком прочтенных устройств
-    let (modbus_fabric, _handle) =
-        Actor::spawn(Some("ModbusFabric".into()), ModbusFabricActor::new(settings.devices.clone()), settings.devices.clone()).await?;
-
     //выводим список устройств
-    modbus_fabric.send_message(ModbusFabricMsg::PrintDevices).unwrap();
+    // modbus_fabric.send_message(ModbusFabricMsg::PrintDevices).unwrap();
 
 
     //Test 25.11 create IPC-Actor
@@ -74,6 +58,13 @@ async fn main() -> anyhow::Result<()> {
     )
     .await
     .expect("Failed to start IPCActor!");
+
+    let initial_devices = vec![];
+    // Создаем актор ModbusFabricActor со списком прочтенных устройств
+    let (modbus_fabric, _handle) =
+        Actor::spawn(Some("ModbusFabric".into()), ModbusFabricActor::new(initial_devices.clone()), initial_devices.clone()).await?;
+
+
   let handler_state = IpcHandlerState {
     hart_fabric: modbus_fabric.clone(),
     ipc_router: ipc_router.clone(),
@@ -92,7 +83,7 @@ async fn main() -> anyhow::Result<()> {
 
 //-------Test Serial Scanner--------
 
-let (serial_scanner, _ssc_handle) =
+let (_scanner, _scanner_handle) =
         Actor::spawn(
             Some("SerialScanner".into()),
             SerialScannerActor::new(),
