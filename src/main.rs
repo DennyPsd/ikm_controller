@@ -101,8 +101,21 @@ let (serial_scanner, _ssc_handle) =
 
 
 
-  //Ручной тест запуск modbusWorker и отправка сообщений
+  //Ручной тест
+    // Просто присваиваем фиктивные значения устройствам через Fabric
+    for (idx, device) in settings.devices.iter().enumerate() {
+        modbus_fabric
+            .cast(ModbusFabricMsg::WriteDevice {
+                device_idx: idx,
+                value: 100 + idx as u16, // фиктивное значение
+            })
+            .ok();
+    }
 
+    // Даем актору время обработать все события
+    //tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+
+    println!("=== Test finished, all actors processed messages ===");
 
 
   signal::ctrl_c().await?;

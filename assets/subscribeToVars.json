@@ -1,0 +1,14 @@
+{
+  "type": "Action",
+  "id": 12,
+  "action": {
+    "type": "Command",
+    "name": "subscribe to vars",
+    "target": {
+      "module_name": "hart_controller",
+      "type": "Device",
+      "device_id": "eb841035-1e9a-40d1-931c-92623090e94d"
+    },
+    "args": [255, 255, 255, 255, 255, 255, 255, 130]
+  }
+}
