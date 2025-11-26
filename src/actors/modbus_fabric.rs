@@ -1,3 +1,4 @@
+use ractor::factory::worker;
 // modbus_fabric_actor.rs
 use ractor::{Actor, ActorProcessingErr, ActorRef};
 use serde::{Deserialize, Serialize};
@@ -73,30 +74,34 @@ impl Actor for ModbusFabricActor {
     ) -> Result<(), ActorProcessingErr> {
         match msg {
             ModbusFabricMsg::AttachPort { port_name, stream } => {
-                info!(port = %port_name, "ModbusFabric: Вызвано подключение порта");
-
-                if state.workers.contains_key(&port_name) {
-                    info!(port = %port_name, "ModbusFabric: воркер уже есть, пропускаем");
-                } else {
-                    // create timings default
-                    let timings = ModbusTimings {
+                info!(port = %port_name, "ModBusFabric: Вызвано подключение порта");
+                //Создаем, если нет воркера
+                if !state.workers.contains_key(&port_name){
+                    let timings = ModbusTimings{
                         first_byte_timeout: std::time::Duration::from_millis(200),
                         per_byte_timeout: std::time::Duration::from_millis(50),
                         max_preamble_ff: 0,
                     };
-
-                    // spawn worker actor (linked)
-                    let (worker_ref, _jh) = Actor::spawn_linked(
-                        Some(format!("modbus-worker:{}", port_name)),
-                        ModbusWorker::new(),
-                        (timings, stream),
+                    
+                    let(worker_ref, _jh) = Actor::spawn_linked(
+                        Some(format!("modbus_worker:{}", port_name)), 
+                        ModbusWorker::new(), 
+                        (timings, stream), 
                         myself.get_cell(),
-                    )
-                    .await
-                    .map_err(|e| ActorProcessingErr::from(e.to_string()))?;
+                    ).await.map_err(|e|ActorProcessingErr::from(e.to_string()))?;
 
                     state.workers.insert(port_name.clone(), worker_ref);
-                    info!(port = %port_name, "ModbusFabric: worker spawned");
+                    info!(port = %port_name, "ModBusFabric: worker spawned");
+
+                    //Новое устройство по умолчанию
+                    state.devices.push(ModbusDevice { 
+                        port: port_name.to_string(), 
+                        slave: 1, 
+                        addres: 0, 
+                        value: 0, 
+                    });
+                } else {
+                    info!(port = %port_name, "ModbusFabric: воркер уже есть, пропускаем");
                 }
             }
 
@@ -104,6 +109,8 @@ impl Actor for ModbusFabricActor {
                 info!(port = %port_name, "ModbusFabric: Вызвано отключение порта");
                 if let Some(wr) = state.workers.remove(&port_name) {
                     let _ = wr.cast(ModbusWorkerMsg::Stop);
+                    state.devices.retain(|d| d.port != port_name);
+                    info!(port = %port_name, "ModbusFabric: устройства с порта удалены");
                 }
             }
 

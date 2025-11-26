@@ -116,7 +116,7 @@ impl Actor for IpcHandler {
                 for sub in &state.subscribers { 
                     let reply = IPCMessage::ActionReply { 
                         id: 0, 
-                        ok: Some(json!(args)), 
+                        ok: Some(serde_json::json!(devices.iter().map(|d| d.value).collect::<Vec<u16>>())), 
                         error: None, 
                         send_at: None, 
                     };
@@ -125,9 +125,9 @@ impl Actor for IpcHandler {
                 if let Err(e) = state.ipc_router.send_message(Some(IPCActorMsg::Send(
                     IPCMessageCrate {
                         msg: reply,
-                        peer_from: uuid::Uuid::nil(), // Разобраться с uuid
+                        peer_from: sub.peer, // Разобраться с uuid
                         encoding: IPCMsgEncoding::Json,
-                        protocol: taxon_core::actors::ipc::protocol::IPCProtocol::WS,
+                        protocol: sub.protocol.clone(),
                     },
                 ))) {
                     error!("Ошибка при отправке списка устройств подписчику: {:?} {:?}",sub.peer, e);
