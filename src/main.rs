@@ -1,8 +1,11 @@
+//Для теста отправляем запрос на подписку как subscribeToVars.Json. После чего будем отправлять в ответ данные по всем датчикам из settings.yaml.
+// value датчиков рандомно меняются 2с.
 mod actors;
 
-use actors::modbus_fabric_actor::{ModbusDevice, ModbusFabricActor, ModbusFabricMsg};
+use actors::modbus_fabric::{ModbusDevice, ModbusFabricActor, ModbusFabricMsg};
 use actors::serial_scanner::{SerialScannerActor, SerialScannerMsg};
 use ractor::Actor;
+use rand::Rng;
 use serde::Deserialize;
 use std::fs;
 
@@ -101,22 +104,29 @@ let (serial_scanner, _ssc_handle) =
 
 
 
-  //Ручной тест
-    // Просто присваиваем фиктивные значения устройствам через Fabric
-    for (idx, device) in settings.devices.iter().enumerate() {
-        modbus_fabric
-            .cast(ModbusFabricMsg::WriteDevice {
-                device_idx: idx,
-                value: 100 + idx as u16, // фиктивное значение
-            })
-            .ok();
-    }
+  //Ручной тест для изменения value датчиков, потом уберу
+  
+    // tokio::spawn({
+    //     let serial_scanner = serial_scanner.clone();
+    //     let devices = settings.devices.clone();
+    //     async move {
+    //         loop {
 
-    // Даем актору время обработать все события
-    //tokio::time::sleep(std::time::Duration::from_secs(1)).await;
-
-    println!("=== Test finished, all actors processed messages ===");
-
+    //             // Эмулируем изменение значений ModBus
+    //             for (idx, dev) in devices.iter().enumerate() {
+    //                 let new_value = rand::rng().random_range(..10); // случайное значение
+    //                 modbus_fabric
+    //                     .cast(ModbusFabricMsg::WriteDevice {
+    //                         device_idx: idx,
+    //                         value: new_value,
+    //                     })
+    //                     .ok();
+    //             }
+    //             // Задержка между циклами
+    //             tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+    //         }
+    //     }
+    // });
 
   signal::ctrl_c().await?;
   info!("Shutting down...");

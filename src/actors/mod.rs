@@ -1,4 +1,4 @@
-pub mod modbus_fabric_actor;
+pub mod modbus_fabric;
 pub mod ipc_handler;
 pub mod serial_scanner;
 pub mod modbus_types;

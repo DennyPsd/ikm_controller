@@ -7,8 +7,8 @@ use taxon_core::prelude::IPCProtocol;
 use taxon_core::prelude::{IPCActorMsg, IPCMessage, IPCMessageCrate, IPCMsgEncoding};
 use tracing::{error, info};
 
-use crate::actors::modbus_fabric_actor::ModbusFabricMsg;
-use crate::actors::modbus_fabric_actor::ModbusDevice;
+use crate::actors::modbus_fabric::ModbusFabricMsg;
+use crate::actors::modbus_fabric::ModbusDevice;
 
 #[derive(Clone)]
 pub struct Subscriber {
@@ -28,6 +28,7 @@ pub struct IpcHandlerState {
 pub enum IpcHandlerMsg {
     Ipc(IPCMessageCrate),
     DevicesList(Vec<ModbusDevice>),
+    Tick,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq, Hash)]
@@ -74,7 +75,14 @@ impl Actor for IpcHandler {
                                 peer: ipc_msg.peer_from,
                                 protocol: ipc_msg.protocol,
                             });
+
+                            // Если это первый подписчик, запускаем Tick
+                            if state.subscribers.len() == 1 {
+                                let myself_clone = myself.clone();
+                                let _ = myself_clone.cast(IpcHandlerMsg::Tick);
+                            }
                         }
+
                         Some("device_send") => {
                             // Можно сразу запросить данные у ModbusFabricActor
                             let _ = state.hart_fabric.send_message(ModbusFabricMsg::GetDevices(myself.clone()));
@@ -83,6 +91,14 @@ impl Actor for IpcHandler {
                     }
                 }
             }
+            // !!! Хз как можно аналогично убрать tokio::spawn !!!
+            IpcHandlerMsg::Tick => {
+                // Запрашиваем актуальные значения у Fabric
+                let _ = state.hart_fabric.send_message(ModbusFabricMsg::GetDevices(myself.clone()));
+                // Перезапускаем таймер через 2 секунды
+                myself.send_after(std::time::Duration::from_secs(2), || IpcHandlerMsg::Tick);
+            }
+
 
             // Когда ModbusFabricActor вернёт список устройств отправим в Ws
             IpcHandlerMsg::DevicesList(devices) => {

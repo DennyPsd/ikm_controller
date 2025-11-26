@@ -1,5 +1,5 @@
 // serial_scanner_modbus.rs
-use crate::actors::modbus_fabric_actor::ModbusFabricMsg;
+use crate::actors::modbus_fabric::ModbusFabricMsg;
 use ractor::{Actor, ActorProcessingErr, ActorRef};
 use serialport::{SerialPortInfo, SerialPortType};
 use smol_str::SmolStr;

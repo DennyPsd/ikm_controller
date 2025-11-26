@@ -903,6 +903,7 @@ dependencies = [
  "linked_hash_set",
  "parking_lot",
  "ractor",
+ "rand 0.9.2",
  "serde",
  "serde_json",
  "serde_yaml",
