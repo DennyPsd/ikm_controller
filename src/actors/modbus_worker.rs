@@ -1,4 +1,3 @@
-// modbus_worker.rs (исправлённый)
 use crate::actors::modbus_types::{ModbusReply, ModbusTimings};
 use crate::actors::modbus_worker_job::{ModbusPortJob, ModbusPortJobArgs, send_and_read};
 use ractor::{Actor, ActorProcessingErr, ActorRef};
@@ -49,15 +48,14 @@ pub struct ModbusWorkerState {
 
 #[derive(Debug)]
 pub enum ModbusWorkerMsg {
-    /// cmd, reply_to (ActorRef that expects ModbusReplyMsg)
     SendToDevice {
         cmd: Vec<u8>,
-        reply_to: ActorRef<ModbusReplyMsg>,
+        reply_to: ActorRef<ModbusWorkerReplyMsg>,
     },
 
     ScanBatch {
-        cmds: Vec<Vec<u8>>,
-        reply_to: ActorRef<ModbusReplyBatchMsg>,
+      cmds: Vec<Vec<u8>>,
+      reply_to: ActorRef<ModbusReplyBatchMsg>,
     },
 
     Process,
@@ -75,16 +73,13 @@ pub enum ModbusWorkerMsg {
 
 #[derive(Debug)]
 pub enum ModbusWorkerReplyMsg {
-    /// For single-command reply
     Reply(ModbusReply),
 }
-pub type ModbusReplyMsg = ModbusWorkerReplyMsg;
 
 #[derive(Debug)]
-pub enum ModbusWorkerReplyBatchMsg {
+pub enum ModbusReplyBatchMsg {
     ReplyBatch(Vec<(Vec<u8>, Vec<u8>)>),
 }
-pub type ModbusReplyBatchMsg = ModbusWorkerReplyBatchMsg;
 
 pub struct ModbusWorker;
 
@@ -128,7 +123,7 @@ impl Actor for ModbusWorker {
                     return Ok(());
                 }
 
-                // already have stored response
+                // existing cached result
                 if let Some(stored) = state.queues.res_storage.remove(&cmd) {
                     match stored {
                         Ok(data) => {
@@ -141,13 +136,11 @@ impl Actor for ModbusWorker {
                     return Ok(());
                 }
 
-                // already queued
                 if state.queues.queue.contains(&cmd) {
                     let _ = reply_to.cast(ModbusWorkerReplyMsg::Reply(ModbusReply::InProgress));
                     return Ok(());
                 }
 
-                // enqueue
                 state.queues.queue.insert(cmd);
                 if !state.busy {
                     state.busy = true;
@@ -162,7 +155,6 @@ impl Actor for ModbusWorker {
                     return Ok(());
                 }
 
-                // take stream (move out), process commands inline, then put stream back
                 let mut port = match state.stream.take() {
                     Some(p) => p,
                     None => {
@@ -175,7 +167,8 @@ impl Actor for ModbusWorker {
                 let mut out: Vec<(Vec<u8>, Vec<u8>)> = Vec::new();
 
                 for cmd in cmds.into_iter() {
-                    // выполняем send_and_read синхронно (в текущем акторе)
+                    // send_and_read should write APDU/RTU to port and return raw data bytes (without CRC ideally)
+                    // TODO: ensure send_and_read is implemented to use RTU framing and CRC
                     let res = send_and_read(&mut port, &cmd, t.first_byte_timeout, t.per_byte_timeout).await;
                     match res {
                         Ok(data) => {
@@ -184,13 +177,11 @@ impl Actor for ModbusWorker {
                             }
                         }
                         Err(err) => {
-                            // в случае ошибки можно логировать и продолжать
                             error!("ScanBatch: cmd {:?} failed: {}", cmd, err);
                         }
                     }
                 }
 
-                // вернём порт в состояние
                 state.stream = Some(port);
                 let _ = reply_to.cast(ModbusReplyBatchMsg::ReplyBatch(out));
             }
@@ -216,7 +207,6 @@ impl Actor for ModbusWorker {
                         stream,
                     };
 
-                    // spawn job actor which will return via ProcessFinished
                     ractor::Actor::spawn(None, ModbusPortJob::new(), args).await.map_err(|e| {
                         error!("failed spawn job: {:?}", e);
                         ActorProcessingErr::from("spawn job")

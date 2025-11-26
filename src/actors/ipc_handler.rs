@@ -61,12 +61,12 @@ impl Actor for IpcHandler {
         msg: Self::Msg,
         state: &mut Self::State,
     ) -> Result<(), ActorProcessingErr> {
-        info!("ikm_controller: received message");
+        info!("ipc_handler: received message");
         match msg {
             IpcHandlerMsg::Ipc(ipc_msg) => {
                 println!("*Обработка сообщения по IPC*");
-
-                // Проверяем, что это Action с командой device_send
+                
+                                // Проверяем, что это Action с командой device_send
                 if let Some(action) = ipc_msg.as_action() {
                     match action.name.as_deref() {
                         Some("subscribe to vars") => {
@@ -78,8 +78,7 @@ impl Actor for IpcHandler {
 
                             // Если это первый подписчик, запускаем Tick
                             if state.subscribers.len() == 1 {
-                                let myself_clone = myself.clone();
-                                let _ = myself_clone.cast(IpcHandlerMsg::Tick);
+                                let _ = myself.cast(IpcHandlerMsg::Tick);
                             }
                         }
 
@@ -91,12 +90,12 @@ impl Actor for IpcHandler {
                     }
                 }
             }
-            // !!! Хз как можно аналогично убрать tokio::spawn !!!
+
             IpcHandlerMsg::Tick => {
                 // Запрашиваем актуальные значения у Fabric
                 let _ = state.hart_fabric.send_message(ModbusFabricMsg::GetDevices(myself.clone()));
                 // Перезапускаем таймер через 2 секунды
-                myself.send_after(std::time::Duration::from_secs(2), || IpcHandlerMsg::Tick);
+                let _ = myself.send_after(std::time::Duration::from_secs(2), || IpcHandlerMsg::Tick);
             }
 
 
@@ -106,35 +105,36 @@ impl Actor for IpcHandler {
                 //Тут сделать отправку значений подписчикам.
 
                 if state.subscribers.is_empty() {
-                info!("Нет подписчиков, отправка отменена");
-                return Ok(());
+                    info!("Нет подписчиков, отправка отменена");
+                    return Ok(());
                 }
-                
+
+                // собираем массив значений
                 let args: Vec<u16> = devices.iter().map(|d| d.value).collect();
 
-                // Формируем ActionReply
-                for sub in &state.subscribers { 
-                    let reply = IPCMessage::ActionReply { 
-                        id: 0, 
-                        ok: Some(serde_json::json!(devices.iter().map(|d| d.value).collect::<Vec<u16>>())), 
-                        error: None, 
-                        send_at: None, 
+                // Формируем ActionReply для каждого подписчика
+                for sub in &state.subscribers {
+                    let reply = IPCMessage::ActionReply {
+                        id: 0,
+                        ok: Some(json!(args)),
+                        error: None,
+                        send_at: None,
                     };
 
-                // Отправляем через ipc_router в WS
-                if let Err(e) = state.ipc_router.send_message(Some(IPCActorMsg::Send(
-                    IPCMessageCrate {
-                        msg: reply,
-                        peer_from: sub.peer, // Разобраться с uuid
-                        encoding: IPCMsgEncoding::Json,
-                        protocol: sub.protocol.clone(),
-                    },
-                ))) {
-                    error!("Ошибка при отправке списка устройств подписчику: {:?} {:?}",sub.peer, e);
+                    // Отправляем через ipc_router — указываем peer_from равным подписчику
+                    if let Err(e) = state.ipc_router.send_message(Some(IPCActorMsg::Send(
+                        IPCMessageCrate {
+                            msg: reply,
+                            peer_from: sub.peer,
+                            encoding: IPCMsgEncoding::Json,
+                            protocol: sub.protocol.clone(),
+                        },
+                    ))) {
+                        error!("Ошибка при отправке списка устройств подписчику {:?}: {:?}", sub.peer, e);
+                    }
                 }
             }
-            }
         }
-                Ok(())
-            }
-        }
+        Ok(())
+    }
+}
