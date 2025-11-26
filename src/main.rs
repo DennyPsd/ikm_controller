@@ -1,7 +1,7 @@
 mod actors;
 
 use actors::modbus_fabric_actor::{ModbusDevice, ModbusFabricActor, ModbusFabricMsg};
-use actors::serial_scanner_modbus::{SerialScannerActor, SerialScannerMsg};
+use actors::serial_scanner::{SerialScannerActor, SerialScannerMsg};
 use ractor::Actor;
 use serde::Deserialize;
 use std::fs;
@@ -17,6 +17,7 @@ use taxon_core::prelude::IPCMessageCrate;
 use anyhow::anyhow;
 use tokio::signal;
 use tracing::info;
+
 
 
 #[derive(Debug, Deserialize)]
@@ -91,12 +92,18 @@ async fn main() -> anyhow::Result<()> {
 let (serial_scanner, _ssc_handle) =
         Actor::spawn(
             Some("SerialScanner".into()),
-            SerialScannerActor::new(),    // твой новый сканер
-            modbus_fabric.clone()         // он должен слать события в fabric
+            SerialScannerActor::new(),
+            modbus_fabric.clone()         // события в fabric
         ).await?;
 
       // первый тик запускается в pre_start, можно вручную
     // serial_scanner.cast(SerialScannerMsg::Tick).ok();
+
+
+
+  //Ручной тест запуск modbusWorker и отправка сообщений
+
+
 
   signal::ctrl_c().await?;
   info!("Shutting down...");
