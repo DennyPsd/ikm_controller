@@ -2,6 +2,7 @@
 use ractor::{Actor, ActorProcessingErr, ActorRef};
 use serde::{Deserialize, Serialize};
 use smol_str::SmolStr;
+use taxon_core::prelude::IPCProtocol;
 use std::collections::{HashMap, BTreeMap};
 use tokio_serial::SerialStream;
 use tracing::{info, warn, error};
@@ -39,6 +40,11 @@ pub enum ModbusFabricMsg {
         port_name: SmolStr,
     },
     GetDevices(ActorRef<IpcHandlerMsg>),
+    GetDevicesOnce {                     // новое сообщение для одноразового запроса
+        reply_to: ActorRef<IpcHandlerMsg>,
+        peer: uuid::Uuid,
+        protocol: IPCProtocol,
+    },
     WriteDevice { device_idx: usize, value: u16 },
     PrintDevices,
     // New message from worker
@@ -204,6 +210,16 @@ impl Actor for ModbusFabricActor {
                 let _ = reply_to.send_message(crate::actors::ipc_handler::IpcHandlerMsg::DevicesList(
                     devices_clone
                 ));
+            }
+
+            ModbusFabricMsg::GetDevicesOnce{reply_to, peer, protocol} => {
+                let devices_clone = state.devices.clone();
+                let _ = reply_to.send_message(crate::actors::ipc_handler::IpcHandlerMsg::DevicesListOnce {
+                    devices: devices_clone,
+                    peer: peer.clone(),
+                    protocol: protocol.clone(),
+                });
+                println!("{} {:?}",peer, protocol);
             }
 
             ModbusFabricMsg::WriteDevice { device_idx, value } => {

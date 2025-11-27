@@ -3,14 +3,13 @@ use ractor::{Actor, ActorProcessingErr, ActorRef};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use smol_str::SmolStr;
-use taxon_core::infrastructure::device::FacilityDevice;
-use taxon_core::prelude::IPCProtocol;
-use taxon_core::prelude::{IPCActorMsg, IPCMessage, IPCMessageCrate, IPCMsgEncoding};
-use tracing::{error, info};
 use std::time::Duration;
+use tracing::{error, info};
+
+use taxon_core::infrastructure::device::FacilityDevice;
+use taxon_core::prelude::{IPCActorMsg, IPCMessage, IPCMessageCrate, IPCMsgEncoding, IPCProtocol};
 
 use crate::actors::modbus_fabric::ModbusFabricMsg;
-use crate::actors::modbus_fabric::ModbusDevice;
 
 #[derive(Clone)]
 pub struct Subscriber {
@@ -18,7 +17,6 @@ pub struct Subscriber {
     pub protocol: IPCProtocol,
 }
 
-//Позже переименовать статус hart в modbus
 pub struct IpcHandlerState {
     pub hart_fabric: ActorRef<ModbusFabricMsg>,
     #[allow(dead_code)]
@@ -31,6 +29,11 @@ pub enum IpcHandlerMsg {
     Ipc(IPCMessageCrate),
     DevicesList(Vec<FacilityDevice>),
     Tick,
+    DevicesListOnce{
+        devices: Vec<FacilityDevice>,
+        peer: uuid::Uuid,
+        protocol: IPCProtocol,
+    }
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq, Hash)]
@@ -40,6 +43,7 @@ pub struct SendToDeviceArgs {
     #[serde(default)]
     pub data: Option<SmolStr>,
 }
+
 pub struct IpcHandler;
 
 #[ractor::async_trait]
@@ -52,7 +56,7 @@ impl Actor for IpcHandler {
         &self,
         _myself: ActorRef<Self::Msg>,
         args: Self::Arguments,
-    ) -> Result<Self::State, ractor::ActorProcessingErr> {
+    ) -> Result<Self::State, ActorProcessingErr> {
         info!("ipc_handler started");
         Ok(args)
     }
@@ -64,11 +68,11 @@ impl Actor for IpcHandler {
         state: &mut Self::State,
     ) -> Result<(), ActorProcessingErr> {
         info!("ipc_handler: received message");
+
         match msg {
             IpcHandlerMsg::Ipc(ipc_msg) => {
                 println!("*Обработка сообщения по IPC*");
-                
-                // Проверяем, что это Action с командой device_send
+
                 if let Some(action) = ipc_msg.as_action() {
                     match action.name.as_deref() {
                         Some("subscribe to vars") => {
@@ -78,54 +82,74 @@ impl Actor for IpcHandler {
                                 protocol: ipc_msg.protocol,
                             });
 
-                            // Если это первый подписчик, запускаем Tick (один раз)
+                            // Если это первый подписчик, запускаем Tick
                             if state.subscribers.len() == 1 {
                                 let _ = myself.cast(IpcHandlerMsg::Tick);
                             }
                         }
 
                         Some("device_send") => {
-                            // Можно сразу запросить данные у ModbusFabricActor
-                            let _ = state.hart_fabric.send_message(ModbusFabricMsg::GetDevices(myself.clone()));
+                            // Всегда отправляем список устройств разово, даже если подписчиков нет
+                            let reply_to = myself.clone();
+                            let peer = ipc_msg.peer_from;
+                            let protocol = ipc_msg.protocol.clone();
+
+                            let _ = state
+                                .hart_fabric
+                                .send_message(ModbusFabricMsg::GetDevicesOnce {
+                                    reply_to,
+                                    peer,
+                                    protocol,
+                                });
                         }
+                        Some("unsubscribe to vars") => {
+                            info!("Удаляем подписчика на переменные");
+                            state.subscribers.retain(|sub| {
+                                (sub.peer == ipc_msg.peer_from && sub.protocol == ipc_msg.protocol)
+                            });
+                        }
+
                         _ => {}
                     }
                 }
             }
 
             IpcHandlerMsg::Tick => {
-                // Запрашиваем актуальные значения у Fabric.
-                // ВАЖНО: НЕ планируем следующий тик здесь — планирование будет происходить
-                // в обработчике DevicesList *только* если devices не пуст.
+                // Если нет подписчиков — не планируем Tick
                 if state.subscribers.is_empty() {
-                    info!("Нет подписчиков, отправка отменена");
+                    info!("Нет подписчиков, Tick отменён");
                     return Ok(());
                 }
+
+                // Запрашиваем актуальные значения у Fabric
                 let _ = state.hart_fabric.send_message(ModbusFabricMsg::GetDevices(myself.clone()));
             }
 
-            // Когда ModbusFabricActor вернёт список устройств отправим в Ws
             IpcHandlerMsg::DevicesList(devices) => {
-                info!("Отправка значений устройств подписчикам и по запросу");
+                info!("Отправка значений устройств подписчикам");
 
-                // Если подписчиков нет — ничего не делаем
+                // Если подписчиков нет — не планируем новый Tick
                 if state.subscribers.is_empty() {
-                    info!("Нет подписчиков, DevicesList проигнорирован");
+                    info!("Нет подписчиков, DevicesList обработан, Tick не планируется");
                     return Ok(());
                 }
 
-                // Если устройств нет — ничего не планируем (останавливаем циклический опрос)
+                // Если устройств нет — просто возвращаемся
                 if devices.is_empty() {
-                    info!("Список устройств пуст — опрос приостановлен до появления устройств");
-                    // По желанию можно отправить один пустой ответ подписчикам, но задача требовала
-                    // остановить циклические сообщения, поэтому просто возвращаемся.
+                    info!("Список устройств пуст — Tick приостановлен");
                     return Ok(());
                 }
 
                 // собираем массив значений
                 let values: Vec<serde_json::Value> = devices
                     .iter()
-                    .map(|d| d.attrs.as_ref().and_then(|m| m.get(&SmolStr::from("value"))).cloned().unwrap_or(json!(0)))
+                    .map(|d| {
+                        d.attrs
+                            .as_ref()
+                            .and_then(|m| m.get(&SmolStr::from("value")))
+                            .cloned()
+                            .unwrap_or(json!(0))
+                    })
                     .collect();
 
                 // Формируем ActionReply для каждого подписчика
@@ -137,7 +161,6 @@ impl Actor for IpcHandler {
                         send_at: None,
                     };
 
-                    // Отправляем через ipc_router — указываем peer_from равным подписчику
                     if let Err(e) = state.ipc_router.send_message(Some(IPCActorMsg::Send(
                         IPCMessageCrate {
                             msg: reply,
@@ -150,10 +173,48 @@ impl Actor for IpcHandler {
                     }
                 }
 
-                // Если у нас есть подписчики и есть устройства — планируем следующий тик через 2 секунды
+                // Планируем следующий Tick через 2 секунды только если есть подписчики
                 let _ = myself.send_after(Duration::from_secs(2), || IpcHandlerMsg::Tick);
             }
+
+            IpcHandlerMsg::DevicesListOnce{devices, peer, protocol} => {
+        
+                // собираем массив значений
+                let values: Vec<serde_json::Value> = devices
+                    .iter()
+                    .map(|d| {
+                        d.attrs
+                            .as_ref()
+                            .and_then(|m| m.get(&SmolStr::from("value")))
+                            .cloned()
+                            .unwrap_or(json!(0))
+                    })
+                    .collect();
+
+                // Формируем ActionReply для каждого подписчика
+                 let reply = crate::actors::ipc_handler::IPCMessage::ActionReply {
+                    id: 0,
+                    ok: Some(json!(values)),
+                    error: None,
+                    send_at: None,
+                };
+
+                    if let Err(e) = state.ipc_router.send_message(Some(IPCActorMsg::Send(
+                        IPCMessageCrate {
+                            msg: reply,
+                            peer_from: peer,
+                            encoding: IPCMsgEncoding::Json,
+                            protocol,
+                        },
+                    ))) {
+                        error!("Ошибка при отправке списка устройств {:?}: {:?}", peer, e);
+                    }
+            }
+
+
+
         }
+
         Ok(())
     }
 }
