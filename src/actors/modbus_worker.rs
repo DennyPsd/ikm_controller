@@ -96,7 +96,7 @@ impl Actor for ModbusWorker {
                                 port_name: state.port_name.clone(),
                                 slave: state.default_slave,
                                 addr: state.reg_addr,
-                                raw: Some(value as u16), // если нужно хранить как u16
+                                raw: Some(value), // если нужно хранить как f32
                             });
                         } else {
                             error!(port=%state.port_name, "Received frame too short: {:02X?}", bytes);

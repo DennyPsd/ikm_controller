@@ -52,7 +52,7 @@ pub enum ModbusFabricMsg {
         port_name: SmolStr,
         slave: u16,
         addr: u16,
-        raw: Option<u16>,
+        raw: Option<f32>,
     },
 }
 
@@ -256,7 +256,7 @@ impl Actor for ModbusFabricActor {
                         FacilityDeviceMeta::Modbus { meta } => {
                             if meta.slave as u16 == slave && meta.addr as u16 == addr {
                                 // compute final value with mul if present
-                                let raw_value = raw.unwrap_or(0u16);
+                                let raw_value = raw.unwrap_or(0.0);
                                 let mul = dev
                                     .attrs
                                     .as_ref()
