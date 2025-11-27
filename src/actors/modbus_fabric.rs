@@ -282,7 +282,7 @@ impl Actor for ModbusFabricActor {
                 if updated > 0 {
                     info!(port=%port_name, matched = updated, "ModbusFabric: updated device values from worker");
                     // сохраняем изменения в файл
-                    save_devices_to_file(&state.devices);
+                    //save_devices_to_file(&state.devices);
                 } else {
                     info!(port=%port_name, "ModBusFabric: WorkerReport received but no matching device found");
                 }

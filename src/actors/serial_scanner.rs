@@ -83,7 +83,7 @@ impl Actor for SerialScannerActor {
             info!(%key, "SerialScanner: new port detected, try attach");
 
             // Пробуем открыть поток (tokio-serial builder). При неудаче — лог и продолжаем.
-            let builder = tokio_serial::new(full_path, 19200).timeout(std::time::Duration::from_millis(1500));
+            let builder = tokio_serial::new(full_path, 9600).timeout(std::time::Duration::from_millis(1500));
             match builder.open_native_async() {
               Ok(stream) => {
                 // сообщаем Fabric, что порт подключился
