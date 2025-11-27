@@ -1,4 +1,5 @@
-// actors/modbus_worker.rs
+// Формирует команду Мультиплексору и получает ответ
+//TODO: решить вопрос с send_after (слишком часто)
 use crate::actors::modbus_types::{ModbusTimings};
 use crate::actors::modbus_worker_job::{send_and_read, parse_float_swapped};
 use ractor::{Actor, ActorProcessingErr, ActorRef};
@@ -41,8 +42,8 @@ impl Actor for ModbusWorker {
         myself: ActorRef<Self::Msg>,
         (timings, stream, fabric, port_name, default_slave): Self::Arguments,
     ) -> Result<Self::State, ActorProcessingErr> {
-        info!(port=%port_name, "ModbusWorker: started (stream available)");
-        // schedule first poll after 1s
+        info!(port=%port_name, "ModbusWorker: запущен (stream активно)");
+        // Запускаем считываение чз 1с после старта воркера
         let _ = myself.send_after(Duration::from_secs(1), || ModbusWorkerMsg::Poll);
 
         Ok(ModbusWorkerState {
@@ -89,7 +90,7 @@ impl Actor for ModbusWorker {
                             let float_bytes = &bytes[3..7]; // 4 байта данных
                             let value = parse_float_swapped(float_bytes);
 
-                            info!(port=%state.port_name, "Read value: {:.2}", value);
+                            info!(port=%state.port_name, "Прочитанное значение датчика: {:.2}", value);
 
                             // Отправляем Fabric отчёт о прочитанном значении
                             let _ = state.fabric.send_message(ModbusFabricMsg::WorkerReport {
@@ -99,7 +100,7 @@ impl Actor for ModbusWorker {
                                 raw: Some(value), // если нужно хранить как f32
                             });
                         } else {
-                            error!(port=%state.port_name, "Received frame too short: {:02X?}", bytes);
+                            error!(port=%state.port_name, "пришло слишком короткое сообщение: {:02X?}", bytes);
                             let _ = state.fabric.send_message(ModbusFabricMsg::WorkerReport {
                                 port_name: state.port_name.clone(),
                                 slave: state.default_slave,

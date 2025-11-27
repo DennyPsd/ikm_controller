@@ -1,3 +1,4 @@
+//Отслеживает USB-Serial порты, подключает/отключает их, создавая/разрушая ModbusWorker
 use ractor::{Actor, ActorProcessingErr, ActorRef};
 use serialport::{SerialPortInfo, SerialPortType};
 use smol_str::SmolStr;
@@ -35,7 +36,7 @@ impl Actor for SerialScannerActor {
     myself: ActorRef<Self::Msg>,
     fabric: Self::Arguments,
   ) -> Result<Self::State, ActorProcessingErr> {
-    // запускаем первый тик
+    // запускаем первый тик сканирования
     let _ = myself.cast(SerialScannerMsg::Tick);
     Ok(SerialScannerState {
       fabric,
@@ -54,8 +55,8 @@ impl Actor for SerialScannerActor {
         let ports = match serialport::available_ports() {
           Ok(v) => v,
           Err(e) => {
-            error!("SerialScanner: available_ports() failed: {e}");
-            // перезапускаем тик
+            error!("SerialScanner: ошибка available_ports(): {e}");
+            // перезапускаем тик для постоянного обновления
             let _ = myself.cast(SerialScannerMsg::Tick);
             return Ok(());
           }
@@ -80,24 +81,24 @@ impl Actor for SerialScannerActor {
           seen.insert(key.clone());
 
           if !state.known.contains_key(&key) {
-            info!(%key, "SerialScanner: new port detected, try attach");
+            info!(%key, "SerialScanner: найден новый USB - пробуем подключиться");
 
             // Пробуем открыть поток (tokio-serial builder). При неудаче — лог и продолжаем.
             let builder = tokio_serial::new(full_path, 9600).timeout(std::time::Duration::from_millis(1500));
             match builder.open_native_async() {
               Ok(stream) => {
                 // сообщаем Fabric, что порт подключился
-                info!(%key, "SerialScanner: about to send AttachPort");
-                let res = state.fabric.send_message( ModbusFabricMsg::AttachPort {
+                info!(%key, "SerialScanner: отправил сканирование в ModbusFabric");
+                let _res = state.fabric.send_message( ModbusFabricMsg::AttachPort {
                   port_name: key.clone(),
                   stream,
                 });
-                info!(%key, ?res, "SerialScanner: AttachPort send result");
+                //info!(%key, ?res, "SerialScanner: AttachPort send result");
                 state.known.insert(key.clone(), p.clone());
-                info!(%key, "SerialScanner: attached and informed fabric");
+                //info!(%key, "SerialScanner: attached and informed fabric");
               }
               Err(e) => {
-                error!(%key, "SerialScanner: failed to open serial stream: {e}");
+                error!(%key, "SerialScanner: ошибка открытия stream: {e}");
               }
             }
           }
@@ -109,7 +110,7 @@ impl Actor for SerialScannerActor {
           if !seen.contains(&key) {
             let _ = state.fabric.cast(ModbusFabricMsg::DetachPort { port_name: key.clone() });
             state.known.remove(&key);
-            info!(%key, "SerialScanner: USB detached → notify fabric");
+            info!(%key, "SerialScanner: USB отключен. Передали в ModBusFabric");
           }
         }
 
