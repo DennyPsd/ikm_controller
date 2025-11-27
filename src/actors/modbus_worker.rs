@@ -51,7 +51,7 @@ impl Actor for ModbusWorker {
             fabric,
             port_name,
             default_slave,
-            reg_addr: 0,
+            reg_addr: 50, //ТУТ АДРЕС ДАТЧИКА
         })
     }
 

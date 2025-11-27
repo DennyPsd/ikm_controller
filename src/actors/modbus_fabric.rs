@@ -172,7 +172,7 @@ impl Actor for ModbusFabricActor {
                         meta: FacilityDeviceMeta::Modbus {
                             meta: ModbusDeviceMeta {
                                 slave: 1,
-                                addr: 0,
+                                addr: 50, //РЕШИТЬ С АДРЕСОМ
                                 reg: 4,
                             },
                         },
