@@ -4,8 +4,10 @@ use serde::{Deserialize, Serialize};
 use smol_str::SmolStr;
 use std::collections::{HashMap, BTreeMap};
 use tokio_serial::SerialStream;
-use tracing::{info, warn};
+use tracing::{info, warn, error};
 use uuid::Uuid;
+use std::fs;
+use std::path::Path;
 
 use crate::actors::modbus_types::ModbusTimings;
 use crate::actors::modbus_worker::{ModbusWorker, ModbusWorkerMsg};
@@ -57,10 +59,51 @@ pub struct ModbusFabricState {
 }
 
 impl ModbusFabricActor {
-    pub fn new(devices: Vec<FacilityDevice>) -> Self {
+    pub fn new(_devices: Vec<FacilityDevice>) -> Self {
         Self
     }
 }
+
+// --- helper: сохранение/загрузка списка устройств ---
+fn devices_file_path() -> &'static str {
+    "devices.json"
+}
+
+fn save_devices_to_file(devices: &Vec<FacilityDevice>) {
+    match serde_json::to_string_pretty(devices) {
+        Ok(txt) => {
+            if let Err(e) = fs::write(devices_file_path(), txt) {
+                error!("Failed to write devices file: {}", e);
+            } else {
+                info!("Devices saved to {}", devices_file_path());
+            }
+        }
+        Err(e) => {
+            error!("Failed to serialize devices: {}", e);
+        }
+    }
+}
+
+fn load_devices_from_file() -> Option<Vec<FacilityDevice>> {
+    let path = Path::new(devices_file_path());
+    if !path.exists() {
+        return None;
+    }
+    match fs::read_to_string(path) {
+        Ok(txt) => match serde_json::from_str::<Vec<FacilityDevice>>(&txt) {
+            Ok(devs) => Some(devs),
+            Err(e) => {
+                error!("Failed to parse devices file: {}", e);
+                None
+            }
+        },
+        Err(e) => {
+            error!("Failed to read devices file: {}", e);
+            None
+        }
+    }
+}
+// --------------------------------------------------
 
 #[ractor::async_trait]
 impl Actor for ModbusFabricActor {
@@ -73,9 +116,12 @@ impl Actor for ModbusFabricActor {
         _myself: ActorRef<Self::Msg>,
         args: Self::Arguments,
     ) -> Result<Self::State, ActorProcessingErr> {
+        // Если есть файл — подгружаем, иначе используем args
+        let devices = load_devices_from_file().unwrap_or(args);
+        info!("ModbusFabric: starting with {} devices (in-memory)", devices.len());
         Ok(ModbusFabricState {
             workers: HashMap::new(),
-            devices: args,
+            devices,
         })
     }
 
@@ -133,6 +179,9 @@ impl Actor for ModbusFabricActor {
                         diagnostic: None,
                     };
                     state.devices.push(device);
+
+                    // сохраняем список в файл
+                    save_devices_to_file(&state.devices);
                 } else {
                     info!(port = %port_name, "ModBusFabric: worker already exists — skipping");
                 }
@@ -145,6 +194,8 @@ impl Actor for ModbusFabricActor {
                     // remove devices from this port
                     state.devices.retain(|d| d.port_address != port_name);
                     info!(port = %port_name, "ModBusFabric: devices removed for port");
+                    // сохраняем изменения
+                    save_devices_to_file(&state.devices);
                 }
             }
 
@@ -162,6 +213,8 @@ impl Actor for ModbusFabricActor {
                         attrs.insert(SS::from("value"), json!(value));
                     }
                     info!("ModbusFabric: device idx {} updated = {}", device_idx, value);
+                    //сохраняем
+                    save_devices_to_file(&state.devices);
                 } else {
                     warn!("ModbusFabric: WriteDevice: index {} out of range", device_idx);
                 }
@@ -194,7 +247,7 @@ impl Actor for ModbusFabricActor {
                                     .and_then(|m| m.get(&SS::from("mul")))
                                     .and_then(|v| v.as_f64())
                                     .unwrap_or(1.0);
-                                let final_value =serde_json::Value::from((raw_value as f64) * mul);
+                                let final_value = serde_json::Value::from((raw_value as f64) * mul);
 
                                 if let Some(attrs) = dev.attrs.as_mut() {
                                     attrs.insert(SS::from("value"), final_value);
@@ -212,8 +265,10 @@ impl Actor for ModbusFabricActor {
                 }
                 if updated > 0 {
                     info!(port=%port_name, matched = updated, "ModbusFabric: updated device values from worker");
+                    // сохраняем изменения в файл
+                    save_devices_to_file(&state.devices);
                 } else {
-                    info!(port=%port_name, "ModbusFabric: WorkerReport received but no matching device found");
+                    info!(port=%port_name, "ModBusFabric: WorkerReport received but no matching device found");
                 }
             }
         }

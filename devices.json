@@ -1,0 +1,98 @@
+[
+  {
+    "device_id": "6b21138d-d0f4-4ca4-952c-835adf396de2",
+    "port_address": "demo_port_0",
+    "meta": {
+      "type": "Modbus",
+      "meta": {
+        "slave": 1,
+        "addr": 0,
+        "reg": 4
+      }
+    },
+    "connected": true,
+    "attrs": {
+      "mul": 1.0,
+      "value": 0,
+      "value_type": "u16"
+    },
+    "info": null,
+    "docs": null,
+    "events": null,
+    "active_events": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "diagnostic": null
+  },
+  {
+    "device_id": "8c0a6ad7-8b41-4a76-8fcd-2606486459d8",
+    "port_address": "demo_port_1",
+    "meta": {
+      "type": "Modbus",
+      "meta": {
+        "slave": 1,
+        "addr": 1,
+        "reg": 4
+      }
+    },
+    "connected": true,
+    "attrs": {
+      "mul": 1.0,
+      "value": 10,
+      "value_type": "u16"
+    },
+    "info": null,
+    "docs": null,
+    "events": null,
+    "active_events": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "diagnostic": null
+  },
+  {
+    "device_id": "9e970566-28bd-424f-b05a-9bf40877dd07",
+    "port_address": "demo_port_2",
+    "meta": {
+      "type": "Modbus",
+      "meta": {
+        "slave": 1,
+        "addr": 2,
+        "reg": 4
+      }
+    },
+    "connected": true,
+    "attrs": {
+      "mul": 1.0,
+      "value": 20,
+      "value_type": "u16"
+    },
+    "info": null,
+    "docs": null,
+    "events": null,
+    "active_events": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "diagnostic": null
+  }
+]

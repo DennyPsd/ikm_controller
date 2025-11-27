@@ -1,5 +1,4 @@
-//Для теста отправляем запрос на подписку как subscribeToVars.Json. После чего будем отправлять в ответ данные по всем датчикам из settings.yaml.
-// value датчиков рандомно меняются 2с.
+// main.rs (модифицированные части — полный файл для удобства)
 mod actors;
 
 use actors::modbus_fabric::{ModbusFabricActor, ModbusFabricMsg};
@@ -19,9 +18,12 @@ use anyhow::anyhow;
 use tokio::signal;
 use tracing::info;
 
+// Для создания demo-устройств
+use taxon_core::infrastructure::device::{FacilityDevice, FacilityDeviceMeta, ModbusDeviceMeta};
+use smol_str::SmolStr as SS;
+use std::collections::BTreeMap;
+use serde_json::json;
 
-
-//Настройки для ws
 #[derive(Parser)]
 #[command(version = "0.1")]
 struct Cli {
@@ -39,12 +41,6 @@ struct Cli {
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
 
-    
-    //выводим список устройств
-    // modbus_fabric.send_message(ModbusFabricMsg::PrintDevices).unwrap();
-
-
-    //Test 25.11 create IPC-Actor
     let cli = Cli::parse();
     init_logging(cli.log_level.unwrap_or(LogLevel::Debug), !cli.disable_ui);
 
@@ -60,7 +56,35 @@ async fn main() -> anyhow::Result<()> {
     .await
     .expect("Failed to start IPCActor!");
 
-    let initial_devices = vec![];
+    // --- создаём 2-3 demo устройства для наглядности ---
+    let mut initial_devices: Vec<FacilityDevice> = Vec::new();
+    for i in 0..3 {
+        let mut attrs = BTreeMap::new();
+        attrs.insert(SS::from("value"), json!(i * 10)); // demo values 0,10,20
+        attrs.insert(SS::from("mul"), json!(1.0));
+        attrs.insert(SS::from("value_type"), json!("u16"));
+
+        let dev = FacilityDevice {
+            device_id: Uuid::new_v4(),
+            port_address: format!("demo_port_{}", i).into(),
+            meta: FacilityDeviceMeta::Modbus {
+                meta: ModbusDeviceMeta {
+                    slave: 1,
+                    addr: i as u16,
+                    reg: 4,
+                },
+            },
+            connected: true,
+            attrs: Some(attrs),
+            info: None,
+            docs: None,
+            events: None,
+            active_events: [0; 8],
+            diagnostic: None,
+        };
+        initial_devices.push(dev);
+    }
+
     // Создаем актор ModbusFabricActor со списком прочтенных устройств
     let (modbus_fabric, _handle) =
         Actor::spawn(Some("ModbusFabric".into()), ModbusFabricActor::new(initial_devices.clone()), initial_devices.clone()).await?;
@@ -80,7 +104,7 @@ async fn main() -> anyhow::Result<()> {
   
   let _res = ipc_router
     .send_message(Some(IPCActorMsg::Subscribe(output_port)))
-    .map_err(|e| anyhow!("Err to sub {e:?}"));
+    .map_err(|e| anyhow!("Err to sub {e:?}"))?;
 
 //-------Test Serial Scanner--------
 
@@ -91,34 +115,6 @@ let (_scanner, _scanner_handle) =
             modbus_fabric.clone()         // события в fabric
         ).await?;
 
-      // первый тик запускается в pre_start, можно вручную
-    // serial_scanner.cast(SerialScannerMsg::Tick).ok();
-
-
-
-  //Ручной тест для изменения value датчиков, потом уберу
-  
-    // tokio::spawn({
-    //     let serial_scanner = serial_scanner.clone();
-    //     let devices = settings.devices.clone();
-    //     async move {
-    //         loop {
-
-    //             // Эмулируем изменение значений ModBus
-    //             for (idx, dev) in devices.iter().enumerate() {
-    //                 let new_value = rand::rng().random_range(..10); // случайное значение
-    //                 modbus_fabric
-    //                     .cast(ModbusFabricMsg::WriteDevice {
-    //                         device_idx: idx,
-    //                         value: new_value,
-    //                     })
-    //                     .ok();
-    //             }
-    //             // Задержка между циклами
-    //             tokio::time::sleep(std::time::Duration::from_secs(2)).await;
-    //         }
-    //     }
-    // });
 
   signal::ctrl_c().await?;
   info!("Shutting down...");

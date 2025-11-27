@@ -1,4 +1,4 @@
-//Отправка и получение сообщений из ModBus_fabric в Ws
+// actors/ipc_handler.rs
 use ractor::{Actor, ActorProcessingErr, ActorRef};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -7,6 +7,7 @@ use taxon_core::infrastructure::device::FacilityDevice;
 use taxon_core::prelude::IPCProtocol;
 use taxon_core::prelude::{IPCActorMsg, IPCMessage, IPCMessageCrate, IPCMsgEncoding};
 use tracing::{error, info};
+use std::time::Duration;
 
 use crate::actors::modbus_fabric::ModbusFabricMsg;
 use crate::actors::modbus_fabric::ModbusDevice;
@@ -67,7 +68,7 @@ impl Actor for IpcHandler {
             IpcHandlerMsg::Ipc(ipc_msg) => {
                 println!("*Обработка сообщения по IPC*");
                 
-                                // Проверяем, что это Action с командой device_send
+                // Проверяем, что это Action с командой device_send
                 if let Some(action) = ipc_msg.as_action() {
                     match action.name.as_deref() {
                         Some("subscribe to vars") => {
@@ -77,7 +78,7 @@ impl Actor for IpcHandler {
                                 protocol: ipc_msg.protocol,
                             });
 
-                            // Если это первый подписчик, запускаем Tick
+                            // Если это первый подписчик, запускаем Tick (один раз)
                             if state.subscribers.len() == 1 {
                                 let _ = myself.cast(IpcHandlerMsg::Tick);
                             }
@@ -93,32 +94,36 @@ impl Actor for IpcHandler {
             }
 
             IpcHandlerMsg::Tick => {
-                // Запрашиваем актуальные значения у Fabric
+                // Запрашиваем актуальные значения у Fabric.
+                // ВАЖНО: НЕ планируем следующий тик здесь — планирование будет происходить
+                // в обработчике DevicesList *только* если devices не пуст.
                 if state.subscribers.is_empty() {
                     info!("Нет подписчиков, отправка отменена");
                     return Ok(());
                 }
                 let _ = state.hart_fabric.send_message(ModbusFabricMsg::GetDevices(myself.clone()));
-                // Перезапускаем таймер через 2 секунды
-                let _ = myself.send_after(std::time::Duration::from_secs(2), || IpcHandlerMsg::Tick);
             }
-
 
             // Когда ModbusFabricActor вернёт список устройств отправим в Ws
             IpcHandlerMsg::DevicesList(devices) => {
                 info!("Отправка значений устройств подписчикам и по запросу");
-                //Тут сделать отправку значений подписчикам.
 
-                // if state.subscribers.is_empty() {
-                //     info!("Нет подписчиков, отправка отменена");
-                //     return Ok(());
-                // }
+                // Если подписчиков нет — ничего не делаем
+                if state.subscribers.is_empty() {
+                    info!("Нет подписчиков, DevicesList проигнорирован");
+                    return Ok(());
+                }
+
+                // Если устройств нет — ничего не планируем (останавливаем циклический опрос)
                 if devices.is_empty() {
+                    info!("Список устройств пуст — опрос приостановлен до появления устройств");
+                    // По желанию можно отправить один пустой ответ подписчикам, но задача требовала
+                    // остановить циклические сообщения, поэтому просто возвращаемся.
                     return Ok(());
                 }
 
                 // собираем массив значений
-                    let values: Vec<serde_json::Value> = devices
+                let values: Vec<serde_json::Value> = devices
                     .iter()
                     .map(|d| d.attrs.as_ref().and_then(|m| m.get(&SmolStr::from("value"))).cloned().unwrap_or(json!(0)))
                     .collect();
@@ -144,6 +149,9 @@ impl Actor for IpcHandler {
                         error!("Ошибка при отправке списка устройств подписчику {:?}: {:?}", sub.peer, e);
                     }
                 }
+
+                // Если у нас есть подписчики и есть устройства — планируем следующий тик через 2 секунды
+                let _ = myself.send_after(Duration::from_secs(2), || IpcHandlerMsg::Tick);
             }
         }
         Ok(())
