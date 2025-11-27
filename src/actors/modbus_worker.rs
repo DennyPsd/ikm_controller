@@ -127,6 +127,7 @@ impl Actor for ModbusWorker {
             }
 
             ModbusWorkerMsg::Stop => {
+                println!("Команда на остановку modbus worker");
                 let _ = myself.stop(None);
             }
         }

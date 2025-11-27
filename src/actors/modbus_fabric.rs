@@ -140,19 +140,22 @@ impl Actor for ModbusFabricActor {
         match msg {
             ModbusFabricMsg::AttachPort { port_name, stream } => {
                 info!(port = %port_name, "ModBusFabric: AttachPort called");
-                if !state.workers.contains_key(&port_name) {
+
+                if let Some(old_worker) = state.workers.remove(&port_name){
+                    let _ = old_worker.cast(ModbusWorkerMsg::Stop);
+                    state.devices.retain(|d| d.port_address != port_name);
+                };
                     let timings = ModbusTimings {
                         first_byte_timeout: std::time::Duration::from_millis(200),
                         per_byte_timeout: std::time::Duration::from_millis(50),
                         max_preamble_ff: 0,
                     };
-
+                    println!("Команда на запуск МодбасВоркер");
                     // spawn worker — передаем ссылку на Fabric (myself) чтобы воркер мог сообщать WorkerReport
-                    let (worker_ref, _jh) = ractor::Actor::spawn_linked(
+                    let (worker_ref, _jh) = ractor::Actor::spawn(
                         Some(format!("modbus_worker:{}", port_name)),
                         ModbusWorker::new(),
                         (timings, stream, myself.clone(), port_name.clone(), 1u16),
-                        myself.get_cell(),
                     )
                     .await
                     .map_err(|e| ActorProcessingErr::from(e.to_string()))?;
@@ -188,9 +191,6 @@ impl Actor for ModbusFabricActor {
 
                     // сохраняем список в файл
                     save_devices_to_file(&state.devices);
-                } else {
-                    info!(port = %port_name, "ModBusFabric: worker already exists — skipping");
-                }
             }
 
             ModbusFabricMsg::DetachPort { port_name } => {

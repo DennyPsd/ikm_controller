@@ -1,7 +1,7 @@
 use ractor::{Actor, ActorProcessingErr, ActorRef};
 use serialport::{SerialPortInfo, SerialPortType};
 use smol_str::SmolStr;
-use std::collections::{HashMap, HashSet};
+use std::{collections::{HashMap, HashSet}, time::Duration};
 use tokio_serial::SerialPortBuilderExt;
 use tracing::{error, info};
 
@@ -87,10 +87,12 @@ impl Actor for SerialScannerActor {
             match builder.open_native_async() {
               Ok(stream) => {
                 // сообщаем Fabric, что порт подключился
-                let _ = state.fabric.cast(ModbusFabricMsg::AttachPort {
+                info!(%key, "SerialScanner: about to send AttachPort");
+                let res = state.fabric.send_message( ModbusFabricMsg::AttachPort {
                   port_name: key.clone(),
                   stream,
                 });
+                info!(%key, ?res, "SerialScanner: AttachPort send result");
                 state.known.insert(key.clone(), p.clone());
                 info!(%key, "SerialScanner: attached and informed fabric");
               }
@@ -112,7 +114,7 @@ impl Actor for SerialScannerActor {
         }
 
         // перезапустить тик
-        let _ = myself.cast(SerialScannerMsg::Tick);
+        let _ = myself.send_after(Duration::from_secs(1), || SerialScannerMsg::Tick);
       }
     }
 

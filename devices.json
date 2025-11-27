@@ -96,45 +96,13 @@
     "diagnostic": null
   },
   {
-    "device_id": "27276e1a-1a6f-4405-a9e5-d7e8d2b052f1",
+    "device_id": "8fbda2e1-592f-4b18-8602-ca564cccc0b5",
     "port_address": "COM4",
     "meta": {
       "type": "Modbus",
       "meta": {
         "slave": 1,
-        "addr": 0,
-        "reg": 4
-      }
-    },
-    "connected": false,
-    "attrs": {
-      "mul": 1.0,
-      "value": 0.0,
-      "value_type": "u16"
-    },
-    "info": null,
-    "docs": null,
-    "events": null,
-    "active_events": [
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0
-    ],
-    "diagnostic": null
-  },
-  {
-    "device_id": "28fa9867-b12b-4cbc-8d19-228fa98e4ae8",
-    "port_address": "COM4",
-    "meta": {
-      "type": "Modbus",
-      "meta": {
-        "slave": 1,
-        "addr": 0,
+        "addr": 50,
         "reg": 4
       }
     },
