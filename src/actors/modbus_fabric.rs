@@ -2,24 +2,26 @@
 use ractor::{Actor, ActorProcessingErr, ActorRef};
 use serde::{Deserialize, Serialize};
 use smol_str::SmolStr;
-use taxon_core::prelude::IPCProtocol;
-use std::collections::{HashMap, BTreeMap};
-use tokio_serial::SerialStream;
-use tracing::{info, warn, error};
-use uuid::Uuid;
+use std::collections::{BTreeMap, HashMap};
 use std::fs;
 use std::path::Path;
+use taxon_core::prelude::IPCProtocol;
+use tokio_serial::SerialStream;
+use tracing::{error, info, warn};
+use uuid::Uuid;
 
-use crate::actors::modbus_types::ModbusTimings;
+use crate::actors::ipc_handler::IpcHandlerMsg;
+use crate::actors::modbus_types::*;
+use crate::actors::modbus_types::{ModbusSettings, ModbusTimings};
 use crate::actors::modbus_worker::{ModbusWorker, ModbusWorkerMsg};
 use crate::actors::modbus_worker_job::*;
-use crate::actors::modbus_types::*;
-use crate::actors::ipc_handler::IpcHandlerMsg;
 
 // taxon types
-use taxon_core::infrastructure::device::{FacilityDevice, FacilityDeviceMeta, ModbusDeviceMeta, FacilityDeviceinfo, FacilityDeviceDocs};
-use smol_str::SmolStr as SS;
 use serde_json::json;
+use smol_str::SmolStr as SS;
+use taxon_core::infrastructure::device::{
+    FacilityDevice, FacilityDeviceDocs, FacilityDeviceMeta, FacilityDeviceinfo, ModbusDeviceMeta,
+};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[allow(dead_code)]
@@ -40,12 +42,16 @@ pub enum ModbusFabricMsg {
         port_name: SmolStr,
     },
     GetDevices(ActorRef<IpcHandlerMsg>),
-    GetDevicesOnce {                     // новое сообщение для одноразового запроса
+    GetDevicesOnce {
+        // новое сообщение для одноразового запроса
         reply_to: ActorRef<IpcHandlerMsg>,
         peer: uuid::Uuid,
         protocol: IPCProtocol,
     },
-    WriteDevice { device_idx: usize, value: u16 },
+    WriteDevice {
+        device_idx: usize,
+        value: u16,
+    },
     PrintDevices,
     // New message from worker
     WorkerReport {
@@ -58,10 +64,11 @@ pub enum ModbusFabricMsg {
 
 pub struct ModbusFabricActor;
 
-#[derive(Default)]
+#[derive(Debug)]
 pub struct ModbusFabricState {
-    pub workers: HashMap<SmolStr, ActorRef<ModbusWorkerMsg>>,
+    pub workers: HashMap<(SmolStr, String), ActorRef<ModbusWorkerMsg>>,
     pub devices: Vec<FacilityDevice>, // теперь FacilityDevice
+    pub settings: ModbusSettings,
 }
 
 impl ModbusFabricActor {
@@ -115,19 +122,23 @@ fn load_devices_from_file() -> Option<Vec<FacilityDevice>> {
 impl Actor for ModbusFabricActor {
     type Msg = ModbusFabricMsg;
     type State = ModbusFabricState;
-    type Arguments = Vec<FacilityDevice>;
+    type Arguments = (Vec<FacilityDevice>, ModbusSettings);
 
     async fn pre_start(
         &self,
         _myself: ActorRef<Self::Msg>,
-        args: Self::Arguments,
+        (devices, settings): Self::Arguments,
     ) -> Result<Self::State, ActorProcessingErr> {
         // Если есть файл — подгружаем, иначе используем args
-        let devices = load_devices_from_file().unwrap_or(args);
-        info!("ModbusFabric: starting with {} devices (in-memory)", devices.len());
+        let devices = load_devices_from_file().unwrap_or(devices);
+        info!(
+            "ModbusFabric: starting with {} devices (in-memory)",
+            devices.len()
+        );
         Ok(ModbusFabricState {
             workers: HashMap::new(),
             devices,
+            settings,
         })
     }
 
@@ -141,45 +152,62 @@ impl Actor for ModbusFabricActor {
             ModbusFabricMsg::AttachPort { port_name, stream } => {
                 info!(port = %port_name, "ModBusFabric: AttachPort called");
 
-                if let Some(old_worker) = state.workers.remove(&port_name){
+                // Check if this port matches the configured com_port
+                if port_name != state.settings.modbus.com_port {
+                    info!(port = %port_name, "ModBusFabric: port does not match configured com_port, ignoring");
+                    return Ok(());
+                }
+
+                // Stop and remove old worker for this port
+                if let Some(old_worker) = state.workers.remove(&(port_name.clone(), "".to_string()))
+                {
                     let _ = old_worker.cast(ModbusWorkerMsg::Stop);
-                    state.devices.retain(|d| d.port_address != port_name);
+                }
+                state.devices.retain(|d| d.port_address != port_name);
+
+                let timings = ModbusTimings {
+                    first_byte_timeout: std::time::Duration::from_millis(200),
+                    per_byte_timeout: std::time::Duration::from_millis(50),
+                    max_preamble_ff: 0,
                 };
-                    let timings = ModbusTimings {
-                        first_byte_timeout: std::time::Duration::from_millis(200),
-                        per_byte_timeout: std::time::Duration::from_millis(50),
-                        max_preamble_ff: 0,
-                    };
-                    println!("Команда на запуск МодбасВоркер");
-                    // spawn worker — передаем ссылку на Fabric (myself) чтобы воркер мог сообщать WorkerReport
-                    let (worker_ref, _jh) = ractor::Actor::spawn(
-                        Some(format!("modbus_worker:{}", port_name)),
-                        ModbusWorker::new(),
-                        (timings, stream, myself.clone(), port_name.clone(), 1u16),
-                    )
-                    .await
-                    .map_err(|e| ActorProcessingErr::from(e.to_string()))?;
 
-                    state.workers.insert(port_name.clone(), worker_ref);
-                    info!(port = %port_name, "ModBusFabric: worker spawned");
+                // Spawn one worker for all sensors
+                let (worker_ref, _jh) = ractor::Actor::spawn(
+                    Some(format!("modbus_worker:{}", port_name)),
+                    ModbusWorker::new(),
+                    (
+                        timings,
+                        stream,
+                        myself.clone(),
+                        port_name.clone(),
+                        state.settings.sensors.clone(),
+                        state.settings.modbus.polling_ms,
+                    ),
+                )
+                .await
+                .map_err(|e| ActorProcessingErr::from(e.to_string()))?;
 
-                    let device_type = format!("modbus-{}-{}", 1, 50).into(); // slave=1, addr=50
+                state
+                    .workers
+                    .insert((port_name.clone(), "".to_string()), worker_ref);
+                info!(port = %port_name, "ModBusFabric: worker spawned");
 
-                    // Create default FacilityDevice for this port (meta defaults can be adjusted later)
+                // Create FacilityDevice for each sensor
+                for sensor in &state.settings.sensors {
                     let mut attrs = BTreeMap::new();
-                    attrs.insert(SS::from("value"), json!(0));
+                    attrs.insert(SS::from("value"), json!(0.0));
                     attrs.insert(SS::from("mul"), json!(1.0));
-                    attrs.insert(SS::from("value_type"), json!("u16"));
+                    attrs.insert(SS::from("value_type"), json!("f32"));
 
                     let device = FacilityDevice {
                         device_id: Uuid::new_v4(),
-                        device_type,
+                        device_type: sensor.name.clone().into(),
                         port_address: port_name.to_string().into(),
                         meta: FacilityDeviceMeta::Modbus {
                             data: ModbusDeviceMeta {
-                                slave: 1,
-                                addr: 50, //РЕШИТЬ С АДРЕСОМ
-                                reg: 4,
+                                slave: sensor.slave as u16,
+                                addr: sensor.start_reg,
+                                reg: sensor.reg_type as u8,
                             },
                         },
                         connected: true,
@@ -191,14 +219,15 @@ impl Actor for ModbusFabricActor {
                         diagnostic: None,
                     };
                     state.devices.push(device);
+                }
 
-                    // сохраняем список в файл
-                    save_devices_to_file(&state.devices);
+                // сохраняем список в файл
+                save_devices_to_file(&state.devices);
             }
 
             ModbusFabricMsg::DetachPort { port_name } => {
                 info!(port = %port_name, "ModBusFabric: DetachPort");
-                if let Some(wr) = state.workers.remove(&port_name) {
+                if let Some(wr) = state.workers.remove(&(port_name.clone(), "".to_string())) {
                     let _ = wr.cast(ModbusWorkerMsg::Stop);
                     // remove devices from this port
                     state.devices.retain(|d| d.port_address != port_name);
@@ -210,19 +239,25 @@ impl Actor for ModbusFabricActor {
 
             ModbusFabricMsg::GetDevices(reply_to) => {
                 let devices_clone = state.devices.clone();
-                let _ = reply_to.send_message(crate::actors::ipc_handler::IpcHandlerMsg::DevicesList(
-                    devices_clone
-                ));
+                let _ = reply_to.send_message(
+                    crate::actors::ipc_handler::IpcHandlerMsg::DevicesList(devices_clone),
+                );
             }
 
-            ModbusFabricMsg::GetDevicesOnce{reply_to, peer, protocol} => {
+            ModbusFabricMsg::GetDevicesOnce {
+                reply_to,
+                peer,
+                protocol,
+            } => {
                 let devices_clone = state.devices.clone();
-                let _ = reply_to.send_message(crate::actors::ipc_handler::IpcHandlerMsg::DevicesListOnce {
-                    devices: devices_clone,
-                    peer: peer.clone(),
-                    protocol: protocol.clone(),
-                });
-                println!("{} {:?}",peer, protocol);
+                let _ = reply_to.send_message(
+                    crate::actors::ipc_handler::IpcHandlerMsg::DevicesListOnce {
+                        devices: devices_clone,
+                        peer: peer.clone(),
+                        protocol: protocol.clone(),
+                    },
+                );
+                println!("{} {:?}", peer, protocol);
             }
 
             ModbusFabricMsg::WriteDevice { device_idx, value } => {
@@ -231,28 +266,45 @@ impl Actor for ModbusFabricActor {
                     if let Some(attrs) = dev.attrs.as_mut() {
                         attrs.insert(SS::from("value"), json!(value));
                     }
-                    info!("ModbusFabric: device idx {} updated = {}", device_idx, value);
+                    info!(
+                        "ModbusFabric: device idx {} updated = {}",
+                        device_idx, value
+                    );
                     //сохраняем
                     save_devices_to_file(&state.devices);
                 } else {
-                    warn!("ModbusFabric: WriteDevice: index {} out of range", device_idx);
+                    warn!(
+                        "ModbusFabric: WriteDevice: index {} out of range",
+                        device_idx
+                    );
                 }
             }
 
             ModbusFabricMsg::PrintDevices => {
                 info!("--- Devices list ---");
                 for (i, d) in state.devices.iter().enumerate() {
-                    let value = d.attrs.as_ref().and_then(|m| m.get(&SS::from("value"))).cloned();
+                    let value = d
+                        .attrs
+                        .as_ref()
+                        .and_then(|m| m.get(&SS::from("value")))
+                        .cloned();
                     info!(idx = i, port = %d.port_address, meta = ?d.meta, value = ?value, "device");
                 }
             }
 
-            ModbusFabricMsg::WorkerReport { port_name, slave, addr, raw } => {
+            ModbusFabricMsg::WorkerReport {
+                port_name,
+                slave,
+                addr,
+                raw,
+            } => {
                 // Update devices that match port + slave + addr (if meta matches)
                 let mut updated = 0usize;
                 for dev in state.devices.iter_mut() {
                     // match port address
-                    if dev.port_address != port_name.to_string() { continue; }
+                    if dev.port_address != port_name.to_string() {
+                        continue;
+                    }
 
                     // match modbus meta
                     match &dev.meta {

@@ -3,6 +3,7 @@ mod actors;
 
 use actors::modbus_fabric::{ModbusFabricActor, ModbusFabricMsg};
 use actors::serial_scanner::{SerialScannerActor, SerialScannerMsg};
+use actors::modbus_types::ModbusSettings;
 use ractor::Actor;
 
 
@@ -49,6 +50,15 @@ async fn main() -> anyhow::Result<()> {
     // parse router address into Url
     let zmq_addr = Url::parse(&cli.router_address[..])
         .map_err(|e| anyhow!("Invalid router address '{}': {}", cli.router_address, e))?;
+
+    // Read modbus settings from YAML
+    let modbus_settings: ModbusSettings = {
+        let yaml_content = std::fs::read_to_string("modbus_settings.yaml")
+            .map_err(|e| anyhow!("Failed to read modbus_settings.yaml: {}", e))?;
+        serde_yaml::from_str(&yaml_content)
+            .map_err(|e| anyhow!("Failed to parse modbus_settings.yaml: {}", e))?
+    };
+    info!("Loaded modbus settings: {:?}", modbus_settings);
 
     let ipc_args = IPCActorArgs {
         module_name: SmolStr::from("simple_router"),
@@ -99,9 +109,9 @@ async fn main() -> anyhow::Result<()> {
         initial_devices.push(dev);
     }
 
-    // Создаем актор ModbusFabricActor со списком прочтенных устройств
+    // Создаем актор ModbusFabricActor со списком прочтенных устройств и настройками
     let (modbus_fabric, _handle) =
-        Actor::spawn(Some("ModbusFabric".into()), ModbusFabricActor::new(initial_devices.clone()), initial_devices.clone()).await?;
+        Actor::spawn(Some("ModbusFabric".into()), ModbusFabricActor::new(initial_devices.clone()), (initial_devices.clone(), modbus_settings.clone())).await?;
 
 
   let handler_state = IpcHandlerState {
@@ -126,7 +136,7 @@ let (_scanner, _scanner_handle) =
         Actor::spawn(
             Some("SerialScanner".into()),
             SerialScannerActor::new(),
-            modbus_fabric.clone()         // события в fabric
+            (modbus_fabric.clone(), modbus_settings.clone())         // события в fabric и настройки
         ).await?;
 
 
