@@ -88,7 +88,7 @@ async fn main() -> anyhow::Result<()> {
             meta: FacilityDeviceMeta::Modbus {
                 data: ModbusDeviceMeta {
                     slave: 1,
-                    addr: i as u16,
+                    addr: 50+i as u16,
                     reg: 4,
                 },
             },
