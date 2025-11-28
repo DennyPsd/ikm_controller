@@ -1,4 +1,4 @@
-// Формирует команду Мультиплексору и получает ответ
+// ModbusWorker периодически опрашивает порт, отправляет WorkerReport
 //TODO: решить вопрос с send_after (слишком часто)
 use crate::actors::modbus_fabric::ModbusFabricMsg;
 use crate::actors::modbus_types::{ModbusTimings, SensorConfig};
@@ -75,7 +75,7 @@ impl Actor for ModbusWorker {
     ) -> Result<(), ActorProcessingErr> {
         match msg {
             ModbusWorkerMsg::Poll => {
-                // Если нет потока — пропускаем
+                // Если нет потока данных — пропускаем
                 if state.stream.is_none() {
                     let _ = myself.send_after(Duration::from_secs(2), || ModbusWorkerMsg::Poll);
                     return Ok(());
@@ -120,7 +120,7 @@ impl Actor for ModbusWorker {
                                 raw: Some(value), // если нужно хранить как f32
                             });
                         } else {
-                            error!(port=%state.port_name, "пришло слишком короткое сообщение: {:02X?}", bytes);
+                            error!(port=%state.port_name, "Пришло слишком короткое сообщение: {:02X?}", bytes);
                             let _ = state.fabric.send_message(ModbusFabricMsg::WorkerReport {
                                 port_name: state.port_name.clone(),
                                 slave: sensor.slave as u16,

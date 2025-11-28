@@ -41,7 +41,7 @@ impl Actor for SerialScannerActor {
         myself: ActorRef<Self::Msg>,
         (fabric, settings): Self::Arguments,
     ) -> Result<Self::State, ActorProcessingErr> {
-        // запускаем первый тик сканирования
+        // запускаем первый тик сканирования USB-портов
         let _ = myself.cast(SerialScannerMsg::Tick);
         Ok(SerialScannerState {
             fabric,
@@ -62,8 +62,9 @@ impl Actor for SerialScannerActor {
                     Ok(v) => v,
                     Err(e) => {
                         error!("SerialScanner: ошибка available_ports(): {e}");
-                        // перезапускаем тик для постоянного обновления
-                        let _ = myself.cast(SerialScannerMsg::Tick);
+                        // перезапускаем тик в случае ошибки
+                        let _ =
+                            myself.send_after(Duration::from_secs(1), || SerialScannerMsg::Tick);
                         return Ok(());
                     }
                 };
@@ -83,6 +84,7 @@ impl Actor for SerialScannerActor {
                         continue;
                     };
 
+                    // Создаем ключ USB-порта для сверки запоминания
                     let key = SmolStr::from(full_path.clone());
                     seen.insert(key.clone());
 
@@ -93,7 +95,7 @@ impl Actor for SerialScannerActor {
                         let bitrate = if key == state.settings.modbus.com_port {
                             state.settings.modbus.bitrate
                         } else {
-                            9600 // default
+                            9600 // по стандарту если не нашли в конфиге
                         };
                         let mut builder = tokio_serial::new(full_path, bitrate)
                             .timeout(std::time::Duration::from_millis(1500));
@@ -102,7 +104,7 @@ impl Actor for SerialScannerActor {
                         let parity = if key == state.settings.modbus.com_port {
                             state.settings.modbus.parity.as_str()
                         } else {
-                            "none"
+                            "none" // Если нет - None
                         };
                         match parity {
                             "none" => {
@@ -180,7 +182,7 @@ impl Actor for SerialScannerActor {
                     }
                 }
 
-                // отключение
+                // отключение и удаление порта
                 let existing: Vec<SmolStr> = state.known.keys().cloned().collect();
                 for key in existing {
                     if !seen.contains(&key) {

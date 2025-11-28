@@ -1,4 +1,4 @@
-// actors/modbus_types.rs
+// Стандартные типы переменных для акторов
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 

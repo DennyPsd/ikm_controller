@@ -14,7 +14,7 @@
     "connected": true,
     "attrs": {
       "mul": 1.0,
-      "value": 0,
+      "value": 111,
       "value_type": "u16"
     },
     "info": null,
@@ -47,7 +47,7 @@
     "connected": true,
     "attrs": {
       "mul": 1.0,
-      "value": 0,
+      "value": 111,
       "value_type": "u16"
     },
     "info": null,

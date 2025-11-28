@@ -1,3 +1,4 @@
+// Зависимости для main.rs
 pub mod ipc_handler;
 pub mod modbus_fabric;
 pub mod modbus_types;

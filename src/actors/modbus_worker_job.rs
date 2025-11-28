@@ -1,9 +1,9 @@
-// actors/modbus_worker_job.rs
+// Функция формирования команды мультиплексору и расшифровка ответа
 use std::time::Duration;
-use tokio_serial::SerialStream;
-use tracing::{info, error};
-use tokio::io::AsyncWriteExt;
 use tokio::io::AsyncReadExt;
+use tokio::io::AsyncWriteExt;
+use tokio_serial::SerialStream;
+use tracing::{error, info};
 
 /// CRC16 Modbus RTU
 pub fn calc_crc(bytes: &[u8]) -> u16 {
@@ -29,7 +29,7 @@ pub fn parse_float_swapped(bytes: &[u8]) -> f32 {
     f32::from_bits(u32::from_be_bytes(reordered))
 }
 
-/// Реальная функция отправки команды и чтения ответа
+/// Функция отправки команды и чтения ответа
 pub async fn send_and_read(
     port: &mut SerialStream,
     apdu: &[u8],
@@ -68,5 +68,7 @@ pub async fn send_and_read(
 /// Job actor (не нужен, используем прямой вызов в ModbusWorker)
 pub struct ModbusPortJob;
 impl ModbusPortJob {
-    pub fn new() -> Self { Self }
+    pub fn new() -> Self {
+        Self
+    }
 }

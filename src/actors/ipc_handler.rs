@@ -1,4 +1,4 @@
-// actors/ipc_handler.rs
+// Получает запросы от WebSocket IPC, обрабатывает подписки и отправляет данные подписчикам.
 use ractor::{Actor, ActorProcessingErr, ActorRef};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -29,11 +29,11 @@ pub enum IpcHandlerMsg {
     Ipc(IPCMessageCrate),
     DevicesList(Vec<FacilityDevice>),
     Tick,
-    DevicesListOnce{
+    DevicesListOnce {
         devices: Vec<FacilityDevice>,
         peer: uuid::Uuid,
         protocol: IPCProtocol,
-    }
+    },
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq, Hash)]
@@ -57,7 +57,7 @@ impl Actor for IpcHandler {
         _myself: ActorRef<Self::Msg>,
         args: Self::Arguments,
     ) -> Result<Self::State, ActorProcessingErr> {
-        info!("ipc_handler started");
+        info!("IPC_Handler запущен");
         Ok(args)
     }
 
@@ -67,7 +67,7 @@ impl Actor for IpcHandler {
         msg: Self::Msg,
         state: &mut Self::State,
     ) -> Result<(), ActorProcessingErr> {
-        info!("ipc_handler: received message");
+        info!("IPC_Handler: получено сообщение");
 
         match msg {
             IpcHandlerMsg::Ipc(ipc_msg) => {
@@ -94,13 +94,14 @@ impl Actor for IpcHandler {
                             let peer = ipc_msg.peer_from;
                             let protocol = ipc_msg.protocol.clone();
 
-                            let _ = state
-                                .hart_fabric
-                                .send_message(ModbusFabricMsg::GetDevicesOnce {
-                                    reply_to,
-                                    peer,
-                                    protocol,
-                                });
+                            let _ =
+                                state
+                                    .hart_fabric
+                                    .send_message(ModbusFabricMsg::GetDevicesOnce {
+                                        reply_to,
+                                        peer,
+                                        protocol,
+                                    });
                         }
                         Some("unsubscribe to vars") => {
                             info!("Удаляем подписчика на переменные");
@@ -122,7 +123,9 @@ impl Actor for IpcHandler {
                 }
 
                 // Запрашиваем актуальные значения у Fabric
-                let _ = state.hart_fabric.send_message(ModbusFabricMsg::GetDevices(myself.clone()));
+                let _ = state
+                    .hart_fabric
+                    .send_message(ModbusFabricMsg::GetDevices(myself.clone()));
             }
 
             IpcHandlerMsg::DevicesList(devices) => {
@@ -161,15 +164,20 @@ impl Actor for IpcHandler {
                         send_at: None,
                     };
 
-                    if let Err(e) = state.ipc_router.send_message(Some(IPCActorMsg::Send(
-                        IPCMessageCrate {
-                            msg: reply,
-                            peer_from: sub.peer,
-                            encoding: IPCMsgEncoding::Json,
-                            protocol: sub.protocol.clone(),
-                        },
-                    ))) {
-                        error!("Ошибка при отправке списка устройств подписчику {:?}: {:?}", sub.peer, e);
+                    if let Err(e) =
+                        state
+                            .ipc_router
+                            .send_message(Some(IPCActorMsg::Send(IPCMessageCrate {
+                                msg: reply,
+                                peer_from: sub.peer,
+                                encoding: IPCMsgEncoding::Json,
+                                protocol: sub.protocol.clone(),
+                            })))
+                    {
+                        error!(
+                            "Ошибка при отправке списка устройств подписчику {:?}: {:?}",
+                            sub.peer, e
+                        );
                     }
                 }
 
@@ -177,8 +185,12 @@ impl Actor for IpcHandler {
                 let _ = myself.send_after(Duration::from_secs(2), || IpcHandlerMsg::Tick);
             }
 
-            IpcHandlerMsg::DevicesListOnce{devices, peer, protocol} => {
-        
+            // Разовое сообщение в WS при запросе без подписки
+            IpcHandlerMsg::DevicesListOnce {
+                devices,
+                peer,
+                protocol,
+            } => {
                 // собираем массив значений
                 let values: Vec<serde_json::Value> = devices
                     .iter()
@@ -191,28 +203,27 @@ impl Actor for IpcHandler {
                     })
                     .collect();
 
-                // Формируем ActionReply для каждого подписчика
-                 let reply = crate::actors::ipc_handler::IPCMessage::ActionReply {
+                // Формируем ActionReply
+                let reply = crate::actors::ipc_handler::IPCMessage::ActionReply {
                     id: 0,
                     ok: Some(json!(values)),
                     error: None,
                     send_at: None,
                 };
 
-                    if let Err(e) = state.ipc_router.send_message(Some(IPCActorMsg::Send(
-                        IPCMessageCrate {
+                if let Err(e) =
+                    state
+                        .ipc_router
+                        .send_message(Some(IPCActorMsg::Send(IPCMessageCrate {
                             msg: reply,
                             peer_from: peer,
                             encoding: IPCMsgEncoding::Json,
                             protocol,
-                        },
-                    ))) {
-                        error!("Ошибка при отправке списка устройств {:?}: {:?}", peer, e);
-                    }
+                        })))
+                {
+                    error!("Ошибка при отправке списка устройств {:?}: {:?}", peer, e);
+                }
             }
-
-
-
         }
 
         Ok(())
