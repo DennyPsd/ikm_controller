@@ -22,7 +22,7 @@ pub fn calc_crc(bytes: &[u8]) -> u16 {
     crc
 }
 
-/// Преобразуем 4 байта Modbus в f32 с учетом порядка 41 D3 58 84
+/// Преобразуем 4 байта Modbus в f32 с учетом обратного порядка
 pub fn parse_float_swapped(bytes: &[u8]) -> f32 {
     assert!(bytes.len() == 4, "Expected 4 bytes for float");
     let reordered = [bytes[3], bytes[2], bytes[1], bytes[0]];

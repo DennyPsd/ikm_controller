@@ -10,18 +10,20 @@ use clap::Parser;
 use smol_str::SmolStr;
 use uuid::Uuid;
 use taxon_core::utils::logging::{LogLevel, init_logging};
-use taxon_core::prelude::{IPCActor, IPCActorArgs, IPCActorMsg, ProcessActor};
+use taxon_core::prelude::{IPCActor, IPCActorArgs, IPCActorMsg, IPCRole, ProcessActor};
 use crate::actors::ipc_handler::{IpcHandler, IpcHandlerMsg, IpcHandlerState};
 use ractor::{OutputPort};
 use taxon_core::prelude::IPCMessageCrate;
 use anyhow::anyhow;
 use tokio::signal;
 use tracing::info;
+use url::Url;
 
 // Для создания demo-устройств
 use taxon_core::infrastructure::device::{FacilityDevice, FacilityDeviceMeta, ModbusDeviceMeta};
 use smol_str::SmolStr as SS;
 use std::collections::BTreeMap;
+use std::path::PathBuf;
 use serde_json::json;
 
 #[derive(Parser)]
@@ -31,7 +33,7 @@ struct Cli {
   router_address: SmolStr,
   #[arg(long, action = clap::ArgAction::SetTrue)]
   disable_ui: bool,
-  /// Module Identity when its run as dealer
+
   #[arg(short, long, default_value = "00801ad4-1949-4c46-a883-b1a7812852ff")]
   identity: Uuid,
   #[arg(long, env, default_value = "debug")]
@@ -44,17 +46,28 @@ async fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
     init_logging(cli.log_level.unwrap_or(LogLevel::Debug), !cli.disable_ui);
 
+    // parse router address into Url
+    let zmq_addr = Url::parse(&cli.router_address[..])
+        .map_err(|e| anyhow!("Invalid router address '{}': {}", cli.router_address, e))?;
+
+    let ipc_args = IPCActorArgs {
+        module_name: SmolStr::from("simple_router"),
+        identity: cli.identity,
+        static_path: PathBuf::from("."), // спросить про путь
+        zmq_router_addr: zmq_addr,
+        ws_addr: None,
+        http_addr: None,
+        role: IPCRole::Router,
+    };
+
     let (ipc_router, _ipc_router_handle) = IPCActor
-    .spawn(
-      Some("router".to_string()),
-      IPCActorArgs::default_router()
-        .with_address(cli.router_address.clone())
-        .with_identity(cli.identity)
-        .with_module_name("simple_router"),
-      None,
-    )
-    .await
-    .expect("Failed to start IPCActor!");
+        .spawn(
+            Some("router".to_string()),
+            ipc_args,
+            None,
+        )
+        .await
+        .expect("Failed to start IPCActor!");
 
     // --- создаём 2-3 demo устройства для наглядности ---
     let mut initial_devices: Vec<FacilityDevice> = Vec::new();
@@ -66,9 +79,10 @@ async fn main() -> anyhow::Result<()> {
 
         let dev = FacilityDevice {
             device_id: Uuid::new_v4(),
+            device_type: "modbus".into(),
             port_address: format!("demo_port_{}", i).into(),
             meta: FacilityDeviceMeta::Modbus {
-                meta: ModbusDeviceMeta {
+                data: ModbusDeviceMeta {
                     slave: 1,
                     addr: i as u16,
                     reg: 4,

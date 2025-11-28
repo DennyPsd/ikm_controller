@@ -163,6 +163,8 @@ impl Actor for ModbusFabricActor {
                     state.workers.insert(port_name.clone(), worker_ref);
                     info!(port = %port_name, "ModBusFabric: worker spawned");
 
+                    let device_type = format!("modbus-{}-{}", 1, 50).into(); // slave=1, addr=50
+
                     // Create default FacilityDevice for this port (meta defaults can be adjusted later)
                     let mut attrs = BTreeMap::new();
                     attrs.insert(SS::from("value"), json!(0));
@@ -171,9 +173,10 @@ impl Actor for ModbusFabricActor {
 
                     let device = FacilityDevice {
                         device_id: Uuid::new_v4(),
+                        device_type,
                         port_address: port_name.to_string().into(),
                         meta: FacilityDeviceMeta::Modbus {
-                            meta: ModbusDeviceMeta {
+                            data: ModbusDeviceMeta {
                                 slave: 1,
                                 addr: 50, //РЕШИТЬ С АДРЕСОМ
                                 reg: 4,
@@ -253,8 +256,8 @@ impl Actor for ModbusFabricActor {
 
                     // match modbus meta
                     match &dev.meta {
-                        FacilityDeviceMeta::Modbus { meta } => {
-                            if meta.slave as u16 == slave && meta.addr as u16 == addr {
+                        FacilityDeviceMeta::Modbus { data } => {
+                            if data.slave as u16 == slave && data.addr as u16 == addr {
                                 // compute final value with mul if present
                                 let raw_value = raw.unwrap_or(0.0);
                                 let mul = dev
