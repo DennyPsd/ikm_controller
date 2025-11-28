@@ -75,7 +75,7 @@ async fn main() -> anyhow::Result<()> {
 
     // Создаём demo устройства для наглядности. Мб удалю. И будем брать из конфига все.
     let mut initial_devices: Vec<FacilityDevice> = Vec::new();
-    for i in 0..3 {
+    for i in 0..2 {
         let mut attrs = BTreeMap::new();
         attrs.insert(SS::from("value"), json!(i * 10)); // demo values 0,10,20
         attrs.insert(SS::from("mul"), json!(1.0));

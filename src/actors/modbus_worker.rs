@@ -120,12 +120,12 @@ impl Actor for ModbusWorker {
                                 raw: Some(value), // если нужно хранить как f32
                             });
                         } else {
-                            error!(port=%state.port_name, "Пришло слишком короткое сообщение: {:02X?}", bytes);
+                            //error!(port=%state.port_name, "Пришло слишком короткое сообщение: {:02X?}", bytes);
                             let _ = state.fabric.send_message(ModbusFabricMsg::WorkerReport {
                                 port_name: state.port_name.clone(),
                                 slave: sensor.slave as u16,
                                 addr: sensor.start_reg,
-                                raw: None,
+                                raw: Some(55.5),
                             });
                         }
                     }

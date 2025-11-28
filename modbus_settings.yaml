@@ -8,13 +8,13 @@ modbus:
   polling_ms: 2000         # polling frequency in milliseconds
 
 sensors:
-  - name: "Sensor1"
+  - name: "Sensor1 Test"
     slave: 1
-    start_reg: 50
-    bytes: 4               # or registers count (2 registers = 4 bytes)
+    start_reg: 1 #was 50
+    bytes: 1               # or registers count (2 registers = 4 bytes)
     reg_type: 4            # function code (e.g. 3 or 4)
   - name: "Sensor2"
     slave: 1
     start_reg: 52
-    bytes: 4
+    bytes: 2
     reg_type: 4

@@ -88,7 +88,7 @@ fn save_devices_to_file(devices: &Vec<FacilityDevice>) {
             if let Err(e) = fs::write(devices_file_path(), txt) {
                 error!("Failed to write devices file: {}", e);
             } else {
-                info!("Devices saved to {}", devices_file_path());
+                //info!("Devices saved to {}", devices_file_path());
             }
         }
         Err(e) => {
@@ -339,7 +339,7 @@ impl Actor for ModbusFabricActor {
                     }
                 }
                 if updated > 0 {
-                    info!(port=%port_name, matched = updated, "ModbusFabric: updated device values from worker");
+                    //info!(port=%port_name, matched = updated, "ModbusFabric: updated device values from worker");
                     // сохраняем изменения в файл. Мб не стоит это делать так часто.
                     save_devices_to_file(&state.devices);
                 } else {
