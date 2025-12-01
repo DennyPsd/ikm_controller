@@ -100,7 +100,7 @@ async fn main() -> anyhow::Result<()> {
             active_events: [0; 8],
             diagnostic: None,
         };
-        initial_devices.push(dev);
+        //initial_devices.push(dev);
     }
 
     // Создаем актор ModbusFabricActor со списком прочтенных устройств и настройками

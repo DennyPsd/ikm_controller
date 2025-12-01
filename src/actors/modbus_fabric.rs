@@ -230,8 +230,8 @@ impl Actor for ModbusFabricActor {
                 if let Some(wr) = state.workers.remove(&(port_name.clone(), "".to_string())) {
                     let _ = wr.cast(ModbusWorkerMsg::Stop);
                     // удаление девайсов с порта
-                    state.devices.retain(|d| d.port_address != port_name);
-                    info!(port = %port_name, "ModBusFabric: удалены устройства с порта");
+                    //state.devices.retain(|d| d.port_address != port_name);
+                    //info!(port = %port_name, "ModBusFabric: удалены устройства с порта");
                     // сохраняем изменения
                     save_devices_to_file(&state.devices);
                 }
