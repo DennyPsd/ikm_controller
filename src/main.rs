@@ -142,3 +142,4 @@ async fn main() -> anyhow::Result<()> {
 
     Ok(())
 }
+// Тест на изменения в репе.
