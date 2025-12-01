@@ -1,0 +1,20 @@
+modbus:
+  id: "mux1"
+  com_port: "COM8"         # or "/dev/ttyUSB0"
+  bitrate: 9600
+  parity: "none"           # none | even | odd
+  data_bits: 8
+  stop_bits: 1
+  polling_ms: 2000         # polling frequency in milliseconds
+
+sensors:
+  - name: "Sensor1"
+    slave: 1
+    start_reg: 50
+    bytes: 4               # or registers count (2 registers = 4 bytes)
+    reg_type: 4            # function code (e.g. 3 or 4)
+  - name: "Sensor2"
+    slave: 1
+    start_reg: 52
+    bytes: 4
+    reg_type: 4

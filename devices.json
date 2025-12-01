@@ -1,0 +1,134 @@
+[
+  {
+    "device_id": "940cbf30-f8b3-4993-9eb9-3382a2bda11c",
+    "device_type": "Sensor1",
+    "port_address": "COM4",
+    "meta": {
+      "type": "Modbus",
+      "data": {
+        "slave": 1,
+        "addr": 50,
+        "reg": 4
+      }
+    },
+    "connected": true,
+    "attrs": {
+      "mul": 1.0,
+      "value": 111,
+      "value_type": "u16"
+    },
+    "info": null,
+    "docs": null,
+    "events": null,
+    "active_events": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "diagnostic": null
+  },
+  {
+    "device_id": "e3e7d0bf-fe42-47f1-896c-948de1ffac59",
+    "device_type": "Sensor2",
+    "port_address": "COM4",
+    "meta": {
+      "type": "Modbus",
+      "data": {
+        "slave": 1,
+        "addr": 52,
+        "reg": 4
+      }
+    },
+    "connected": true,
+    "attrs": {
+      "mul": 1.0,
+      "value": 111,
+      "value_type": "u16"
+    },
+    "info": null,
+    "docs": null,
+    "events": null,
+    "active_events": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "diagnostic": null
+  },
+  {
+    "device_id": "9b64897e-2963-4a21-b4fb-f6e224692046",
+    "device_type": "Sensor1",
+    "port_address": "COM8",
+    "meta": {
+      "type": "Modbus",
+      "data": {
+        "slave": 1,
+        "addr": 50,
+        "reg": 4
+      }
+    },
+    "connected": true,
+    "attrs": {
+      "mul": 1.0,
+      "value": 0.0,
+      "value_type": "f32"
+    },
+    "info": null,
+    "docs": null,
+    "events": null,
+    "active_events": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "diagnostic": null
+  },
+  {
+    "device_id": "89f67790-a9ae-400c-9243-61e794b903e4",
+    "device_type": "Sensor2",
+    "port_address": "COM8",
+    "meta": {
+      "type": "Modbus",
+      "data": {
+        "slave": 1,
+        "addr": 52,
+        "reg": 4
+      }
+    },
+    "connected": true,
+    "attrs": {
+      "mul": 1.0,
+      "value": 0.0,
+      "value_type": "f32"
+    },
+    "info": null,
+    "docs": null,
+    "events": null,
+    "active_events": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "diagnostic": null
+  }
+]

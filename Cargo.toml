@@ -2,7 +2,7 @@
 [package]
 name = "hart_comm_server"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 ractor = { version = "0.15", features = ["async-trait", "output-port-v2"] }
@@ -50,3 +50,6 @@ smol_str = { version = "0.2.2", features = ["serde"] }
 thiserror = "2.0.17"
 clap = { version = "4.5.52", features = ["derive"] }
 chrono = "0.4.42"
+
+rand = "0.9.2"
+url = "2.5"
