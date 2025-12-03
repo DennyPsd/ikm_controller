@@ -153,7 +153,7 @@ impl Actor for ModbusFabricActor {
                 info!(port = %port_name, "ModBusFabric: USB-Порт подключен");
 
                 // Ищем группу для этого порта
-                let group = state.settings.groups.iter().find(|g| g.modbus.com_port == port_name);
+                let group = state.settings.groups.values().find(|g| g.com_port == port_name);
                 if group.is_none() {
                     info!(port = %port_name, "ModBusFabric: порт не найден в конфигурации групп");
                     return Ok(());
@@ -183,7 +183,7 @@ impl Actor for ModbusFabricActor {
                         myself.clone(),
                         port_name.clone(),
                         group.sensors.clone(),
-                        group.modbus.polling_ms,
+                        group.polling_ms,
                     ),
                 )
                 .await

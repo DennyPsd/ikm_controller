@@ -75,7 +75,7 @@ impl Actor for IpcHandler {
 
                 if let Some(action) = ipc_msg.as_action() {
                     match action.name.as_deref() {
-                        Some("subscribe to vars") => {
+                        Some("subscribe_to_vars") => {
                             info!("Добавляем подписчика на переменные");
                             state.subscribers.push(Subscriber {
                                 peer: ipc_msg.peer_from,
@@ -103,7 +103,7 @@ impl Actor for IpcHandler {
                                         protocol,
                                     });
                         }
-                        Some("unsubscribe to vars") => {
+                        Some("unsubscribe_to_vars") => {
                             info!("Удаляем подписчика на переменные");
                             state.subscribers.retain(|sub| {
                                 (sub.peer == ipc_msg.peer_from && sub.protocol == ipc_msg.protocol)

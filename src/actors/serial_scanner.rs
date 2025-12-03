@@ -92,15 +92,15 @@ impl Actor for SerialScannerActor {
                         info!(%key, "SerialScanner: найден новый USB - пробуем подключиться");
 
                         // Ищем группу для этого порта
-                        let group = state.settings.groups.iter().find(|g| g.modbus.com_port == key);
+                        let group = state.settings.groups.values().find(|g| g.com_port == key);
 
                         // Пробуем открыть поток с настройками из YAML (если порт найден в группах, иначе с дефолтными)
-                        let bitrate = group.map(|g| g.modbus.bitrate).unwrap_or(9600);
+                        let bitrate = group.map(|g| g.bitrate).unwrap_or(9600);
                         let mut builder = tokio_serial::new(full_path, bitrate)
                             .timeout(std::time::Duration::from_millis(1500));
 
                         // Устанавливаем parity
-                        let parity_str = group.map(|g| g.modbus.parity.as_str()).unwrap_or("none");
+                        let parity_str = group.map(|g| g.parity.as_str()).unwrap_or("none");
                         match parity_str {
                             "none" => {
                                 builder = builder.parity(tokio_serial::Parity::None);
@@ -117,7 +117,7 @@ impl Actor for SerialScannerActor {
                         }
 
                         // Устанавливаем data bits
-                        let data_bits = group.map(|g| g.modbus.data_bits).unwrap_or(8);
+                        let data_bits = group.map(|g| g.data_bits).unwrap_or(8);
                         match data_bits {
                             5 => {
                                 builder = builder.data_bits(tokio_serial::DataBits::Five);
@@ -137,7 +137,7 @@ impl Actor for SerialScannerActor {
                         }
 
                         // Устанавливаем stop bits
-                        let stop_bits = group.map(|g| g.modbus.stop_bits).unwrap_or(1);
+                        let stop_bits = group.map(|g| g.stop_bits).unwrap_or(1);
                         match stop_bits {
                             1 => {
                                 builder = builder.stop_bits(tokio_serial::StopBits::One);

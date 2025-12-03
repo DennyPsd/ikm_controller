@@ -1,5 +1,6 @@
 // Стандартные типы переменных для акторов
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 use std::time::Duration;
 
 #[derive(Debug, Clone, Copy)]
@@ -38,12 +39,18 @@ pub struct SensorConfig {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct ModbusGroup {
-    pub modbus: ModbusConfig,
+pub struct ModbusGroupConfig {
+    pub id: String,
+    pub com_port: String,
+    pub bitrate: u32,
+    pub parity: String,
+    pub data_bits: u8,
+    pub stop_bits: u8,
+    pub polling_ms: u64,
     pub sensors: Vec<SensorConfig>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ModbusSettings {
-    pub groups: Vec<ModbusGroup>,
+    pub groups: BTreeMap<String, ModbusGroupConfig>,
 }

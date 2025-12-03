@@ -5,10 +5,9 @@
     "type": "Command",
     "name": "device_send",
     "target": {
-      "module_name": "hart_controller",
+      "module_name": "ikm_controller",
       "type": "Device",
-      "device_id": "eb841035-1e9a-40d1-931c-92623090e94d"
-    },
-    "args": [255, 255, 255, 255, 255, 255, 255, 130]
+      "group": "r33"
+    }
   }
 }

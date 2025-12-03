@@ -1,14 +1,47 @@
 [
   {
-    "device_id": "6a4d234b-5a28-4472-a774-064ad3e2eb39",
-    "device_type": "Sensor3",
+    "device_id": "2dc38a53-a7dc-4e44-9130-0acc66acb513",
+    "device_type": "Sensor1 Test",
     "port_address": "COM8",
     "meta": {
       "type": "Modbus",
       "data": {
-        "slave": 2,
-        "addr": 100,
-        "reg": 3
+        "slave": 1,
+        "addr": 50,
+        "reg": 4
+      }
+    },
+    "connected": true,
+    "attrs": {
+      "mul": 1.0,
+      "value": 56.5,
+      "value_type": "f32"
+    },
+    "info": null,
+    "docs": null,
+    "events": null,
+    "active_events": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "diagnostic": null
+  },
+  {
+    "device_id": "6a8115ba-8197-4218-a608-598028265150",
+    "device_type": "Sensor2",
+    "port_address": "COM8",
+    "meta": {
+      "type": "Modbus",
+      "data": {
+        "slave": 1,
+        "addr": 52,
+        "reg": 4
       }
     },
     "connected": true,

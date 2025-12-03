@@ -1,12 +1,12 @@
 groups:
-  - modbus:
-      id: "mux1"
-      com_port: "COM9"         # or "/dev/ttyUSB0"
-      bitrate: 9600
-      parity: "none"           # none | even | odd
-      data_bits: 8
-      stop_bits: 1
-      polling_ms: 2000         # polling frequency in milliseconds
+  r33:
+    id: "mux1"
+    com_port: "COM8"         # or "/dev/ttyUSB0"
+    bitrate: 9600
+    parity: "none"           # none | even | odd
+    data_bits: 8
+    stop_bits: 1
+    polling_ms: 2000         # polling frequency in milliseconds
     sensors:
       - name: "Sensor1 Test"
         slave: 1
@@ -18,14 +18,14 @@ groups:
         start_reg: 52
         bytes: 2
         reg_type: 4
-  - modbus:
-      id: "mux2"
-      com_port: "COM8"
-      bitrate: 19200
-      parity: "even"
-      data_bits: 8
-      stop_bits: 1
-      polling_ms: 1000
+  r32:
+    id: "mux2"
+    com_port: "COM9"
+    bitrate: 19200
+    parity: "even"
+    data_bits: 8
+    stop_bits: 1
+    polling_ms: 1000
     sensors:
       - name: "Sensor3"
         slave: 2
