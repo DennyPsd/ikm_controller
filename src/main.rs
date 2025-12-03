@@ -1,6 +1,7 @@
 // main.rs Чтение modbus_settings. Запуск акторов, подписка на WS.
 // Есть 2 демо-датчика, но без показаний.
 mod actors;
+mod msg_def;
 
 use actors::modbus_fabric::ModbusFabricActor;
 use actors::modbus_types::ModbusSettings;
@@ -10,6 +11,8 @@ use crate::actors::ipc_handler::{IpcHandler, IpcHandlerMsg, IpcHandlerState};
 pub use taxon_core::prelude::*;
 use tracing::info;
 use taxon_core::infrastructure::device::FacilityDevice;
+pub use msg_def::*;
+
 
 fn main() -> Result<(), ModuleError> {
     Module::init(IPCRole::Router).map(|module| {
