@@ -1,6 +1,6 @@
 [
   {
-    "device_id": "c5288d9d-22c2-481e-b9dd-177212317597",
+    "device_id": "c9137a2a-50ed-4bdd-9404-b611cf84d9fb",
     "device_type": "Sensor1 Test",
     "port_address": "COM8",
     "meta": {
@@ -34,7 +34,7 @@
     "diagnostic": null
   },
   {
-    "device_id": "a52817bc-128b-40a5-8859-f9be8e95d674",
+    "device_id": "2250afda-3390-4d8a-8c47-80e2484cca64",
     "device_type": "Sensor2",
     "port_address": "COM8",
     "meta": {

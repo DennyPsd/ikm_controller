@@ -130,11 +130,9 @@ impl Actor for ModbusFabricActor {
         (devices, settings): Self::Arguments,
     ) -> Result<Self::State, ActorProcessingErr> {
         // Если есть файл — подгружаем, иначе используем args
-        let devices = load_devices_from_file().unwrap_or(devices);
-        info!(
-            "ModbusFabric: запущен с {} устройствами из файла devices.json",
-            devices.len()
-        );
+        //let devices = load_devices_from_file().unwrap_or(devices);
+        //info!("ModbusFabric: запущен с {} устройствами из файла devices.json",devices.len());
+        info!("ModBusFabric запущен");
         Ok(ModbusFabricState {
             workers: HashMap::new(),
             devices,
