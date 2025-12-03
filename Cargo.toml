@@ -1,6 +1,6 @@
 
 [package]
-name = "hart_comm_server"
+name = "modbus_comm_server"
 version = "0.1.0"
 edition = "2024"
 

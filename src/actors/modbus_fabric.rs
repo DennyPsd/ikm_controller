@@ -71,7 +71,7 @@ pub struct ModbusFabricState {
 }
 
 impl ModbusFabricActor {
-    pub fn new(_devices: Vec<FacilityDevice>) -> Self {
+    pub fn new() -> Self {
         Self
     }
 }
@@ -205,18 +205,19 @@ impl Actor for ModbusFabricActor {
                         device_id: Uuid::new_v4(),
                         device_type: sensor.name.clone().into(),
                         port_address: port_name.to_string().into(),
-                        meta: FacilityDeviceMeta::Modbus {
+                        meta: Some(FacilityDeviceMeta::Modbus {
                             data: ModbusDeviceMeta {
                                 slave: sensor.slave as u16,
                                 addr: sensor.start_reg,
                                 reg: sensor.reg_type as u8,
                             },
-                        },
+                        }),
                         connected: true,
                         attrs: Some(attrs),
                         info: None,
                         docs: None,
                         events: None,
+                        events_rules: None,
                         active_events: [0; 8],
                         diagnostic: None,
                     };
@@ -313,31 +314,28 @@ impl Actor for ModbusFabricActor {
                     }
 
                     // modbus meta
-                    match &dev.meta {
-                        FacilityDeviceMeta::Modbus { data } => {
-                            if data.slave as u16 == slave && data.addr as u16 == addr {
-                                // Вычисление MUL значения, если оно есть в devices
-                                let raw_value = raw.unwrap_or(0.0);
-                                let mul = dev
-                                    .attrs
-                                    .as_ref()
-                                    .and_then(|m| m.get(&SS::from("mul")))
-                                    .and_then(|v| v.as_f64())
-                                    .unwrap_or(1.0);
-                                let final_value = serde_json::Value::from((raw_value as f64) * mul);
+                    if let Some(FacilityDeviceMeta::Modbus { data }) = &dev.meta {
+                        if data.slave as u16 == slave && data.addr as u16 == addr {
+                            // Вычисление MUL значения, если оно есть в devices
+                            let raw_value = raw.unwrap_or(0.0);
+                            let mul = dev
+                                .attrs
+                                .as_ref()
+                                .and_then(|m| m.get(&SS::from("mul")))
+                                .and_then(|v| v.as_f64())
+                                .unwrap_or(1.0);
+                            let final_value = serde_json::Value::from((raw_value as f64) * mul);
 
-                                if let Some(attrs) = dev.attrs.as_mut() {
-                                    attrs.insert(SS::from("value"), final_value);
-                                } else {
-                                    let mut map = BTreeMap::new();
-                                    map.insert(SS::from("value"), json!(final_value));
-                                    dev.attrs = Some(map);
-                                }
-                                dev.connected = raw.is_some();
-                                updated += 1;
+                            if let Some(attrs) = dev.attrs.as_mut() {
+                                attrs.insert(SS::from("value"), final_value);
+                            } else {
+                                let mut map = BTreeMap::new();
+                                map.insert(SS::from("value"), json!(final_value));
+                                dev.attrs = Some(map);
                             }
+                            dev.connected = raw.is_some();
+                            updated += 1;
                         }
-                        _ => {}
                     }
                 }
                 if updated > 0 {
