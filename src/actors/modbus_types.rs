@@ -38,7 +38,12 @@ pub struct SensorConfig {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct ModbusSettings {
+pub struct ModbusGroup {
     pub modbus: ModbusConfig,
     pub sensors: Vec<SensorConfig>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct ModbusSettings {
+    pub groups: Vec<ModbusGroup>,
 }

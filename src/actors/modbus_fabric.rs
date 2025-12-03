@@ -152,11 +152,13 @@ impl Actor for ModbusFabricActor {
             ModbusFabricMsg::AttachPort { port_name, stream } => {
                 info!(port = %port_name, "ModBusFabric: USB-Порт подключен");
 
-                // Проверка порта на наличие в конфиге
-                if port_name != state.settings.modbus.com_port {
-                    info!(port = %port_name, "ModBusFabric: порт не соответствует modbus_config.yaml");
+                // Ищем группу для этого порта
+                let group = state.settings.groups.iter().find(|g| g.modbus.com_port == port_name);
+                if group.is_none() {
+                    info!(port = %port_name, "ModBusFabric: порт не найден в конфигурации групп");
                     return Ok(());
                 }
+                let group = group.unwrap();
 
                 // Остановка и удаление старых воркеров
                 if let Some(old_worker) = state.workers.remove(&(port_name.clone(), "".to_string()))
@@ -180,8 +182,8 @@ impl Actor for ModbusFabricActor {
                         stream,
                         myself.clone(),
                         port_name.clone(),
-                        state.settings.sensors.clone(),
-                        state.settings.modbus.polling_ms,
+                        group.sensors.clone(),
+                        group.modbus.polling_ms,
                     ),
                 )
                 .await
@@ -193,7 +195,7 @@ impl Actor for ModbusFabricActor {
                 info!(port = %port_name, "ModBusFabric: worker spawned");
 
                 // Создаем FacilityDevice для каждого датчика
-                for sensor in &state.settings.sensors {
+                for sensor in &group.sensors {
                     let mut attrs = BTreeMap::new();
                     attrs.insert(SS::from("value"), json!(0.0));
                     attrs.insert(SS::from("mul"), json!(1.0));

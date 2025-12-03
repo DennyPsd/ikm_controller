@@ -91,22 +91,17 @@ impl Actor for SerialScannerActor {
                     if !state.known.contains_key(&key) {
                         info!(%key, "SerialScanner: найден новый USB - пробуем подключиться");
 
-                        // Пробуем открыть поток с настройками из YAML (если порт совпадает, иначе с дефолтными)
-                        let bitrate = if key == state.settings.modbus.com_port {
-                            state.settings.modbus.bitrate
-                        } else {
-                            9600 // по стандарту если не нашли в конфиге
-                        };
+                        // Ищем группу для этого порта
+                        let group = state.settings.groups.iter().find(|g| g.modbus.com_port == key);
+
+                        // Пробуем открыть поток с настройками из YAML (если порт найден в группах, иначе с дефолтными)
+                        let bitrate = group.map(|g| g.modbus.bitrate).unwrap_or(9600);
                         let mut builder = tokio_serial::new(full_path, bitrate)
                             .timeout(std::time::Duration::from_millis(1500));
 
                         // Устанавливаем parity
-                        let parity = if key == state.settings.modbus.com_port {
-                            state.settings.modbus.parity.as_str()
-                        } else {
-                            "none" // Если нет - None
-                        };
-                        match parity {
+                        let parity_str = group.map(|g| g.modbus.parity.as_str()).unwrap_or("none");
+                        match parity_str {
                             "none" => {
                                 builder = builder.parity(tokio_serial::Parity::None);
                             }
@@ -122,11 +117,7 @@ impl Actor for SerialScannerActor {
                         }
 
                         // Устанавливаем data bits
-                        let data_bits = if key == state.settings.modbus.com_port {
-                            state.settings.modbus.data_bits
-                        } else {
-                            8
-                        };
+                        let data_bits = group.map(|g| g.modbus.data_bits).unwrap_or(8);
                         match data_bits {
                             5 => {
                                 builder = builder.data_bits(tokio_serial::DataBits::Five);
@@ -146,11 +137,7 @@ impl Actor for SerialScannerActor {
                         }
 
                         // Устанавливаем stop bits
-                        let stop_bits = if key == state.settings.modbus.com_port {
-                            state.settings.modbus.stop_bits
-                        } else {
-                            1
-                        };
+                        let stop_bits = group.map(|g| g.modbus.stop_bits).unwrap_or(1);
                         match stop_bits {
                             1 => {
                                 builder = builder.stop_bits(tokio_serial::StopBits::One);
