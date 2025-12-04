@@ -1,34 +1,82 @@
 groups:
   r33:
-    id: "mux1"
-    com_port: "COM8"         # or "/dev/ttyUSB0"
-    bitrate: 9600
-    parity: "none"           # none | even | odd
-    data_bits: 8
-    stop_bits: 1
-    polling_ms: 2000         # polling frequency in milliseconds
-    sensors:
-      - name: "Sensor1 Test"
-        slave: 1
-        start_reg: 50 #was 50
-        bytes: 1               # or registers count (2 registers = 4 bytes)
-        reg_type: 4            # function code (e.g. 3 or 4)
-      - name: "Sensor2"
-        slave: 1
-        start_reg: 52
-        bytes: 2
-        reg_type: 4
+    port1:
+      port: "COM8"              # или "/dev/ttyUSB0"
+      bitrate: 9600
+      parity: "none"                # none | even | odd
+      data_bits: 8
+      stop_bits: 1
+      flow_control: "none"          # none | rts_cts | xon_xoff | hardware | software
+      polling_ms: 2000              # период опроса одного сенсора, мс
+
+      # таймауты (или подтянутся дефолты)
+      open_timeout_ms: 1500
+      first_byte_timeout_ms: 200
+      per_byte_timeout_ms: 50
+
+      slaves:
+        - name: "Sensor1 Test"
+          slave_id: 1
+          registers:
+            - start_reg: 50
+              regs_count: 1             # раньше bytes: 1
+              reg_type: "input_register" # fc04
+              value_type: "u16"         # читаем как U16
+
+              # формат слов/байт — по умолчанию оба false, можно не писать
+              word_format:
+                swap_words: false
+                swap_bytes_in_word: false
+
+              # опциональное масштабирование:
+              # при raw = 1.23 бар, хотим 123 кПа:
+              # final = raw * 100.0 + 0.0
+              # 1.23 * 100 = 123
+              # scale: 100.0
+              # offset: 0.0
+
+        - name: "Sensor2"
+          slave_id: 2
+          registers:
+            - start_reg: 52
+              regs_count: 2             # 2 регистра = 4 байта
+              reg_type: "input_register"
+              value_type: "f32"
+
+              # пример для "перевернутых" слов (CDAB)
+              word_format:
+                swap_words: true
+                swap_bytes_in_word: false
+
+              # пример: прибор отдаёт в °C сразу, но нам надо в °C со сдвигом
+              # скажем, надо добавить +2°C (калибровка нуля):
+              # final = raw * 1.0 + 2.0
+              # scale: 1.0
+              # offset: 2.0
+
   r32:
-    id: "mux2"
-    com_port: "COM9"
-    bitrate: 19200
-    parity: "even"
-    data_bits: 8
-    stop_bits: 1
-    polling_ms: 1000
-    sensors:
-      - name: "Sensor3"
-        slave: 2
-        start_reg: 100
-        bytes: 2
-        reg_type: 3
+    port1:
+      port: "COM9"
+      bitrate: 19200
+      parity: "even"
+      data_bits: 8
+      stop_bits: 1
+      flow_control: "none"
+      polling_ms: 1000
+
+      open_timeout_ms: 1500
+      first_byte_timeout_ms: 200
+      per_byte_timeout_ms: 50
+
+      slaves:
+        - name: "Sensor3"
+          slave_id: 2
+          registers:
+            - start_reg: 100
+              regs_count: 2                # тоже два регистра
+              reg_type: "holding_register" # fc03
+              value_type: "f32"
+
+              word_format:
+                swap_words: false
+                swap_bytes_in_word: false
