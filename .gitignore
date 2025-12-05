@@ -1,5 +1,4 @@
 /target
 devices.json
-Cargo.lock
 main_example.rs
 msg_def_example.rs
