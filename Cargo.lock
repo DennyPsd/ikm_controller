@@ -1294,6 +1294,7 @@ dependencies = [
  "serde",
  "serde-saphyr",
  "serde_json",
+ "serde_yaml",
  "serialport",
  "smol_str",
  "taxon-core",

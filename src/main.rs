@@ -16,6 +16,7 @@ use clap::Parser;
 pub use msg_def::*;
 pub use taxon_core::prelude::*;
 use tracing::info;
+use uuid::Uuid;
 
 /// Simple program to greet a person
 #[derive(Parser, Debug)]
@@ -26,9 +27,13 @@ struct Args {
   build_shared_types: bool,
 }
 fn main() -> Result<(), ModuleError> {
+  for _ in 0..2 {
+    let id = Uuid::now_v7();
+    println!("{id}");
+  }
   let args = Args::parse();
   if args.build_shared_types {
-    _build_shared("ikm_controller", ikm_controller_client_api());
+    let _ = _build_shared("ikm_controller", ikm_controller_client_api());
     exit(0);
   }
   Module::init(IPCRole::Router).map(|module| {
@@ -75,7 +80,7 @@ fn main() -> Result<(), ModuleError> {
         .map_err(|err| ModuleError::SpawnErr("ClientIpcHandler".into(), err))?;
 
       ipc_router
-        .subscribe(ipc_handler, |msg| Some(IpcHandlerMsg::Ipc(Box::new(msg))))
+        .subscribe(ipc_handler, |msg| Some(IpcHandlerMsg::Ipc(*Box::new(msg))))
         .map_err(|err| ModuleError::Run("ClientIpcHandler".into(), err))?;
 
       // Сканирование портов делает SerialScanner
@@ -88,7 +93,7 @@ fn _build_shared(path: impl Into<PathBuf>, builder: AsyncapiBuilder) -> Result<(
   let schema_path = Path::new(&manifest_dir)
     .join("../shared-types/")
     .join(path.into());
-  fs::create_dir_all(schema_path.join("./components"));
+  let _ = fs::create_dir_all(schema_path.join("./components"));
   let res = builder.commit2path(schema_path.clone());
   match res {
     Err(err) => {
@@ -118,8 +123,8 @@ fn _build_shared(path: impl Into<PathBuf>, builder: AsyncapiBuilder) -> Result<(
     .wait()
     .expect("Schema Validation  error");
   // Create bindings:
-  fs::create_dir_all(schema_path.join("./bindings/ts"));
-  fs::create_dir_all(schema_path.join("./bindings/csharp"));
+  let _ = fs::create_dir_all(schema_path.join("./bindings/ts"));
+  let _ = fs::create_dir_all(schema_path.join("./bindings/csharp"));
   let mut entries = fs::read_dir(schema_path.join("./components"))?
     .map(|res| res.map(|e| e.path()))
     .collect::<Result<Vec<_>, io::Error>>()?;
@@ -186,12 +191,11 @@ fn _build_shared(path: impl Into<PathBuf>, builder: AsyncapiBuilder) -> Result<(
           .expect("Schema Validation  error")
           .wait()
           .expect("Schema Validation  error");
-        ()
       })
     })
     .collect();
   for job in jobs {
-    job.join();
+    let _ = job.join();
   }
 
   Ok(())

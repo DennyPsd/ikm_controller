@@ -1,4 +1,4 @@
-use ractor::{Actor, ActorProcessingErr, ActorRef};
+use ractor::{Actor, ActorProcessingErr, ActorRef, RpcReplyPort};
 use smol_str::SmolStr;
 use std::collections::{BTreeMap, HashMap};
 use taxon_core::utils::default;
@@ -6,15 +6,18 @@ use tokio_serial::SerialStream;
 use tracing::{info, warn};
 use uuid::Uuid;
 
-use crate::actors::ipc_handler::IpcHandlerMsg;
 use crate::actors::modbus::config::{ModbusPortConfig, ModbusSettings};
 use crate::actors::modbus::modbus_worker::{ModbusWorker, ModbusWorkerMsg};
+use crate::actors::modbus::protocol::utils::reg_type_to_fc;
 use crate::actors::serial_scanner::parse_group_port_id;
 
-use crate::actors::modbus::protocol::utils::reg_type_to_fc;
 use serde_json::json;
 use smol_str::SmolStr as SS;
 use taxon_core::infrastructure::device::{FacilityDevice, FacilityDeviceMeta, ModbusDeviceMeta};
+
+// добавил
+use crate::types::parks::Park;
+use crate::types::products::Product;
 
 #[derive(Debug)]
 pub enum ModbusFabricMsg {
@@ -26,17 +29,34 @@ pub enum ModbusFabricMsg {
   DetachPort {
     port_name: SmolStr,
   },
-  GetDevices(ActorRef<IpcHandlerMsg>),
+
+  /// Получить девайсы (по указанным портам, либо по всем)
+  #[allow(dead_code)]
+  GetDevices {
+    port_names: Vec<SmolStr>,
+    resp: RpcReplyPort<Vec<FacilityDevice>>,
+  },
+
+  /// Получить парки
+  #[allow(dead_code)]
+  GetParks {
+    resp: RpcReplyPort<Vec<Park>>,
+  },
+
+  /// Получить продукты
+  #[allow(dead_code)]
+  GetProducts {
+    resp: RpcReplyPort<Vec<Product>>,
+  },
+
   #[allow(dead_code)]
   WriteDevice {
-    /// Глобальный индекс во "всех девайсах" (пока оставим так для совместимости)
     device_idx: usize,
     value: u16,
   },
 
   /// Сообщение от воркера: обновление значения
   WorkerReport {
-    /// Логический port_id ("r33:port1")
     port_name: SmolStr,
     slave: u16,
     addr: u16,
@@ -54,6 +74,10 @@ pub struct ModbusFabricState {
   pub workers: HashMap<SmolStr, ActorRef<ModbusWorkerMsg>>,
   pub devices: HashMap<SmolStr, Vec<FacilityDevice>>,
   pub settings: ModbusSettings,
+
+  // добавил
+  pub parks: Vec<Park>,
+  pub products: Vec<Product>,
 }
 
 impl ModbusFabricActor {
@@ -66,7 +90,6 @@ impl ModbusFabricActor {
 impl Actor for ModbusFabricActor {
   type Msg = ModbusFabricMsg;
   type State = ModbusFabricState;
-  /// Аргументы — только ModbusSettings
   type Arguments = ModbusSettings;
 
   async fn pre_start(
@@ -79,6 +102,8 @@ impl Actor for ModbusFabricActor {
       workers: HashMap::new(),
       devices: HashMap::new(),
       settings,
+      parks: Vec::new(),
+      products: Vec::new(),
     })
   }
 
@@ -155,8 +180,6 @@ impl Actor for ModbusFabricActor {
 
         state.workers.insert(port_name.clone(), worker_ref);
         info!(port = %port_name, "ModBusFabric: worker spawned");
-
-        // Создаём FacilityDevice под КАЖДЫЙ регистр у каждого slave на этом порту
         let mut port_devices: Vec<FacilityDevice> = Vec::new();
 
         for slave_cfg in &port_cfg.slaves {
@@ -178,12 +201,10 @@ impl Actor for ModbusFabricActor {
               json!(format!("{:?}", reg_cfg.value_type)),
             );
 
-            // имя девайса: "<SlaveName>:<start_reg>"
-            let dev_type = format!("{}:{}", slave_cfg.name, reg_cfg.start_reg);
+            let _dev_type = format!("{}:{}", slave_cfg.name, reg_cfg.start_reg);
 
             let device = FacilityDevice {
               device_id: Uuid::now_v7(),
-              // порт — это логический id "r33:port1"
               port_address: port_name.clone(),
               meta: Some(FacilityDeviceMeta::Modbus {
                 data: ModbusDeviceMeta {
@@ -211,20 +232,33 @@ impl Actor for ModbusFabricActor {
         state.devices.remove(&port_name);
       }
 
-      ModbusFabricMsg::GetDevices(reply_to) => {
-        // Плоский список для IPC
+      ModbusFabricMsg::GetDevices { port_names, resp } => {
         let mut all_devices: Vec<FacilityDevice> = Vec::new();
-        for devs in state.devices.values() {
-          all_devices.extend(devs.clone());
+
+        if port_names.is_empty() {
+          for devs in state.devices.values() {
+            all_devices.extend(devs.clone());
+          }
+        } else {
+          for port in port_names {
+            if let Some(devs) = state.devices.get(&port) {
+              all_devices.extend(devs.clone());
+            }
+          }
         }
 
-        let _ = reply_to.send_message(crate::actors::ipc_handler::IpcHandlerMsg::DevicesList(
-          all_devices,
-        ));
+        let _ = resp.send(all_devices);
+      }
+
+      ModbusFabricMsg::GetParks { resp } => {
+        let _ = resp.send(state.parks.clone());
+      }
+
+      ModbusFabricMsg::GetProducts { resp } => {
+        let _ = resp.send(state.products.clone());
       }
 
       ModbusFabricMsg::WriteDevice { device_idx, value } => {
-        // Разворачиваем в плоский список (порт, локальный индекс),
         let mut index_map: Vec<(SmolStr, usize)> = Vec::new();
         for (port_id, list) in state.devices.iter() {
           for i in 0..list.len() {
@@ -274,9 +308,9 @@ impl Actor for ModbusFabricActor {
                     .and_then(|v| v.as_f64())
                     // поддержка старого поля "mul"
                     .or_else(|| {
-                        attrs_ref
-                            .and_then(|m| m.get(&SS::from("mul")))
-                            .and_then(|v| v.as_f64())
+                      attrs_ref
+                          .and_then(|m| m.get(&SS::from("mul")))
+                          .and_then(|v| v.as_f64())
                     })
                     .unwrap_or(1.0);
 

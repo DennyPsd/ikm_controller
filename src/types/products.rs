@@ -24,6 +24,7 @@ impl Default for Product {
   fn default() -> Self {
     Self::Oil {
       id: Uuid::now_v7(),
+      name: SmolStr::new("default oil"),
       product_weight_net: None,
       product_weight_gross: None,
       volume_oil_at_15: None,

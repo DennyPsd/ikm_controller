@@ -127,8 +127,7 @@ impl Actor for ModbusWorker {
     (timings, stream, fabric, port_name, port_cfg): Self::Arguments,
   ) -> Result<Self::State, ActorProcessingErr> {
     info!(port = %port_name, "ModbusWorker: запущен (stream активен)");
-
-    // Разворачиваем slaves + их registers в плоский список PollItem
+    
     let mut polls = Vec::<PollItem>::new();
     for slave in &port_cfg.slaves {
       for reg in &slave.registers {
@@ -239,7 +238,6 @@ impl Actor for ModbusWorker {
             );
           }
           Ok(frame) => {
-            // шлём готовый кадр, получаем сырые байты
             let res = send_and_read_frame(
               &mut port,
               &frame,
@@ -351,7 +349,6 @@ impl Actor for ModbusWorker {
         if is_last_in_cycle {
           use std::fmt::Write as FmtWrite;
 
-          // Собираем один большой текст-отчёт
           let mut report = String::new();
 
           let _ = writeln!(
@@ -387,15 +384,12 @@ impl Actor for ModbusWorker {
           }
 
           let _ = writeln!(&mut report, "+-------+---------+----------------------+");
-
-          // ОДИН лог на весь цикл
+          
           info!(port = %state.port_name, "{}", report);
         }
-
-        // Следующая точка
+        
         state.current_index = (state.current_index + 1) % state.polls.len();
 
-        // Планируем следующий Poll
         let _poll_handle = myself.send_after(Duration::from_millis(state.polling_ms), || {
           ModbusWorkerMsg::Poll
         });
