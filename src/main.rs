@@ -1,5 +1,6 @@
 mod actors;
 mod msg_def;
+mod types;
 
 use actors::serial_scanner::SerialScannerActor;
 
