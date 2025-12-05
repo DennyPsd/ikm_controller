@@ -1,118 +1,126 @@
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
-/// Modbus unit id (slave address)
-pub type UnitId = u8;
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct CouchMeta {
+  #[serde(alias = "_id")]
+  pub id: Option<String>,
+  #[serde(alias = "_rev")]
+  pub rev: Option<String>,
+  pub document_type: Option<String>,
+}
 
-/// Адрес регистра (holding / input)
-pub type RegisterAddress = u16;
-
-/// Адрес coil / discrete input
 #[allow(dead_code)]
-pub type CoilAddress = u16;
-
-/// Какой тип регистра читаем
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum ModbusRegType {
-  Coil,
-  DiscreteInput,
-  HoldingRegister,
-  InputRegister,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum ModbusValueType {
-  // булевое
-  Bool,
-
-  // 8-битные
-  U8,
-  I8,
-
-  // 16-битные
-  U16,
-  I16,
-
-  // multi-word числа (2+ регистра)
-  U32,
-  I32,
-  F32,
-  F64,
-
-  // строки / сырые байты
-  AsciiString,
-  Utf8String,
-  RawBytes,
-}
-
-/// Формат слов/байт для multi-word значений (u32/i32/f32/f64 и т.п.)
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-#[derive(Default)]
-pub struct ModbusWordFormat {
-  /// Поменять слова местами (word1, word0, word2…)
-  pub swap_words: bool,
-  /// Поменять байты внутри КАЖДОГО слова (lo, hi)
-  pub swap_bytes_in_word: bool,
-}
-
-/// Официальные Modbus exception-коды.
-/// https://modbus.org/docs/Modbus_Application_Protocol_V1_1b.pdf
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum ModbusExceptionCode {
-  /// 01 – Illegal Function
-  IllegalFunction,
-  /// 02 – Illegal Data Address
-  IllegalDataAddress,
-  /// 03 – Illegal Data Value
-  IllegalDataValue,
-  /// 04 – Slave Device Failure
-  SlaveDeviceFailure,
-  /// 05 – Acknowledge
-  Acknowledge,
-  /// 06 – Slave Device Busy
-  SlaveDeviceBusy,
-  /// 08 – Memory Parity Error
-  MemoryParityError,
-  /// 0A – Gateway Path Unavailable
-  GatewayPathUnavailable,
-  /// 0B – Gateway Target Device Failed to Respond
-  GatewayTargetFailedToRespond,
-  /// Любой другой код, который не знаем
-  Unknown(u8),
-}
-
-impl ModbusExceptionCode {
-  pub fn from_u8(code: u8) -> Self {
-    match code {
-      0x01 => ModbusExceptionCode::IllegalFunction,
-      0x02 => ModbusExceptionCode::IllegalDataAddress,
-      0x03 => ModbusExceptionCode::IllegalDataValue,
-      0x04 => ModbusExceptionCode::SlaveDeviceFailure,
-      0x05 => ModbusExceptionCode::Acknowledge,
-      0x06 => ModbusExceptionCode::SlaveDeviceBusy,
-      0x08 => ModbusExceptionCode::MemoryParityError,
-      0x0A => ModbusExceptionCode::GatewayPathUnavailable,
-      0x0B => ModbusExceptionCode::GatewayTargetFailedToRespond,
-      other => ModbusExceptionCode::Unknown(other),
-    }
+pub trait CouchModelExt: Serialize {
+  fn document_type(&self) -> Option<&'static str> {
+    None
   }
-  #[allow(dead_code)]
-  pub fn as_u8(&self) -> u8 {
-    match *self {
-      ModbusExceptionCode::IllegalFunction => 0x01,
-      ModbusExceptionCode::IllegalDataAddress => 0x02,
-      ModbusExceptionCode::IllegalDataValue => 0x03,
-      ModbusExceptionCode::SlaveDeviceFailure => 0x04,
-      ModbusExceptionCode::Acknowledge => 0x05,
-      ModbusExceptionCode::SlaveDeviceBusy => 0x06,
-      ModbusExceptionCode::MemoryParityError => 0x08,
-      ModbusExceptionCode::GatewayPathUnavailable => 0x0A,
-      ModbusExceptionCode::GatewayTargetFailedToRespond => 0x0B,
-      ModbusExceptionCode::Unknown(x) => x,
+
+  fn document_type_str(&self) -> Option<&str> {
+    self.document_type()
+  }
+
+  /// JSON для CouchDB: _id / _rev, без null, с document_type
+  fn dump_for_db(&self) -> Value {
+    let mut v = serde_json::to_value(self).expect("serialize to Value failed");
+
+    if let Some(doc_type) = self.document_type_str()
+      && let Value::Object(ref mut map) = v
+    {
+      map.insert(
+        "document_type".to_string(),
+        Value::String(doc_type.to_string()),
+      );
     }
+
+    if let Value::Object(ref mut map) = v {
+      if let Some(id_val) = map.remove("id")
+        && !id_val.is_null()
+      {
+        map.insert("_id".to_string(), id_val);
+      }
+
+      if let Some(rev_val) = map.remove("rev")
+        && !rev_val.is_null()
+      {
+        map.insert("_rev".to_string(), rev_val);
+      }
+    }
+
+    strip_nulls(&mut v);
+    v
+  }
+
+  /// Публичный JSON: id, без rev/document_type, без пустых id/_id
+  fn to_public_json(&self) -> Value {
+    let mut v = serde_json::to_value(self).expect("serialize to Value failed");
+
+    if let Value::Object(ref mut map) = v {
+      map.remove("rev");
+      map.remove("document_type");
+
+      // если вдруг прилетело _id (из базы), перегоняем в id
+      if let Some(id_val) = map.remove("_id")
+        && !id_val.is_null()
+      {
+        map.insert("id".to_string(), id_val);
+      }
+    }
+
+    strip_empty_ids(&mut v);
+    v
+  }
+}
+
+fn strip_empty_ids(value: &mut Value) {
+  match value {
+    Value::Object(map) => {
+      let keys: Vec<String> = map.keys().cloned().collect();
+      for k in keys {
+        if let Some(v) = map.get_mut(&k) {
+          if (k == "id" || k == "_id") && v.is_null() {
+            map.remove(&k);
+          } else {
+            strip_empty_ids(v);
+          }
+        }
+      }
+    }
+    Value::Array(arr) => {
+      for v in arr {
+        strip_empty_ids(v);
+      }
+    }
+    _ => {}
+  }
+}
+
+fn strip_nulls(value: &mut Value) {
+  match value {
+    Value::Object(map) => {
+      let keys: Vec<String> = map.keys().cloned().collect();
+      for k in keys {
+        let remove_this;
+        {
+          let v = map.get_mut(&k).unwrap();
+          if v.is_null() {
+            remove_this = true;
+          } else {
+            remove_this = false;
+            strip_nulls(v);
+          }
+        }
+        if remove_this {
+          map.remove(&k);
+        }
+      }
+    }
+    Value::Array(arr) => {
+      arr.retain(|v| !v.is_null());
+      for v in arr {
+        strip_nulls(v);
+      }
+    }
+    _ => {}
   }
 }

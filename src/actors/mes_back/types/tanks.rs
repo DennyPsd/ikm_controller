@@ -2,9 +2,11 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 /// Modbus unit id (slave address)
+#[allow(dead_code)]
 pub type UnitId = u8;
 
 /// Адрес регистра (holding / input)
+#[allow(dead_code)]
 pub type RegisterAddress = u16;
 
 /// Адрес coil / discrete input
@@ -86,6 +88,7 @@ pub enum ModbusExceptionCode {
 }
 
 impl ModbusExceptionCode {
+  #[allow(dead_code)]
   pub fn from_u8(code: u8) -> Self {
     match code {
       0x01 => ModbusExceptionCode::IllegalFunction,
