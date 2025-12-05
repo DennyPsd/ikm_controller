@@ -17,6 +17,7 @@ pub struct MainParameters {
   pub product_movement_level_measurement_speed: Option<f64>,
   pub volume_product_calc_below_water: Option<f64>,
   pub volume_raw_water: Option<f64>,
+  pub temperatures: Vec<Option<Temperature>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
