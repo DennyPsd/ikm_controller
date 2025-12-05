@@ -1,3 +1,12 @@
 {
-  "cSpell.words": ["ractor", "serde", "thiserror"]
+  "cSpell.words": [
+    "ascyncapi",
+    "ractor",
+    "saphyr",
+    "schemars",
+    "serde",
+    "Smol",
+    "thiserror",
+    "xtask"
+  ]
 }

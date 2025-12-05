@@ -1,7 +1,6 @@
 use chrono::{DateTime, Local};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use serde_with::*;
 use smol_str::SmolStr;
 use std::collections::{BTreeMap, BTreeSet};
 use taxon_core::actors::ipc::errors::IPCError;
@@ -11,6 +10,8 @@ use taxon_core::prelude::*;
 use taxon_core::utils::asyncapi::AsyncapiBuilder;
 use taxon_core::utils::validators::DATE_TIME_RE;
 use uuid::Uuid;
+
+use crate::types::tanks::Tank;
 
 // ////////////////////////////
 /** Авторизация */
@@ -64,19 +65,35 @@ impl IPCMessageDef for UserLogout {
 }
 // ////////////////////////////
 #[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq, Eq, Hash)]
-pub struct GetTanksPrimaryVars;
+pub struct TankList;
 
-impl IPCMessageDef for GetTanksPrimaryVars {
-  type Args = ();
-  type Reply = bool;
+#[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq, Eq, Hash)]
+pub enum TankListFields {
+  Minimal,
+  All,
+  Exact(Vec<SmolStr>),
+}
+#[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq, Eq, Hash)]
+pub struct TankListArgs {
+  ids: Vec<Uuid>,
+  fields: TankListFields,
+}
+#[derive(Default, Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
+pub struct DeviceListReply {
+  ///Devices
+  pub data: Vec<Tank>,
+}
+impl IPCMessageDef for TankList {
+  type Args = TankListArgs;
+  type Reply = DeviceListReply;
   type ErrorArgs = ();
 
   fn action() -> Option<IPCActionKind> {
-    Some(IPCActionKind::Stop)
+    Some(IPCActionKind::GetData)
   }
   fn target() -> Option<IPCTarget> {
     Some(IPCTarget {
-      data_ns: Some("Tank".into()),
+      data_ns: Some("Tanks".into()),
       ..ActionTargetKind::Data.to_target()
     })
   }
@@ -92,11 +109,7 @@ pub fn ikm_controller_client_api() -> AsyncapiBuilder {
     .version("0.1.1")
     .zmq_server("ikm_controller", true)
     .zmq_server("ddngine", false)
-    .operation::<DeviceList, ()>()
-    .operation::<DeviceLoadDD, ()>()
-    .operation::<DeviceUnloadDD, ()>()
-    .operation::<SendToDevice, ()>()
+    .operation::<TankList, ()>()
     .operation::<UserLogin, ()>()
     .operation::<UserLogout, ()>()
-    .operation::<DeviceHistory, ()>()
 }

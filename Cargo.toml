@@ -18,7 +18,7 @@ exclude = [
   ".gitignore",
   "pki",
 ]
-
+#####################################
 
 [profile.dist]
 inherits = "release"
@@ -40,9 +40,12 @@ lto = "off"
 [profile.dev.package."*"]
 opt-level = 3
 
+
+#####################################
 [dependencies]
 #------------ utils ------------#
 taxon-core = { path = "../taxon/crates/taxon_core", features = ["desktop"] }
+
 fancy-regex = "0.16"
 thiserror = "^1.0"
 anyhow = "^1.0"
@@ -103,6 +106,5 @@ serialport = { version = "^4", features = ["serde"] }
 tokio-serial = { version = "^5" }
 #------------ cli ------------#
 clap = { version = "^4.5", features = ["derive", "env"] }
-xtask = "*"
 #------------ tracing ------------#
 tracing = { version = "^0.1", features = ["attributes", "valuable"] }

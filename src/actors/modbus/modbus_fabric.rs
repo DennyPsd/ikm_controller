@@ -1,6 +1,7 @@
 use ractor::{Actor, ActorProcessingErr, ActorRef};
 use smol_str::SmolStr;
 use std::collections::{BTreeMap, HashMap};
+use taxon_core::utils::default;
 use tokio_serial::SerialStream;
 use tracing::{info, warn};
 use uuid::Uuid;
@@ -181,8 +182,7 @@ impl Actor for ModbusFabricActor {
             let dev_type = format!("{}:{}", slave_cfg.name, reg_cfg.start_reg);
 
             let device = FacilityDevice {
-              device_id: Uuid::new_v4(),
-              device_type: dev_type.into(),
+              device_id: Uuid::now_v7(),
               // порт — это логический id "r33:port1"
               port_address: port_name.clone(),
               meta: Some(FacilityDeviceMeta::Modbus {
@@ -192,14 +192,8 @@ impl Actor for ModbusFabricActor {
                   reg: reg_type_to_fc(reg_cfg.reg_type),
                 },
               }),
-              connected: true,
               attrs: Some(attrs),
-              info: None,
-              docs: None,
-              events: None,
-              events_rules: None,
-              active_events: [0; 8],
-              diagnostic: None,
+              ..default()
             };
 
             port_devices.push(device);
