@@ -21,17 +21,30 @@ pub enum ModbusRegType {
   InputRegister,
 }
 
-/// Во что хотим превратить сырые регистры
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ModbusValueType {
+  // булевое
   Bool,
+
+  // 8-битные
+  U8,
+  I8,
+
+  // 16-битные
   U16,
   I16,
+
+  // multi-word числа (2+ регистра)
   U32,
   I32,
   F32,
   F64,
+
+  // строки / сырые байты
+  AsciiString,
+  Utf8String,
+  RawBytes,
 }
 
 /// Формат слов/байт для multi-word значений (u32/i32/f32/f64 и т.п.)

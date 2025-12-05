@@ -2,11 +2,10 @@ use crate::actors::modbus::protocol::error::{ModbusError, ModbusResult};
 use crate::actors::modbus::protocol::frame::{build_rtu_frame, parse_rtu_response};
 use crate::actors::modbus::protocol::types::{CoilAddress, UnitId};
 use crate::actors::modbus::protocol::utils::unpack_bits;
-#[allow(dead_code)]
+
 pub const FC01_READ_COILS: u8 = 0x01;
 
 /// Построить RTU-запрос FC01 (Read Coils)
-#[allow(dead_code)]
 pub fn build_fc01_read_coils(
   unit_id: UnitId,
   start: CoilAddress,
@@ -25,8 +24,7 @@ pub fn build_fc01_read_coils(
   Ok(build_rtu_frame(unit_id, FC01_READ_COILS, &pdu))
 }
 
-/// Распарсить RTU-ответ FC01, вернуть вектор Coil-состояний
-#[allow(dead_code)]
+/// Низкоуровневый парсер FC01 -> Vec<bool>
 pub fn parse_fc01_read_coils(
   unit_id: UnitId,
   quantity: u16,
@@ -46,4 +44,19 @@ pub fn parse_fc01_read_coils(
   }
 
   unpack_bits(status_bytes, quantity)
+}
+
+/// ВЕРХНЕУРОВНЕВЫЙ парсер FC01:
+/// берём первый бит как 0/1, применяем scale/offset, отдаём f64
+pub fn parse_fc01_read_coils_typed(
+  unit_id: UnitId,
+  quantity: u16,
+  frame: &[u8],
+  scale: f64,
+  offset: f64,
+) -> ModbusResult<f64> {
+  let bits = parse_fc01_read_coils(unit_id, quantity, frame)?;
+  let first = bits.first().copied().unwrap_or(false);
+  let raw = if first { 1.0_f64 } else { 0.0_f64 };
+  Ok(raw * scale + offset)
 }

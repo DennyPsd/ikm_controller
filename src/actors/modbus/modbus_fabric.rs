@@ -205,7 +205,7 @@ impl Actor for ModbusFabricActor {
             port_devices.push(device);
           }
         }
-
+        println!("DEVICES!!!!! {:?}", port_devices);
         state.devices.insert(port_name.clone(), port_devices);
       }
 

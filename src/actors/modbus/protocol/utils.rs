@@ -1,11 +1,8 @@
-use crate::actors::modbus::config::ModbusRegisterConfig;
 use crate::actors::modbus::protocol::error::{ModbusError, ModbusResult};
 use crate::actors::modbus::protocol::types::{ModbusRegType, ModbusValueType, ModbusWordFormat};
-use serde_json::Value as JsonValue;
 
 /// Распаковать биты (coils / discrete inputs) из Modbus-байт.
 /// LSB первого байта — первый coil, как в стандарте.
-#[allow(dead_code)]
 pub fn unpack_bits(bytes: &[u8], quantity: u16) -> ModbusResult<Vec<bool>> {
   let quantity = quantity as usize;
   let mut result = Vec::with_capacity(quantity);
@@ -49,120 +46,6 @@ pub fn pack_bits(bools: &[bool]) -> Vec<u8> {
   bytes
 }
 
-/// Перегоняем регистры в байты с учётом формата слов/байт
-#[allow(dead_code)]
-pub fn regs_to_bytes(regs: &[u16], fmt: ModbusWordFormat) -> Vec<u8> {
-  if regs.is_empty() {
-    return Vec::new();
-  }
-
-  let mut words: Vec<u16> = regs.to_vec();
-
-  // сначала переставляем слова, если надо
-  if fmt.swap_words && words.len() >= 2 {
-    words.reverse();
-  }
-
-  let mut bytes = Vec::with_capacity(words.len() * 2);
-
-  for w in words {
-    let hi = ((w >> 8) & 0xFF) as u8;
-    let lo = (w & 0xFF) as u8;
-
-    if fmt.swap_bytes_in_word {
-      bytes.push(lo);
-      bytes.push(hi);
-    } else {
-      bytes.push(hi);
-      bytes.push(lo);
-    }
-  }
-
-  bytes
-}
-
-/// Универсальный декодер регистров в JSON-значение
-#[allow(dead_code)]
-pub fn decode_modbus_value(
-  regs: &[u16],
-  value_type: ModbusValueType,
-  fmt: ModbusWordFormat,
-  scale: Option<f64>,
-  offset: Option<f64>,
-) -> ModbusResult<JsonValue> {
-  use ModbusValueType::*;
-
-  let s = scale.unwrap_or(1.0);
-  let o = offset.unwrap_or(0.0);
-
-  let num = |v: f64| {
-    serde_json::Number::from_f64(v)
-      .map(JsonValue::Number)
-      .ok_or(ModbusError::InvalidFrame("failed to build JSON number"))
-  };
-
-  match value_type {
-    Bool => {
-      let b = regs.first().copied().unwrap_or(0) != 0;
-      Ok(JsonValue::Bool(b))
-    }
-    U16 => {
-      let raw = *regs
-        .first()
-        .ok_or(ModbusError::InvalidFrame("not enough registers for u16"))?;
-      num((raw as f64) * s + o)
-    }
-    I16 => {
-      let raw = *regs
-        .first()
-        .ok_or(ModbusError::InvalidFrame("not enough registers for i16"))? as i16;
-      num((raw as f64) * s + o)
-    }
-    U32 => {
-      if regs.len() < 2 {
-        return Err(ModbusError::InvalidFrame(
-          "not enough registers for u32 (need 2)",
-        ));
-      }
-      let bytes = regs_to_bytes(&regs[0..2], fmt);
-      let raw = u32::from_be_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
-      num((raw as f64) * s + o)
-    }
-    I32 => {
-      if regs.len() < 2 {
-        return Err(ModbusError::InvalidFrame(
-          "not enough registers for i32 (need 2)",
-        ));
-      }
-      let bytes = regs_to_bytes(&regs[0..2], fmt);
-      let raw = i32::from_be_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
-      num((raw as f64) * s + o)
-    }
-    F32 => {
-      if regs.len() < 2 {
-        return Err(ModbusError::InvalidFrame(
-          "not enough registers for f32 (need 2)",
-        ));
-      }
-      let bytes = regs_to_bytes(&regs[0..2], fmt);
-      let raw = f32::from_bits(u32::from_be_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]));
-      num((raw as f64) * s + o)
-    }
-    F64 => {
-      if regs.len() < 4 {
-        return Err(ModbusError::InvalidFrame(
-          "not enough registers for f64 (need 4)",
-        ));
-      }
-      let bytes = regs_to_bytes(&regs[0..4], fmt);
-      let raw = f64::from_bits(u64::from_be_bytes([
-        bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7],
-      ]));
-      num(raw * s + o)
-    }
-  }
-}
-
 /// Маппер ModbusRegType -> function code
 pub fn reg_type_to_fc(rt: ModbusRegType) -> u8 {
   match rt {
@@ -173,106 +56,188 @@ pub fn reg_type_to_fc(rt: ModbusRegType) -> u8 {
   }
 }
 
-/// Применяем word_format к байтам: порядок слов/байт
-pub fn apply_word_format(bytes: &[u8], fmt: ModbusWordFormat) -> Vec<u8> {
-  let mut words: Vec<[u8; 2]> = bytes
-    .chunks(2)
-    .map(|ch| {
-      if ch.len() == 2 {
-        [ch[0], ch[1]]
+/// Применяем настройки word_format к набору регистров:
+///   * swap_bytes_in_word — меняем байты внутри каждого слова
+///   * swap_words — меняем местами слова парами: (w0,w1) -> (w1,w0), (w2,w3)->(w3,w2), ...
+pub fn apply_word_format(regs: &[u16], fmt: ModbusWordFormat) -> Vec<u16> {
+  // сначала свопаем байты внутри слова (если нужно)
+  let mut words: Vec<u16> = regs
+    .iter()
+    .map(|w| {
+      if fmt.swap_bytes_in_word {
+        let [hi, lo] = w.to_be_bytes();
+        u16::from_be_bytes([lo, hi])
       } else {
-        [ch[0], 0]
+        *w
       }
     })
     .collect();
 
-  // swap_words — разворачиваем порядок 16-битных слов
+  // потом свопаем слова парами (если нужно)
   if fmt.swap_words {
-    words.reverse();
-  }
-
-  // swap_bytes_in_word — меняем hi/lo внутри каждого слова
-  if fmt.swap_bytes_in_word {
-    for w in &mut words {
-      w.swap(0, 1);
+    let mut swapped = Vec::with_capacity(words.len());
+    let mut iter = words.chunks_exact(2);
+    for pair in &mut iter {
+      swapped.push(pair[1]);
+      swapped.push(pair[0]);
     }
+    // если нечётное число слов — хвост добавляем как есть
+    let rem = iter.remainder();
+    if !rem.is_empty() {
+      swapped.push(rem[0]);
+    }
+    words = swapped;
   }
 
-  let mut out = Vec::with_capacity(bytes.len());
-  for w in &words {
-    out.push(w[0]);
-    out.push(w[1]);
-  }
-  out
+  words
 }
 
-/// Превращаем сырые байты регистра в f32 по value_type + word_format
-pub fn decode_value(reg: &ModbusRegisterConfig, data_bytes: &[u8]) -> Option<f32> {
-  let needed = (reg.regs_count as usize) * 2;
-  if data_bytes.len() < needed {
-    return None;
-  }
-
-  let slice = &data_bytes[..needed];
-  let reordered = apply_word_format(slice, reg.word_format);
-
+/// Универсальный декодер "сырые регистры -> одно ЧИСЛО f64".
+/// Строки/Raw здесь НЕ обрабатываем — для них должен быть отдельный декодер.
+pub fn decode_from_regs(
+  regs: &[u16],
+  value_type: ModbusValueType,
+  word_format: ModbusWordFormat,
+  scale: f64,
+  offset: f64,
+) -> ModbusResult<f64> {
   use ModbusValueType::*;
 
-  match reg.value_type {
-    Bool => {
-      // Просто первый байт как флаг
-      Some(if reordered[0] != 0 { 1.0 } else { 0.0 })
-    }
-    U16 => {
-      if reordered.len() < 2 {
-        return None;
-      }
-      let v = u16::from_le_bytes([reordered[0], reordered[1]]);
-      Some(v as f32)
-    }
-    I16 => {
-      if reordered.len() < 2 {
-        return None;
-      }
-      let v = i16::from_le_bytes([reordered[0], reordered[1]]);
-      Some(v as f32)
-    }
-    U32 => {
-      if reordered.len() < 4 {
-        return None;
-      }
-      let v = u32::from_le_bytes([reordered[0], reordered[1], reordered[2], reordered[3]]);
-      Some(v as f32)
-    }
-    I32 => {
-      if reordered.len() < 4 {
-        return None;
-      }
-      let v = i32::from_le_bytes([reordered[0], reordered[1], reordered[2], reordered[3]]);
-      Some(v as f32)
-    }
-    F32 => {
-      if reordered.len() < 4 {
-        return None;
-      }
-      let v = f32::from_le_bytes([reordered[0], reordered[1], reordered[2], reordered[3]]);
-      Some(v)
-    }
-    F64 => {
-      if reordered.len() < 8 {
-        return None;
-      }
-      let v = f64::from_le_bytes([
-        reordered[0],
-        reordered[1],
-        reordered[2],
-        reordered[3],
-        reordered[4],
-        reordered[5],
-        reordered[6],
-        reordered[7],
-      ]);
-      Some(v as f32)
-    }
+  if regs.is_empty() {
+    return Err(ModbusError::Decode("no registers in response".into()));
   }
+
+  let raw: f64 = match value_type {
+    // --- BOOL ---
+    Bool => {
+      // Любой ненулевой первый регистр — true
+      let b = regs[0] != 0;
+      if b { 1.0 } else { 0.0 }
+    }
+
+    // --- 8-битные ---
+    // Семантика:
+    //   * берём ПЕРВЫЙ регистр
+    //   * если swap_bytes_in_word = true — меняем в нём байты
+    //   * ВСЕГДА берём младший байт
+    U8 | I8 => {
+      let mut w = regs[0];
+
+      if word_format.swap_bytes_in_word {
+        let [hi, lo] = w.to_be_bytes();
+        w = u16::from_be_bytes([lo, hi]);
+      }
+
+      let byte = (w & 0x00FF) as u8;
+
+      match value_type {
+        U8 => byte as f64,
+        I8 => (byte as i8) as f64,
+        _ => unreachable!(),
+      }
+    }
+
+    // --- 16-битные ---
+    // Также учитываем только swap_bytes_in_word для первого регистра.
+    U16 | I16 => {
+      let mut w = regs[0];
+
+      if word_format.swap_bytes_in_word {
+        let [hi, lo] = w.to_be_bytes();
+        w = u16::from_be_bytes([lo, hi]);
+      }
+
+      match value_type {
+        U16 => w as u64 as f64,
+        I16 => (w as i16) as f64,
+        _ => unreachable!(),
+      }
+    }
+
+    // --- multi-word: сначала применяем полный word_format (байты + слова) ---
+    U32 | I32 | F32 | F64 => {
+      let words = apply_word_format(regs, word_format);
+
+      match value_type {
+        U32 => {
+          if words.len() < 2 {
+            return Err(ModbusError::Decode(
+              "U32 requires at least 2 registers".into(),
+            ));
+          }
+          let bytes = [
+            (words[0] >> 8) as u8,
+            (words[0] & 0xFF) as u8,
+            (words[1] >> 8) as u8,
+            (words[1] & 0xFF) as u8,
+          ];
+          let v = u32::from_be_bytes(bytes);
+          v as f64
+        }
+
+        I32 => {
+          if words.len() < 2 {
+            return Err(ModbusError::Decode(
+              "I32 requires at least 2 registers".into(),
+            ));
+          }
+          let bytes = [
+            (words[0] >> 8) as u8,
+            (words[0] & 0xFF) as u8,
+            (words[1] >> 8) as u8,
+            (words[1] & 0xFF) as u8,
+          ];
+          let v = i32::from_be_bytes(bytes);
+          v as f64
+        }
+
+        F32 => {
+          if words.len() < 2 {
+            return Err(ModbusError::Decode(
+              "F32 requires at least 2 registers".into(),
+            ));
+          }
+          let bytes = [
+            (words[0] >> 8) as u8,
+            (words[0] & 0xFF) as u8,
+            (words[1] >> 8) as u8,
+            (words[1] & 0xFF) as u8,
+          ];
+          let v = f32::from_be_bytes(bytes);
+          v as f64
+        }
+
+        F64 => {
+          if words.len() < 4 {
+            return Err(ModbusError::Decode(
+              "F64 requires at least 4 registers".into(),
+            ));
+          }
+          let bytes = [
+            (words[0] >> 8) as u8,
+            (words[0] & 0xFF) as u8,
+            (words[1] >> 8) as u8,
+            (words[1] & 0xFF) as u8,
+            (words[2] >> 8) as u8,
+            (words[2] & 0xFF) as u8,
+            (words[3] >> 8) as u8,
+            (words[3] & 0xFF) as u8,
+          ];
+          f64::from_be_bytes(bytes)
+        }
+
+        _ => unreachable!(),
+      }
+    }
+
+    // Строки и сырые байты — тут НЕ декодируем, пусть другой слой это делает.
+    AsciiString | Utf8String | RawBytes => {
+      return Err(ModbusError::Decode(
+        "decode_from_regs (numeric) called for non-numeric value_type".into(),
+      ));
+    }
+  };
+
+  // Масштабирование: final = raw * scale + offset
+  Ok(raw * scale + offset)
 }

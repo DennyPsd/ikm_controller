@@ -1,14 +1,26 @@
 use ractor::{Actor, ActorProcessingErr, ActorRef};
 use smol_str::SmolStr;
 use std::time::Duration;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio_serial::SerialStream;
-use tracing::{error, info};
+use tracing::{debug, error, info};
 
 use crate::actors::modbus::config::{ModbusPortConfig, ModbusRegisterConfig, ModbusTimings};
 use crate::actors::modbus::modbus_fabric::ModbusFabricMsg;
-use crate::actors::modbus::protocol::frame::{build_rtu_frame, parse_rtu_response};
-use crate::actors::modbus::protocol::utils::{decode_value, reg_type_to_fc};
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use crate::actors::modbus::protocol::utils::reg_type_to_fc;
+
+use crate::actors::modbus::protocol::fc01_read_coils::{
+  build_fc01_read_coils, parse_fc01_read_coils_typed,
+};
+use crate::actors::modbus::protocol::fc02_read_discrete::{
+  build_fc02_read_discrete, parse_fc02_read_discrete_typed,
+};
+use crate::actors::modbus::protocol::fc03_read_holding::{
+  build_fc03_read_holding, parse_fc03_read_holding_typed,
+};
+use crate::actors::modbus::protocol::fc04_read_input::{
+  build_fc04_read_input, parse_fc04_read_input_typed,
+};
 
 #[derive(Debug)]
 pub enum ModbusWorkerMsg {
@@ -32,6 +44,8 @@ pub struct ModbusWorkerState {
   pub current_index: usize,
   /// Период опроса ОДНОЙ точки
   pub polling_ms: u64,
+  /// Накопленные результаты за текущий цикл поллинга
+  pub pending: Vec<(u16 /*slave*/, u16 /*addr*/, Option<f32>)>,
 }
 
 pub struct ModbusWorker;
@@ -42,6 +56,58 @@ impl ModbusWorker {
   }
 }
 
+fn fmt_hex(bytes: &[u8]) -> String {
+  let mut s = String::new();
+  for (i, b) in bytes.iter().enumerate() {
+    if i > 0 {
+      s.push(' ');
+    }
+    use std::fmt::Write as _;
+    let _ = write!(&mut s, "{:02X}", b);
+  }
+  s
+}
+
+/// Отправка ГОТОВОГО RTU-кадра и чтение сырых байт.
+/// НИЧЕГО не парсим, просто возвращаем полный frame (addr..crc).
+pub async fn send_and_read_frame(
+  port: &mut SerialStream,
+  frame: &[u8],
+  first_byte_timeout: Duration,
+  _per_byte_timeout: Duration,
+) -> Result<Vec<u8>, String> {
+  // TX
+  debug!(
+    "Modbus TX frame ({} bytes): {}",
+    frame.len(),
+    fmt_hex(frame)
+  );
+
+  port
+    .write_all(frame)
+    .await
+    .map_err(|e| format!("Write error: {e}"))?;
+
+  let mut buf = [0u8; 256];
+  let n = match tokio::time::timeout(first_byte_timeout, port.read(&mut buf)).await {
+    Ok(Ok(n)) => n,
+    Ok(Err(e)) => return Err(format!("Read error: {e}")),
+    Err(_) => return Err("Read timeout".to_string()),
+  };
+
+  if n == 0 {
+    return Err("No data received".to_string());
+  }
+
+  let frame_rx = buf[..n].to_vec();
+  debug!(
+    "Modbus RX frame ({} bytes): {}",
+    frame_rx.len(),
+    fmt_hex(&frame_rx)
+  );
+
+  Ok(frame_rx)
+}
 #[ractor::async_trait]
 impl Actor for ModbusWorker {
   type Msg = ModbusWorkerMsg;
@@ -88,6 +154,7 @@ impl Actor for ModbusWorker {
       polls,
       current_index: 0,
       polling_ms: port_cfg.line.polling_ms,
+      pending: Vec::new(),
     })
   }
 
@@ -117,109 +184,213 @@ impl Actor for ModbusWorker {
         let reg = &poll.reg;
         let fc = reg_type_to_fc(reg.reg_type);
 
-        // payload: [start_hi, start_lo, cnt_hi, cnt_lo]
-        let payload = [
-          (reg.start_reg >> 8) as u8,
-          (reg.start_reg & 0xFF) as u8,
-          (reg.regs_count >> 8) as u8,
-          (reg.regs_count & 0xFF) as u8,
-        ];
-
-        let res = send_and_read(
-          &mut port,
-          poll.slave_id,
+        info!(
+          port = %state.port_name,
+          poll_index = state.current_index,
+          polls_total = state.polls.len(),
+          slave = poll.slave_id,
+          start_reg = reg.start_reg,
+          regs_count = reg.regs_count,
+          reg_type = ?reg.reg_type,
+          value_type = ?reg.value_type,
           fc,
-          &payload,
-          state.timings.first_byte_timeout,
-          state.timings.per_byte_timeout,
-        )
-        .await;
+          "ModbusWorker: начинаем опрос регистра",
+        );
 
-        match res {
-          Ok(bytes) => {
-            if bytes.is_empty() {
-              error!(
-                  port = %state.port_name,
-                  "ModbusWorker: пустой data-ответ"
-              );
-              let _ = state.fabric.send_message(ModbusFabricMsg::WorkerReport {
-                port_name: state.port_name.clone(),
-                slave: poll.slave_id as u16,
-                addr: reg.start_reg,
-                raw: None,
-              });
-            } else {
-              let byte_count = bytes[0] as usize;
-              if bytes.len() < 1 + byte_count {
+        // scale / offset из конфига
+        let scale = reg.scale.unwrap_or(1.0);
+        let offset = reg.offset.unwrap_or(0.0);
+
+        // --- строим RTU-кадр через протокольные функции ---
+        let frame_res: Result<Vec<u8>, String> = match fc {
+          1 => {
+            // FC01 / Read Coils
+            build_fc01_read_coils(poll.slave_id, reg.start_reg, reg.regs_count)
+              .map_err(|e| format!("build_fc01_read_coils error: {e:?}"))
+          }
+          2 => {
+            // FC02 / Read Discrete Inputs
+            build_fc02_read_discrete(poll.slave_id, reg.start_reg, reg.regs_count)
+              .map_err(|e| format!("build_fc02_read_discrete error: {e:?}"))
+          }
+          3 => {
+            // FC03 / Read Holding Registers
+            build_fc03_read_holding(poll.slave_id, reg.start_reg, reg.regs_count)
+              .map_err(|e| format!("build_fc03_read_holding error: {e:?}"))
+          }
+          4 => {
+            // FC04 / Read Input Registers
+            build_fc04_read_input(poll.slave_id, reg.start_reg, reg.regs_count)
+              .map_err(|e| format!("build_fc04_read_input error: {e:?}"))
+          }
+          other => Err(format!("Unsupported function code for read: {other}")),
+        };
+
+        let mut value_for_report: Option<f32> = None;
+
+        match frame_res {
+          Err(err) => {
+            error!(
+              port = %state.port_name,
+              slave = poll.slave_id,
+              addr = reg.start_reg,
+              "ModbusWorker: ошибка сборки кадра: {}",
+              err,
+            );
+          }
+          Ok(frame) => {
+            // шлём готовый кадр, получаем сырые байты
+            let res = send_and_read_frame(
+              &mut port,
+              &frame,
+              state.timings.first_byte_timeout,
+              state.timings.per_byte_timeout,
+            )
+            .await;
+
+            match res {
+              Err(err) => {
                 error!(
-                    port = %state.port_name,
-                    "ModbusWorker: неконсистентный ответ (byte_count={}): {:02X?}",
-                    byte_count,
-                    bytes
+                  port = %state.port_name,
+                  slave = poll.slave_id,
+                  addr = reg.start_reg,
+                  "ModbusWorker Poll error: {}",
+                  err,
                 );
-                let _ = state.fabric.send_message(ModbusFabricMsg::WorkerReport {
-                  port_name: state.port_name.clone(),
-                  slave: poll.slave_id as u16,
-                  addr: reg.start_reg,
-                  raw: None,
-                });
-              } else {
-                // data-байты регистров
-                let data = &bytes[1..1 + byte_count];
-                let value_opt = decode_value(reg, data);
-
-                if let Some(val) = value_opt {
-                  info!(
-                      port = %state.port_name,
-                      slave = poll.slave_id,
-                      addr = reg.start_reg,
-                      "ModbusWorker: значение = {:.4}",
-                      val
-                  );
-                  let _ = state.fabric.send_message(ModbusFabricMsg::WorkerReport {
-                    port_name: state.port_name.clone(),
-                    slave: poll.slave_id as u16,
-                    addr: reg.start_reg,
-                    raw: Some(val),
-                  });
-                } else {
-                  error!(
-                      port = %state.port_name,
-                      slave = poll.slave_id,
-                      addr = reg.start_reg,
-                      "ModbusWorker: decode_value вернул None (value_type={:?}, regs_count={})",
+              }
+              Ok(frame_rx) => {
+                // теперь декодим через parse_fc0X_*_typed
+                let decoded: Result<Option<f64>, String> = match fc {
+                  1 => {
+                    let val = parse_fc01_read_coils_typed(
+                      poll.slave_id,
+                      reg.regs_count,
+                      &frame_rx,
+                      scale,
+                      offset,
+                    )
+                    .map_err(|e| format!("parse_fc01_read_coils_typed error: {e:?}"))?;
+                    Ok(Some(val))
+                  }
+                  2 => {
+                    let val = parse_fc02_read_discrete_typed(
+                      poll.slave_id,
+                      reg.regs_count,
+                      &frame_rx,
+                      scale,
+                      offset,
+                    )
+                    .map_err(|e| format!("parse_fc02_read_discrete_typed error: {e:?}"))?;
+                    Ok(Some(val))
+                  }
+                  3 => {
+                    let val = parse_fc03_read_holding_typed(
+                      poll.slave_id,
+                      reg.regs_count,
+                      &frame_rx,
                       reg.value_type,
-                      reg.regs_count
-                  );
-                  let _ = state.fabric.send_message(ModbusFabricMsg::WorkerReport {
-                    port_name: state.port_name.clone(),
-                    slave: poll.slave_id as u16,
-                    addr: reg.start_reg,
-                    raw: None,
-                  });
+                      reg.word_format,
+                      scale,
+                      offset,
+                    )
+                    .map_err(|e| format!("parse_fc03_read_holding_typed error: {e:?}"))?;
+                    Ok(Some(val))
+                  }
+                  4 => {
+                    let val = parse_fc04_read_input_typed(
+                      poll.slave_id,
+                      reg.regs_count,
+                      &frame_rx,
+                      reg.value_type,
+                      reg.word_format,
+                      scale,
+                      offset,
+                    )
+                    .map_err(|e| format!("parse_fc04_read_input_typed error: {e:?}"))?;
+                    Ok(Some(val))
+                  }
+                  other => Err(format!(
+                    "Unsupported FC in ModbusWorker decode path: {other}"
+                  )),
+                };
+
+                match decoded {
+                  Ok(Some(v64)) => {
+                    value_for_report = Some(v64 as f32);
+                  }
+                  Ok(None) => {
+                    value_for_report = None;
+                  }
+                  Err(err) => {
+                    error!(
+                      port = %state.port_name,
+                      slave = poll.slave_id,
+                      addr = reg.start_reg,
+                      "ModbusWorker decode error: {}",
+                      err,
+                    );
+                    value_for_report = None;
+                  }
                 }
               }
             }
           }
-          Err(err) => {
-            error!(
-                port = %state.port_name,
-                slave = poll.slave_id,
-                addr = reg.start_reg,
-                "ModbusWorker Poll error: {}",
-                err
-            );
-            let _ = state.fabric.send_message(ModbusFabricMsg::WorkerReport {
-              port_name: state.port_name.clone(),
-              slave: poll.slave_id as u16,
-              addr: reg.start_reg,
-              raw: None,
-            });
-          }
         }
+
+        // Кладём результат этого регистра в pending (даже если None — тоже важно)
+        state
+          .pending
+          .push((poll.slave_id as u16, reg.start_reg, value_for_report));
 
         // Возвращаем поток
         state.stream = Some(port);
+
+        // Проверяем: был ли это последний регистр цикла?
+        let is_last_in_cycle = state.current_index + 1 == state.polls.len();
+
+        if is_last_in_cycle {
+          use std::fmt::Write as FmtWrite;
+
+          // Собираем один большой текст-отчёт
+          let mut report = String::new();
+
+          let _ = writeln!(
+            &mut report,
+            "ModbusWorker: завершён цикл опроса, {} точек",
+            state.pending.len()
+          );
+          let _ = writeln!(&mut report, "+-------+---------+----------------------+");
+          let _ = writeln!(&mut report, "| slave |  addr   | value                |");
+          let _ = writeln!(&mut report, "+-------+---------+----------------------+");
+
+          for (slave, addr, val_opt) in state.pending.drain(..) {
+            match val_opt {
+              Some(v) => {
+                let _ = writeln!(&mut report, "| {:5} | {:7} | {:>20.6} |", slave, addr, v);
+              }
+              None => {
+                let _ = writeln!(
+                  &mut report,
+                  "| {:5} | {:7} | {:>20} |",
+                  slave, addr, "<нет данных>",
+                );
+              }
+            }
+
+            // Отправляем в Fabric как и раньше
+            let _ = state.fabric.send_message(ModbusFabricMsg::WorkerReport {
+              port_name: state.port_name.clone(),
+              slave,
+              addr,
+              raw: val_opt,
+            });
+          }
+
+          let _ = writeln!(&mut report, "+-------+---------+----------------------+");
+
+          // ОДИН лог на весь цикл
+          info!(port = %state.port_name, "{}", report);
+        }
 
         // Следующая точка
         state.current_index = (state.current_index + 1) % state.polls.len();
@@ -237,45 +408,5 @@ impl Actor for ModbusWorker {
     }
 
     Ok(())
-  }
-}
-
-/// Отправка RTU-кадра и чтение ответа.
-/// Возвращаем **data-часть** Modbus-ответа:
-///   для Read Holding/Input Registers:
-///     [byte_count, data0, data1, ...]
-pub async fn send_and_read(
-  port: &mut SerialStream,
-  slave: u8,
-  func: u8,
-  payload: &[u8],
-  first_byte_timeout: Duration,
-  _per_byte_timeout: Duration, // пока не юзаем, оставляем для будущего
-) -> Result<Vec<u8>, String> {
-  let frame = build_rtu_frame(slave, func, payload);
-  info!("send_and_read: sending {:02X?}", frame);
-
-  port
-    .write_all(&frame)
-    .await
-    .map_err(|e| format!("Write error: {e}"))?;
-
-  let mut buf = [0u8; 256];
-  let n = match tokio::time::timeout(first_byte_timeout, port.read(&mut buf)).await {
-    Ok(Ok(n)) => n,
-    Ok(Err(e)) => return Err(format!("Read error: {e}")),
-    Err(_) => return Err("Read timeout".to_string()),
-  };
-
-  if n == 0 {
-    return Err("No data received".to_string());
-  }
-
-  let frame_rx = &buf[..n];
-  info!("send_and_read: received {} bytes: {:02X?}", n, frame_rx);
-
-  match parse_rtu_response(slave, func, frame_rx) {
-    Ok((_addr, _func, data)) => Ok(data),
-    Err(e) => Err(format!("RTU parse error: {e:?}")),
   }
 }
