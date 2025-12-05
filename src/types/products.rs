@@ -1,5 +1,6 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use smol_str::SmolStr;
 use uuid::Uuid;
 
 #[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
@@ -7,12 +8,14 @@ use uuid::Uuid;
 pub enum Product {
   Oil {
     id: Uuid,
+    name: SmolStr,
     product_weight_net: Option<f64>,
     product_weight_gross: Option<f64>,
     volume_oil_at_15: Option<f64>,
   },
   OilProduct {
     id: Uuid,
+    name: SmolStr,
     product_weight: Option<f64>,
     volume_product_at_15: Option<f64>,
   },
