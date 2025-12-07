@@ -6,10 +6,10 @@ use taxon_core::prelude::*;
 use taxon_core::utils::asyncapi::AsyncapiBuilder;
 use uuid::Uuid;
 
-use crate::types::parks::Park;
 use crate::types::products::Product;
 use crate::types::tank_configuration::TankConfig;
 use crate::types::tanks::Tank;
+use crate::types::{kmh::KMHReportInstance, parks::Park};
 use ikm_calc::calculation::kmh::{KMHCalculator, KMHReport};
 // ////////////////////////////
 /// Авторизация
@@ -148,13 +148,13 @@ pub enum KMHReportListFields {
 #[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq, Eq, Hash)]
 pub struct KMHReportListArgs {
   pub ids: Vec<Uuid>,
-  pub fields: TankListFields,
+  pub fields: KMHReportListFields,
 }
 
 #[derive(Default, Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
 pub struct KMHReportListReply {
   /// Tanks
-  pub data: Vec<KMHReport>,
+  pub data: Vec<KMHReportInstance>,
 }
 
 impl IPCMessageDef for KMHReportList {
@@ -182,9 +182,9 @@ pub struct KMHReportSet;
 
 impl IPCMessageDef for KMHReportSet {
   /// [TankConfig] - Настройки цистерны
-  type Args = KMHReport;
+  type Args = KMHReportInstance;
   /// [TankConfig] - Настройки цистерны
-  type Reply = KMHReport;
+  type Reply = KMHReportInstance;
   type ErrorArgs = ();
 
   fn action() -> Option<IPCActionKind> {
@@ -193,8 +193,7 @@ impl IPCMessageDef for KMHReportSet {
   fn target() -> Option<IPCTarget> {
     Some(IPCTarget {
       data_ns: Some("KMHReport".into()),
-      data_id: Some(Uuid::max()),
-      device_id: Some(Uuid::max()),
+      // data_id: Some(Uuid::max()),
       ..ActionTargetKind::Device.to_target()
     })
   }
