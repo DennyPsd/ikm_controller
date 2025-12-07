@@ -98,7 +98,7 @@ impl IPCMessageDef for TankList {
   }
   fn target() -> Option<IPCTarget> {
     Some(IPCTarget {
-      data_ns: Some("Tanks".into()),
+      data_ns: Some("Tank".into()),
       ..ActionTargetKind::Data.to_target()
     })
   }
@@ -111,29 +111,19 @@ impl IPCMessageDef for TankList {
 #[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
 pub struct TankConfigSet;
 
-#[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
-pub struct TankConfigSetArgs {
-  pub config: TankConfig,
-}
-
-#[derive(Default, Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
-pub struct TankConfigSetReplay {
-  /// Tanks
-  pub data: TankConfig,
-}
-
 impl IPCMessageDef for TankConfigSet {
-  type Args = TankConfigSetArgs;
-  type Reply = TankConfigSetReplay;
+  type Args = TankConfig;
+  type Reply = TankConfig;
   type ErrorArgs = ();
 
   fn action() -> Option<IPCActionKind> {
-    Some(IPCActionKind::GetData)
+    Some(IPCActionKind::SetData)
   }
   fn target() -> Option<IPCTarget> {
     Some(IPCTarget {
-      data_ns: Some("Tanks".into()),
-      ..ActionTargetKind::Data.to_target()
+      data_ns: Some("TankConfig".into()),
+      device_id: Some(Uuid::max()),
+      ..ActionTargetKind::Device.to_target()
     })
   }
   fn direction() -> IPCMessageDir {
