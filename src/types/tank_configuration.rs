@@ -2,7 +2,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 #[derive(Default, Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
-pub struct TankConfiguration {
+pub struct TankConfig {
   pub basic_data: TankBasicData,
   pub levels_of_point_sensors: LevelsOfPointSensors,
   pub construction: Construction,

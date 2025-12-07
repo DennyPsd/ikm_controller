@@ -11,13 +11,13 @@ pub enum Product {
     name: SmolStr,
     product_weight_net: Option<f64>,
     product_weight_gross: Option<f64>,
-    volume_oil_at_15: Option<f64>,
+    volume_at_15: Option<f64>,
   },
   OilProduct {
     id: Uuid,
     name: SmolStr,
     product_weight: Option<f64>,
-    volume_product_at_15: Option<f64>,
+    volume_at_15: Option<f64>,
   },
 }
 impl Default for Product {
@@ -27,7 +27,7 @@ impl Default for Product {
       name: SmolStr::new("default oil"),
       product_weight_net: None,
       product_weight_gross: None,
-      volume_oil_at_15: None,
+      volume_at_15: None,
     }
   }
 }

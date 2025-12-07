@@ -8,6 +8,7 @@ use uuid::Uuid;
 
 use crate::types::parks::Park;
 use crate::types::products::Product;
+use crate::types::tank_configuration::TankConfig;
 use crate::types::tanks::Tank;
 
 // ////////////////////////////
@@ -63,7 +64,7 @@ impl IPCMessageDef for UserLogout {
 }
 
 // ////////////////////////////
-/// TankList
+/// Получения списка цистерн
 
 #[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq, Eq, Hash)]
 pub struct TankList;
@@ -105,7 +106,40 @@ impl IPCMessageDef for TankList {
     IPCMessageDir::Receive
   }
 }
+/// Изменение настроек цистерны
 
+#[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
+pub struct TankConfigSet;
+
+#[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
+pub struct TankConfigSetArgs {
+  pub config: TankConfig,
+}
+
+#[derive(Default, Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
+pub struct TankConfigSetReplay {
+  /// Tanks
+  pub data: TankConfig,
+}
+
+impl IPCMessageDef for TankConfigSet {
+  type Args = TankConfigSetArgs;
+  type Reply = TankConfigSetReplay;
+  type ErrorArgs = ();
+
+  fn action() -> Option<IPCActionKind> {
+    Some(IPCActionKind::GetData)
+  }
+  fn target() -> Option<IPCTarget> {
+    Some(IPCTarget {
+      data_ns: Some("Tanks".into()),
+      ..ActionTargetKind::Data.to_target()
+    })
+  }
+  fn direction() -> IPCMessageDir {
+    IPCMessageDir::Receive
+  }
+}
 // ////////////////////////////
 /// ParkList
 
@@ -201,6 +235,7 @@ pub fn ikm_controller_client_api() -> AsyncapiBuilder {
     .version("0.1.1")
     .zmq_server("ikm_controller", true)
     .zmq_server("ddngine", false)
+    .operation::<TankList, ()>()
     .operation::<TankList, ()>()
     .operation::<ParkList, ()>()
     .operation::<ProductList, ()>()

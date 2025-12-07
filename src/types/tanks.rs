@@ -1,5 +1,5 @@
 use crate::types::products::Product;
-use crate::types::tank_configuration::TankConfiguration;
+use crate::types::tank_configuration::TankConfig;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -34,7 +34,7 @@ pub struct Tank {
   pub base_vars: Option<BaseVars>,
   pub ext_vars: Option<ExtVars>,
   pub display_params: Option<TankDisplay>,
-  pub configuration: Option<TankConfiguration>,
+  pub config: Option<TankConfig>,
 }
 #[derive(Default, Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
 pub struct ExtVars {
