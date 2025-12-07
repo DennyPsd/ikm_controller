@@ -1,0 +1,8 @@
+tab_spaces = 2
+hard_tabs = false
+merge_derives = true
+reorder_imports = true
+use_field_init_shorthand = true
+use_try_shorthand = true
+edition = "2024"
+style_edition = "2024"

@@ -1,0 +1,93 @@
+- id: "96f5ca2a-ba11-44d0-9b79-73446cc555c1" # r1
+  group: "Группа 1"
+  product:
+    type: Oil
+    id: "00000000-0000-0000-0000-000000000001"
+    name: "Oil-1"
+    product_weight_net: null
+    product_weight_gross: null
+    volume_at_15: null
+  name: "Tank-1"
+  status: "work"
+  grc: "1 1"
+  trc: "1 1"
+  display_params:
+    min_tank_level: 0.0
+    max_tank_level: 12070.0
+    min_level: 0.0
+    max_level: 12070.0
+    level: 3500.0
+- id: "d0dfb627-a5da-4901-b45e-81c7310c5810" # r2
+  group: "Группа 1"
+  product:
+    type: Oil
+    id: "00000000-0000-0000-0000-000000000001"
+    name: "Oil-1"
+    product_weight_net: null
+    product_weight_gross: null
+    volume_at_15: null
+  name: "Tank-2"
+  status: "work"
+  grc: "1 1"
+  trc: "1 2"
+  display_params:
+    min_tank_level: 0.0
+    max_tank_level: 12070.0
+    min_level: 0.0
+    max_level: 12070.0
+    level: 3500.0
+- id: "0f77a636-e538-4e85-bab5-00d4921674cf" # r3
+  group: "Группа 1"
+  product:
+    type: OilProduct
+    id: "00000000-0000-0000-0000-000000000002"
+    name: "OilProduct-2"
+    product_weight: null
+    volume_product_at_15: null
+  name: "Tank-3"
+  status: "work"
+  grc: "1 1"
+  trc: "1 3"
+  display_params:
+    min_tank_level: 0.0
+    max_tank_level: 12070.0
+    min_level: 0.0
+    max_level: 12070.0
+    level: 3500.0
+- id: "0f99cd5d-6f09-4e5a-a590-386fdddd15b2" # r4
+  group: "Группа 2"
+  product:
+    type: Oil
+    id: "00000000-0000-0000-0000-000000000001"
+    name: "Oil-1"
+    product_weight_net: null
+    product_weight_gross: null
+    volume_at_15: null
+  name: "Tank-4"
+  status: "work"
+  grc: "1 2"
+  trc: "1 1"
+  display_params:
+    min_tank_level: 0.0
+    max_tank_level: 12070.0
+    min_level: 0.0
+    max_level: 12070.0
+    level: 3500.0
+- id: "840cdcd6-fd1f-4dab-a1b7-cb2b53aaf1e8" # r5
+  group: "Группа 2"
+  product:
+    type: OilProduct
+    id: "00000000-0000-0000-0000-000000000002"
+    name: "OilProduct-2"
+    product_weight: null
+    volume_at_15: null
+  name: "Tank-5"
+  status: "work"
+  grc: "1 2"
+  trc: "1 2"
+  display_params:
+    min_tank_level: 0.0
+    max_tank_level: 12070.0
+    min_level: 0.0
+    max_level: 12070.0
+    level: 3500.0
