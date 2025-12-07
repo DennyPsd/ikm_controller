@@ -236,7 +236,7 @@ pub fn ikm_controller_client_api() -> AsyncapiBuilder {
     .zmq_server("ikm_controller", true)
     .zmq_server("ddngine", false)
     .operation::<TankList, ()>()
-    .operation::<TankList, ()>()
+    .operation::<TankConfigSet, ()>()
     .operation::<ParkList, ()>()
     .operation::<ProductList, ()>()
     .operation::<UserLogin, ()>()
