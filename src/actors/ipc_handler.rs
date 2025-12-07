@@ -11,7 +11,8 @@ use tracing::{error, info};
 
 use crate::TankListArgs;
 use crate::actors::modbus::modbus_fabric::ModbusFabricMsg;
-use crate::types::tanks::{BaseVars, Tank};
+use crate::types::tank_configuration::TankConfig;
+use crate::types::tanks::{BaseVars, ExtVars, Tank};
 
 #[derive(Clone)]
 #[allow(dead_code)]
@@ -159,13 +160,13 @@ impl Actor for IpcHandler {
                         .map_or(None, |v| Some(v))
                     });
                   let path = format!("assets/db/tanks/{id}/config.yaml");
-                  tank.base_vars = File::open(&path[..])
+                  tank.config = File::open(&path[..])
                     .map_err(|err| {
                       error!("{err:#?}");
                       Option::<()>::None
                     })
                     .map_or(None, |mut reader| {
-                      serde_saphyr::from_reader::<File, BaseVars>(reader)
+                      serde_saphyr::from_reader::<File, TankConfig>(reader)
                         .map_err(|err| {
                           error!("{err:#?}");
                           Option::<()>::None
@@ -173,13 +174,13 @@ impl Actor for IpcHandler {
                         .map_or(None, |v| Some(v))
                     });
                   let path = format!("assets/db/tanks/{id}/ext_vars.yaml");
-                  tank.base_vars = File::open(&path[..])
+                  tank.ext_vars = File::open(&path[..])
                     .map_err(|err| {
                       error!("{err:#?}");
                       Option::<()>::None
                     })
                     .map_or(None, |mut reader| {
-                      serde_saphyr::from_reader::<File, BaseVars>(reader)
+                      serde_saphyr::from_reader::<File, ExtVars>(reader)
                         .map_err(|err| {
                           error!("{err:#?}");
                           Option::<()>::None
