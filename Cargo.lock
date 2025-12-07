@@ -1352,6 +1352,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "ikm-calc"
+version = "0.1.0"
+dependencies = [
+ "schemars 1.1.0",
+ "serde",
+]
+
+[[package]]
 name = "ikm-controller"
 version = "0.1.0"
 dependencies = [
@@ -1363,6 +1371,7 @@ dependencies = [
  "futures",
  "futures-channel",
  "futures-util",
+ "ikm-calc",
  "ractor",
  "rand 0.8.5",
  "saphyr",

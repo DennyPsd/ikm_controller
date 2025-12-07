@@ -10,7 +10,7 @@ use crate::types::parks::Park;
 use crate::types::products::Product;
 use crate::types::tank_configuration::TankConfig;
 use crate::types::tanks::Tank;
-
+use ikm_calc::calculation::kmh::{KMHCalculator, KMHReport};
 // ////////////////////////////
 /// Авторизация
 #[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq, Eq, Hash)]
@@ -133,6 +133,76 @@ impl IPCMessageDef for TankConfigSet {
   }
 }
 // ////////////////////////////
+/// Получения списка КМХ отчетов
+
+#[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq, Eq, Hash)]
+pub struct KMHReportList;
+
+#[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq, Eq, Hash)]
+pub enum KMHReportListFields {
+  Minimal,
+  All,
+  Exact(Vec<SmolStr>),
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq, Eq, Hash)]
+pub struct KMHReportListArgs {
+  pub ids: Vec<Uuid>,
+  pub fields: TankListFields,
+}
+
+#[derive(Default, Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
+pub struct KMHReportListReply {
+  /// Tanks
+  pub data: Vec<KMHReport>,
+}
+
+impl IPCMessageDef for KMHReportList {
+  type Args = KMHReportListArgs;
+  type Reply = KMHReportListReply;
+  type ErrorArgs = ();
+
+  fn action() -> Option<IPCActionKind> {
+    Some(IPCActionKind::GetData)
+  }
+  fn target() -> Option<IPCTarget> {
+    Some(IPCTarget {
+      data_ns: Some("KMHReport".into()),
+      ..ActionTargetKind::Data.to_target()
+    })
+  }
+  fn direction() -> IPCMessageDir {
+    IPCMessageDir::Receive
+  }
+}
+/// Изменение настроек цистерны
+
+#[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
+pub struct KMHReportSet;
+
+impl IPCMessageDef for KMHReportSet {
+  /// [TankConfig] - Настройки цистерны
+  type Args = KMHReport;
+  /// [TankConfig] - Настройки цистерны
+  type Reply = KMHReport;
+  type ErrorArgs = ();
+
+  fn action() -> Option<IPCActionKind> {
+    Some(IPCActionKind::SetData)
+  }
+  fn target() -> Option<IPCTarget> {
+    Some(IPCTarget {
+      data_ns: Some("KMHReport".into()),
+      data_id: Some(Uuid::max()),
+      device_id: Some(Uuid::max()),
+      ..ActionTargetKind::Device.to_target()
+    })
+  }
+  fn direction() -> IPCMessageDir {
+    IPCMessageDir::Receive
+  }
+}
+// ////////////////////////////
 /// ParkList
 
 #[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq, Eq, Hash)]
@@ -231,6 +301,8 @@ pub fn ikm_controller_client_api() -> AsyncapiBuilder {
     .operation::<TankConfigSet, ()>()
     .operation::<ParkList, ()>()
     .operation::<ProductList, ()>()
+    .operation::<KMHReportList, ()>()
+    .operation::<KMHReportSet, ()>()
     .operation::<UserLogin, ()>()
     .operation::<UserLogout, ()>()
 }

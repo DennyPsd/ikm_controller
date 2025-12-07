@@ -13,6 +13,7 @@ exclude = [
   ".git",
   ".roo",
   "docs/*",
+  "assets/*",
   "tmp/*",
   ".gitattributes",
   ".gitignore",
@@ -45,7 +46,7 @@ opt-level = 3
 [dependencies]
 #------------ utils ------------#
 taxon-core = { path = "../taxon/crates/taxon_core", features = ["desktop"] }
-
+ikm-calc = { path = "../ikm-calc/ikm_calc" }
 fancy-regex = "0.16"
 thiserror = "^1.0"
 anyhow = "^1.0"
