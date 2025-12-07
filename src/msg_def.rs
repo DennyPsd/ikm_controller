@@ -112,7 +112,9 @@ impl IPCMessageDef for TankList {
 pub struct TankConfigSet;
 
 impl IPCMessageDef for TankConfigSet {
+  /// [TankConfig] - Настройки цистерны
   type Args = TankConfig;
+  /// [TankConfig] - Настройки цистерны
   type Reply = TankConfig;
   type ErrorArgs = ();
 
