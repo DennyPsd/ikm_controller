@@ -1361,7 +1361,7 @@ dependencies = [
 
 [[package]]
 name = "ikm-controller"
-version = "0.1.0"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "bytes",
@@ -2690,7 +2690,6 @@ dependencies = [
  "serde_json",
  "serde_repr",
  "serde_with",
- "serde_yaml",
  "serialport",
  "smallvec 1.15.1",
  "smol_str",
