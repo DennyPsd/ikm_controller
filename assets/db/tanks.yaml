@@ -1,5 +1,4 @@
----
-- id: "019aef2a-2358-71c1-a204-ee09b00e8f0a" # r1
+- id: "96f5ca2a-ba11-44d0-9b79-73446cc555c1" # r1
   group: "Группа 1"
   product:
     type: Oil
@@ -18,8 +17,7 @@
     min_level: 0.0
     max_level: 12070.0
     level: 3500.0
-
-- id: "019aef2a-2358-71c1-a204-ee110bf80fcf" # r2
+- id: "d0dfb627-a5da-4901-b45e-81c7310c5810" # r2
   group: "Группа 1"
   product:
     type: Oil
@@ -38,8 +36,7 @@
     min_level: 0.0
     max_level: 12070.0
     level: 3500.0
-
-- id: "019aef2a-2358-71c1-a204-ee259ce5e139" # r3
+- id: "0f77a636-e538-4e85-bab5-00d4921674cf" # r3
   group: "Группа 1"
   product:
     type: OilProduct
@@ -57,8 +54,7 @@
     min_level: 0.0
     max_level: 12070.0
     level: 3500.0
-
-- id: "019aef2a-2358-71c1-a204-ee30a0113310" # r4
+- id: "0f99cd5d-6f09-4e5a-a590-386fdddd15b2" # r4
   group: "Группа 2"
   product:
     type: Oil
@@ -77,8 +73,7 @@
     min_level: 0.0
     max_level: 12070.0
     level: 3500.0
-
-- id: "019aef2a-2358-71c1-a204-ee4ce4f124bb" # r5
+- id: "840cdcd6-fd1f-4dab-a1b7-cb2b53aaf1e8" # r5
   group: "Группа 2"
   product:
     type: OilProduct

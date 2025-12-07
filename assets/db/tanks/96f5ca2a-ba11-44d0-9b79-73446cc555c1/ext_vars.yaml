@@ -1,0 +1,22 @@
+# ---
+# changed_at: 1765111081110
+# data:
+product_volume: 12000.0
+product_level: 3500.0
+water_level: 200.0
+product_temperature: 32.0
+vapour_temperature: 36.0
+product_density: 738.0
+product_at_15_density: 720.0
+hydrostatic_pressure: 5500.0
+vapour_pressure: 2000.0
+reserve_capacity_up_max: 12070.0
+reserve_product_up_min: 3500.0
+product_movement_consumption: 20.0
+product_movement_level_measurement_speed: 5.0
+volume_product_calc_below_water: 10.0
+volume_raw_water: 50.0
+temperatures:
+  - { value: 32.0, level: 500.0, name: "T1" }
+  - { value: 33.5, level: 2000.0, name: "T2" }
+  - { value: 35.0, level: 3500.0, name: "T3" }

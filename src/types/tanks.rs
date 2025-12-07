@@ -2,6 +2,8 @@ use crate::types::products::Product;
 use crate::types::tank_configuration::TankConfig;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use smol_str::SmolStr;
+use uuid::Uuid;
 
 pub type TankStatus = String;
 
@@ -24,13 +26,13 @@ pub struct TankDisplay {
 
 #[derive(Default, Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
 pub struct Tank {
-  pub id: String,
-  pub group: String,
-  pub product: Product,
-  pub name: String,
+  pub id: Uuid,
+  pub group: SmolStr,
+  pub product: Option<Product>,
+  pub name: SmolStr,
   pub status: TankStatus,
-  pub grc: String,
-  pub trc: String,
+  pub grc: SmolStr,
+  pub trc: SmolStr,
   pub base_vars: Option<BaseVars>,
   pub ext_vars: Option<ExtVars>,
   pub display_params: Option<TankDisplay>,
