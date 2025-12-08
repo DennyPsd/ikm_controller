@@ -1,5 +1,5 @@
-product_volume: 6982.0
-product_level: 3491.0
+product_volume: 6974.0
+product_level: 3487.0
 water_level: 0.0
 product_temperature: 20.744999999999997
 vapour_temperature: 22.59
@@ -18,29 +18,29 @@ temperatures:
     level: 0.0
     name: T0
   - value: 19.3
-    level: 388.0
+    level: 387.0
     name: T1
   - value: 19.4
-    level: 776.0
+    level: 775.0
     name: T2
   - value: 19.4
-    level: 1164.0
+    level: 1162.0
     name: T3
   - value: 19.69
-    level: 1552.0
+    level: 1550.0
     name: T4
-  - value: 23.01
-    level: 1939.0
+  - value: 23.0
+    level: 1937.0
     name: T5
-  - value: 22.89
-    level: 2327.0
+  - value: 22.91
+    level: 2325.0
     name: T6
-  - value: 21.79
-    level: 2715.0
+  - value: 21.81
+    level: 2712.0
     name: T7
   - value: 22.5
-    level: 3103.0
+    level: 3100.0
     name: T8
   - value: 22.59
-    level: 3491.0
+    level: 3487.0
     name: T9
