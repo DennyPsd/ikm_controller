@@ -420,7 +420,7 @@ impl Actor for IpcHandler {
 
             info!(
               "kmh_set: расчёт КМХ для device_id={}, report_id={}",
-              kmh_instance.device_id, kmh_instance.id
+              kmh_instance.device.id, kmh_instance.id
             );
 
             let mut calc = KMHCalculator {
