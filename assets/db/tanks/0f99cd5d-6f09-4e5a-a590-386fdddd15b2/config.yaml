@@ -3,65 +3,80 @@ basic_data:
   reservoir_park: Парк 1
   group: Группа 1
   tank_type: vertical
-  nominal_capacity: '12070'
-  density_stored_liquid_according: '738'
-  basic_height: '12070'
+  nominal_capacity: "12070"
+  density_stored_liquid_according: "738"
+  basic_height: "12070"
   product: default oil
-  maximum_allowable_product_level: '12070'
+  maximum_allowable_product_level: "12070"
 levels_of_point_sensors:
-  hysteresis: '2'
+  hysteresis: "2"
   points:
-  - id: t0
-    index: 0
-    value: '750'
-  - id: t1
-    index: 1
-    value: '2000'
-  - id: t2
-    index: 2
-    value: '3500'
-  - id: t3
-    index: 3
-    value: '5000'
-  - id: t4
-    index: 4
-    value: '6500'
+    - id: t0
+      index: 0
+      value: "750"
+    - id: t1
+      index: 1
+      value: "2000"
+    - id: t2
+      index: 2
+      value: "3500"
+    - id: t3
+      index: 3
+      value: "5000"
+    - id: t4
+      index: 4
+      value: "6500"
+    - id: t45
+      index: 4
+      value: "8000"
+    - id: t6
+      index: 4
+      value: "9500"
+    - id: t7
+      index: 4
+      value: "11000"
+    - id: t8
+      index: 4
+      value: "12500"
+    - id: t9
+      index: 4
+      value: "15000"
 construction:
-  linear_expansion: '0.0000125'
-  mass_floating_coating: '2877'
+  linear_expansion: "0.0000125"
+  mass_floating_coating: "2877"
 mass_calculation_method:
-  method: '1'
-  switching_level: '3500'
-  switching_level_hysteresis: '2'
-  p3_p1: '12758'
-  p1_reference_point: '1242'
-  reference_point: '0'
+  method: "1"
+  switching_level: "3500"
+  switching_level_hysteresis: "2"
+  p3_p1: "12758"
+  p1_reference_point: "1242"
+  reference_point: "0"
 measurement_accuracy_indicators:
-  limit_permissible_absolute_error: '0.001'
-  hydrostatic_device_limit: '110000'
-  pressure_device_limit: '10000'
-  limit_permissible_absolute_measurement_reservoir_level: '1'
-  limit_permissible_absolute_measurement_level_raw_water: '1'
-  limit_permissible_absolute_measurement_temp_products_and_vapours: '0.5'
-  limit_permissible_absolute_measurement_oil_densities: '1'
+  limit_permissible_absolute_error: "0.001"
+  hydrostatic_device_limit: "110000"
+  pressure_device_limit: "10000"
+  limit_permissible_absolute_measurement_reservoir_level: "1"
+  limit_permissible_absolute_measurement_level_raw_water: "1"
+  limit_permissible_absolute_measurement_temp_products_and_vapours: "0.5"
+  limit_permissible_absolute_measurement_oil_densities: "1"
   drawing_calibration_table: grad_table_v1
   hydrostatic_device_vpi: null
   pressure_device_vpi: null
 calibration_block:
-  level_coefficient: '-2'
+  level_coefficient: "-2"
   level_point_sensors:
-  - id: t0
-    index: 0
-    value: '750'
-  - id: t1
-    index: 1
-    value: '2000'
-  - id: t2
-    index: 2
-    value: '3500'
-  - id: t3
-    index: 3
-    value: '5000'
-  - id: t4
-    index: 4
-    value: '6500'
+    - id: t0
+      index: 0
+      value: "750"
+    - id: t1
+      index: 1
+      value: "2000"
+    - id: t2
+      index: 2
+      value: "3500"
+    - id: t3
+      index: 3
+      value: "5000"
+    - id: t4
+      index: 4
+      value: "6500"

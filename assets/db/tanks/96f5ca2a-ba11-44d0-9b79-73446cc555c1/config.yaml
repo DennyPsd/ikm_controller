@@ -12,11 +12,36 @@ basic_data:
 levels_of_point_sensors:
   hysteresis: "2"
   points:
-    - { id: "t0", index: 0, value: "750" }
-    - { id: "t1", index: 1, value: "2000" }
-    - { id: "t2", index: 2, value: "3500" }
-    - { id: "t3", index: 3, value: "5000" }
-    - { id: "t4", index: 4, value: "6500" }
+    - id: t0
+      index: 0
+      value: "750"
+    - id: t1
+      index: 1
+      value: "2000"
+    - id: t2
+      index: 2
+      value: "3500"
+    - id: t3
+      index: 3
+      value: "5000"
+    - id: t4
+      index: 4
+      value: "6500"
+    - id: t45
+      index: 4
+      value: "8000"
+    - id: t6
+      index: 4
+      value: "9500"
+    - id: t7
+      index: 4
+      value: "11000"
+    - id: t8
+      index: 4
+      value: "12500"
+    - id: t9
+      index: 4
+      value: "15000"
 
 construction: { linear_expansion: "0.0000125", mass_floating_coating: "2877" }
 mass_calculation_method:

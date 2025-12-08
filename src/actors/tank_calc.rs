@@ -307,52 +307,42 @@ impl TankCalcActor {
     let temperatures = vec![
       Temperature {
         value: entry.t0,
-        level: (entry.h_measured * 0.0 / 9.0).round(),
         name: "T0".to_string(),
       },
       Temperature {
         value: entry.t1,
-        level: (entry.h_measured * 1.0 / 9.0).round(),
         name: "T1".to_string(),
       },
       Temperature {
         value: entry.t2,
-        level: (entry.h_measured * 2.0 / 9.0).round(),
         name: "T2".to_string(),
       },
       Temperature {
         value: entry.t3,
-        level: (entry.h_measured * 3.0 / 9.0).round(),
         name: "T3".to_string(),
       },
       Temperature {
         value: entry.t4,
-        level: (entry.h_measured * 4.0 / 9.0).round(),
         name: "T4".to_string(),
       },
       Temperature {
         value: entry.t5,
-        level: (entry.h_measured * 5.0 / 9.0).round(),
         name: "T5".to_string(),
       },
       Temperature {
         value: entry.t6,
-        level: (entry.h_measured * 6.0 / 9.0).round(),
         name: "T6".to_string(),
       },
       Temperature {
         value: entry.t7,
-        level: (entry.h_measured * 7.0 / 9.0).round(),
         name: "T7".to_string(),
       },
       Temperature {
         value: entry.t8,
-        level: (entry.h_measured * 8.0 / 9.0).round(),
         name: "T8".to_string(),
       },
       Temperature {
         value: entry.t9,
-        level: (entry.h_measured * 9.0 / 9.0).round(),
         name: "T9".to_string(),
       },
     ];
