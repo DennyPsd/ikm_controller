@@ -1,16 +1,20 @@
 use std::collections::HashMap;
 use taxon_core::actors::ipc::errors::internal_error;
 
+use crate::actors::modbus::modbus_fabric::ModbusFabricMsg;
+use crate::types::kmh::KMHReportInstance;
+use crate::types::products::Product;
+use crate::types::tank_configuration::TankConfig;
+use crate::types::tanks::{BaseVars, ExtVars, Tank};
+use crate::{KMHReportListArgs, ProductListArgs, TankListArgs};
+use ikm_calc::calculation::kmh::KMHCalculator;
 use ractor::{Actor, ActorProcessingErr, ActorRef};
 use serde_json::{json, to_string_pretty};
 use std::fs::File;
+use std::path::Path;
 use taxon_core::prelude::{IPCActionKind, IPCActorMsg, IPCMessageCrate};
 use tracing::{error, info};
-
-use crate::TankListArgs;
-use crate::actors::modbus::modbus_fabric::ModbusFabricMsg;
-use crate::types::tank_configuration::TankConfig;
-use crate::types::tanks::{BaseVars, ExtVars, Tank};
+use uuid::Uuid;
 
 #[derive(Clone)]
 #[allow(dead_code)]
@@ -204,159 +208,87 @@ impl Actor for IpcHandler {
             info!("Modbus IPC_Handler: обработка action 'park_list'");
             return Ok(());
           }
-
+          */
           // ===================== PRODUCTS_LIST =====================
           if action.kind == IPCActionKind::GetData
             && action.name.as_deref() == Some("products_list")
+            && action.args.is_some()
           {
             info!("Modbus IPC_Handler: обработка action 'products_list'");
 
-            let full_info = action
-              .args
-              .as_ref()
-              .and_then(|v| v.get("full"))
-              .and_then(|v| v.as_bool())
-              .unwrap_or(false);
+            let args = match serde_json::from_value::<ProductListArgs>(action.args.clone().unwrap())
+            {
+              Ok(args) => args,
+              Err(err) => {
+                let err = internal_error(action.name.clone(), None)
+                  .with_message(format!("products_list: {}", err));
 
-            let ids: Vec<String> = action
-              .args
-              .as_ref()
-              .and_then(|v| v.get("ids"))
-              .and_then(|v| v.as_array())
-              .map(|arr| {
-                arr
-                  .iter()
-                  .filter_map(|x| x.as_str().map(|s| s.to_string()))
-                  .collect()
-              })
-              .unwrap_or_default();
+                info!("products_list: шлём ошибку в ipc_router (bad args)");
+                let _ = state
+                  .ipc_router
+                  .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                  .map_err(|err| {
+                    error!("products_list: to_replay_msg {}", err);
+                  });
+                return Ok(());
+              }
+            };
 
             info!(
-              "products_list: full_info={}, ids_filter={:?}",
-              full_info, ids
+              "products_list: ids.len() = {}, fields = {:?}",
+              args.ids.len(),
+              args.fields
             );
 
             let path = "assets/db/tanks.yaml";
-            info!("products_list: читаем файл '{}'", path);
-
-            let yaml_str = match fs::read_to_string(path) {
-              Ok(s) => {
-                info!(
-                  "products_list: файл '{}' прочитан, длина={} байт",
-                  path,
-                  s.len()
-                );
-                s
-              }
-              Err(e) => {
-                error!("products_list: failed to read {}: {:?}", path, e);
-
-                let err: IPCError<()> = IPCError {
-                  code: 500,
-                  message: format!("products_list: не удалось прочитать {}", path).into(),
-                  action_name: action.name.clone(),
-                  target: None,
-                  args: None,
-                };
-
-                if let Some(msg) = ipc_msg.to_replay_msg::<JsonValue>(None, Some(err)) {
-                  info!("products_list: шлём ошибку в ipc_router (read_to_string)");
-                  let _ = state.ipc_router.send_message(Some(msg));
-                } else {
-                  error!("products_list: to_replay_msg вернул None при ошибке чтения");
-                }
-                return Ok(());
-              }
-            };
-
-            let tanks: Vec<YamlValue> = match serde_yaml::from_str::<Vec<YamlValue>>(&yaml_str) {
-              Ok(v) => {
-                info!("products_list: tanks YAML распарсен, элементов={}", v.len());
-                v
-              }
-              Err(e) => {
-                error!("products_list: failed to parse YAML {}: {:?}", path, e);
-
-                let err: IPCError<()> = IPCError {
-                  code: 500,
-                  message: "products_list: ошибка парсинга tanks.yaml".into(),
-                  action_name: action.name.clone(),
-                  target: None,
-                  args: None,
-                };
-
-                if let Some(msg) = ipc_msg.to_replay_msg::<JsonValue>(None, Some(err)) {
-                  info!("products_list: шлём ошибку в ipc_router (parse_yaml)");
-                  let _ = state.ipc_router.send_message(Some(msg));
-                } else {
-                  error!("products_list: to_replay_msg вернул None при ошибке парсинга YAML");
-                }
-                return Ok(());
-              }
-            };
-
-            let mut unique_products: Vec<JsonValue> = Vec::new();
-            let mut seen_keys: HashSet<String> = HashSet::new();
-
-            for t in &tanks {
-              let product_yaml = match t.get("product") {
-                Some(p) => p,
-                None => continue, // в этом танке продукт не описан
-              };
-
-              let prod_json: JsonValue =
-                match serde_yaml::from_value::<JsonValue>(product_yaml.clone()) {
-                  Ok(v) => v,
-                  Err(e) => {
-                    error!(
-                      "products_list: не смог распарсить product из tanks.yaml: {:?}",
-                      e
-                    );
-                    continue;
-                  }
-                };
-
-              let key = prod_json
-                .get("id")
-                .and_then(|v| v.as_str())
-                .map(|s| s.to_string())
-                .or_else(|| {
-                  prod_json
-                    .get("name")
-                    .and_then(|v| v.as_str())
-                    .map(|s| s.to_string())
+            let tanks: Vec<Tank> = match File::open(path)
+              .map_err(|err| {
+                internal_error(action.name.clone(), None).with_message(format!("{err:?}"))
+              })
+              .and_then(|reader| {
+                serde_saphyr::from_reader::<File, Vec<Tank>>(reader).map_err(|err| {
+                  internal_error(action.name.clone(), None).with_message(format!("{err:?}"))
                 })
-                .unwrap_or_else(|| serde_json::to_string(&prod_json).unwrap_or_default());
-
-              if !ids.is_empty() {
-                let match_by_id = prod_json
-                  .get("id")
-                  .and_then(|v| v.as_str())
-                  .map(|s| ids.iter().any(|id| id == s))
-                  .unwrap_or(false);
-
-                let match_by_key = ids.iter().any(|id| id == &key);
-
-                if !(match_by_id || match_by_key) {
-                  continue;
+              }) {
+              Ok(data) => data,
+              Err(err) => {
+                if let Some(msg) = ipc_msg.to_replay_msg(Option::<()>::None, Some(err)) {
+                  info!("products_list: шлём ошибку в ipc_router (read/parse)");
+                  let _ = state.ipc_router.send_message(Some(msg));
+                } else {
+                  error!("products_list: to_replay_msg вернул None при ошибке чтения файла");
                 }
+                return Ok(());
               }
+            };
 
-              if seen_keys.insert(key) {
-                unique_products.push(prod_json);
+            let mut products_by_id: HashMap<Uuid, Product> = HashMap::new();
+
+            for tank in tanks.into_iter() {
+              if let Some(prod) = tank.product {
+                let prod_id = match &prod {
+                  Product::Oil { id, .. } => *id,
+                  Product::OilProduct { id, .. } => *id,
+                };
+
+                products_by_id.entry(prod_id).or_insert(prod);
               }
             }
 
-            info!(
-              "products_list: найдено {} уникальных продуктов",
-              unique_products.len()
-            );
+            let ids: Vec<Uuid> = if !args.ids.is_empty() {
+              args.ids.clone()
+            } else {
+              products_by_id.keys().cloned().collect()
+            };
 
-            let reply_body = json!({
-              "data": unique_products,
-            });
+            let data: Vec<Product> = ids
+              .into_iter()
+              .filter_map(|id| products_by_id.get(&id).cloned())
+              .collect();
 
-            if let Some(msg) = ipc_msg.to_replay_msg(Some(reply_body), None) {
+            info!("products_list: найдено {} продуктов", data.len());
+
+            if let Some(msg) = ipc_msg.to_replay_msg(Some(json!({ "data": data })), None) {
               info!("products_list: отправляем ответ в ipc_router");
               let _ = state.ipc_router.send_message(Some(msg));
             } else {
@@ -366,10 +298,187 @@ impl Actor for IpcHandler {
             return Ok(());
           }
 
+          // ===================== KMH_LIST =====================
+          if action.kind == IPCActionKind::GetData
+            && action.name.as_deref() == Some("kmh_report_list")
+            && action.args.is_some()
+          {
+            info!("Modbus IPC_Handler: обработка action 'kmh_report_list'");
+
+            let args =
+              match serde_json::from_value::<KMHReportListArgs>(action.args.clone().unwrap()) {
+                Ok(args) => args,
+                Err(err) => {
+                  let err = internal_error(action.name.clone(), None)
+                    .with_message(format!("kmh_report_list: {}", err));
+
+                  info!("kmh_report_list: шлём ошибку в ipc_router (bad args)");
+                  let _ = state
+                    .ipc_router
+                    .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                    .map_err(|err| {
+                      error!("kmh_report_list: to_replay_msg {}", err);
+                    });
+                  return Ok(());
+                }
+              };
+
+            info!(
+              "kmh_report_list: ids.len() = {}, fields = {:?}",
+              args.ids.len(),
+              args.fields
+            );
+            let tank_ids: Vec<Uuid> = if !args.ids.is_empty() {
+              args.ids.clone()
+            } else {
+              let path = "assets/db/tanks.yaml";
+              let tanks: Vec<Tank> = match File::open(path)
+                .map_err(|err| {
+                  internal_error(action.name.clone(), None).with_message(format!("{err:?}"))
+                })
+                .and_then(|reader| {
+                  serde_saphyr::from_reader::<File, Vec<Tank>>(reader).map_err(|err| {
+                    internal_error(action.name.clone(), None).with_message(format!("{err:?}"))
+                  })
+                }) {
+                Ok(data) => data,
+                Err(err) => {
+                  if let Some(msg) = ipc_msg.to_replay_msg(Option::<()>::None, Some(err)) {
+                    info!("kmh_report_list: шлём ошибку в ipc_router (read tanks.yaml)");
+                    let _ = state.ipc_router.send_message(Some(msg));
+                  } else {
+                    error!(
+                      "kmh_report_list: to_replay_msg вернул None при ошибке чтения tanks.yaml"
+                    );
+                  }
+                  return Ok(());
+                }
+              };
+
+              tanks.into_iter().map(|t| t.id).collect()
+            };
+
+            let mut reports: Vec<KMHReportInstance> = Vec::new();
+
+            for tank_id in tank_ids {
+              let file_path = format!("assets/db/calc/{tank_id}/kmh_report.json");
+
+              match File::open(&file_path) {
+                Ok(f) => match serde_json::from_reader::<File, KMHReportInstance>(f) {
+                  Ok(instance) => {
+                    reports.push(instance);
+                  }
+                  Err(err) => {
+                    error!(
+                      "kmh_report_list: не удалось распарсить {}: {err:?}",
+                      file_path
+                    );
+                  }
+                },
+                Err(err) => {
+                  info!("kmh_report_list: нет файла {} ({err:?})", file_path);
+                }
+              }
+            }
+
+            info!("kmh_report_list: найдено {} отчётов", reports.len());
+
+            if let Some(msg) = ipc_msg.to_replay_msg(Some(json!({ "data": reports })), None) {
+              info!("kmh_report_list: отправляем ответ в ipc_router");
+              let _ = state.ipc_router.send_message(Some(msg));
+            } else {
+              error!("kmh_report_list: to_replay_msg вернул None");
+            }
+
+            return Ok(());
+          }
+
+          // ===================== KMH_SET =====================
+          if action.kind == IPCActionKind::SetData
+            && action.name.as_deref() == Some("kmh_set")
+            && action.args.is_some()
+          {
+            info!("Modbus IPC_Handler: обработка action 'kmh_set'");
+
+            let mut kmh_instance =
+              match serde_json::from_value::<KMHReportInstance>(action.args.clone().unwrap()) {
+                Ok(v) => v,
+                Err(err) => {
+                  let err = internal_error(action.name.clone(), None)
+                    .with_message(format!("kmh_set: {}", err));
+
+                  info!("kmh_set: шлём ошибку в ipc_router (bad args)");
+                  let _ = state
+                    .ipc_router
+                    .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                    .map_err(|err| {
+                      error!("kmh_set: to_replay_msg {}", err);
+                    });
+                  return Ok(());
+                }
+              };
+
+            info!(
+              "kmh_set: расчёт КМХ для device_id={}, report_id={}",
+              kmh_instance.device_id, kmh_instance.id
+            );
+
+            let mut calc = KMHCalculator {
+              report: kmh_instance.data.clone(),
+            };
+            let calculated_report = calc.get_results();
+
+            kmh_instance.data = calculated_report;
+
+            let dir_path = format!("assets/db/calc/{}", kmh_instance.device_id);
+            if !Path::new(&dir_path).is_dir() {
+              let err = internal_error(action.name.clone(), None).with_message(format!(
+                "kmh_set: директории с метой не существует: {}",
+                dir_path
+              ));
+
+              if let Some(msg) = ipc_msg.to_replay_msg(Option::<()>::None, Some(err)) {
+                info!("kmh_set: шлём ошибку в ipc_router (no calc dir)");
+                let _ = state.ipc_router.send_message(Some(msg));
+              } else {
+                error!("kmh_set: to_replay_msg вернул None при ошибке (no calc dir)");
+              }
+              return Ok(());
+            }
+
+            let file_path = format!("{}/kmh_report.json", dir_path);
+
+            let write_result: Result<(), _> = File::create(&file_path).and_then(|f| {
+              serde_json::to_writer_pretty(f, &kmh_instance).map_err(std::io::Error::other)
+            });
+
+            if let Err(err) = write_result {
+              let err = internal_error(action.name.clone(), None)
+                .with_message(format!("kmh_set: write {:?}: {err:?}", file_path));
+
+              if let Some(msg) = ipc_msg.to_replay_msg(Option::<()>::None, Some(err)) {
+                info!("kmh_set: шлём ошибку в ipc_router (write)");
+                let _ = state.ipc_router.send_message(Some(msg));
+              } else {
+                error!("kmh_set: to_replay_msg вернул None при ошибке записи файла");
+              }
+              return Ok(());
+            }
+
+            if let Some(msg) = ipc_msg.to_replay_msg(Some(json!(kmh_instance)), None) {
+              info!("kmh_set: отправляем ответ в ipc_router");
+              let _ = state.ipc_router.send_message(Some(msg));
+            } else {
+              error!("kmh_set: to_replay_msg вернул None");
+            }
+
+            return Ok(());
+          }
+
           info!(
             "Modbus IPC_Handler: непонятный action: name={:?}, kind={:?} — игнорируем",
             action.name, action.kind
-          ); */
+          );
         }
       }
     }

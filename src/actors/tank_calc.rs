@@ -12,7 +12,9 @@ use crate::types::{
   tanks::{BaseVars, ExtVars, Temperature},
 };
 
-//Инициализация констант из meta. Избыточно, но вдруг понадобятся другие.
+// Инициализация констант из meta. Полей много, часть пока реально не используется.
+// Чтобы clippy не ругался на dead_code, явно разрешаем.
+#[allow(dead_code)]
 #[derive(Deserialize, Debug)]
 struct MetaConstants {
   calculation_method: i32,
@@ -52,6 +54,7 @@ struct MetaConstants {
   product_density_15: f64,
 }
 
+#[allow(dead_code)]
 #[derive(Deserialize, Debug)]
 struct LevelCoefficientPoint {
   id: String,
@@ -59,6 +62,7 @@ struct LevelCoefficientPoint {
   kti: f64,
 }
 
+#[allow(dead_code)]
 #[derive(Deserialize, Debug)]
 struct Meta {
   constants: MetaConstants,
@@ -66,6 +70,7 @@ struct Meta {
   grad_table: Vec<Vec<f64>>,
 }
 
+#[allow(dead_code)]
 #[derive(Deserialize, Debug)]
 struct TimeSeriesEntry {
   ts: i64,
@@ -137,6 +142,7 @@ impl Actor for TankCalcActor {
     })
   }
 
+  #[allow(clippy::let_underscore_future)]
   async fn handle(
     &self,
     myself: ActorRef<Self::Msg>,
@@ -222,17 +228,13 @@ impl TankCalcActor {
 
     // Запись base_vars
     let base_yaml = serde_saphyr::to_string(&base_vars)?;
-    //let existing_base = fs::read_to_string(&base_vars_path).unwrap_or_default();
-    //let base_content = format!("---\n{}\n{}", base_yaml, existing_base);
     fs::write(&base_vars_path, base_yaml)?;
 
     // Запись ext_vars
     let ext_yaml = serde_saphyr::to_string(&ext_vars)?;
-    // let existing_ext = fs::read_to_string(&ext_vars_path).unwrap_or_default();
-    // let ext_content = format!("---\n{}\n{}", ext_yaml, existing_ext);
     fs::write(&ext_vars_path, ext_yaml)?;
 
-    //info!("Резервуар обновлен {} ", tank_id);
+    // info!("Резервуар обновлен {} ", tank_id);
 
     Ok(())
   }
@@ -243,7 +245,7 @@ impl TankCalcActor {
     entry: &TimeSeriesEntry,
     now: DateTime<Utc>,
   ) -> BaseVarsWithDate {
-    // РАСЧЕТ BASE_VARS. Можно поменять под наша задачи
+    // РАСЧЕТ BASE_VARS. Можно поменять под наши задачи
     let weight = meta.constants.pontoon_weight * 3.0;
     let work_calc_vol = entry.h_measured * 2.0;
     let product_avg_temp = ((entry.t0
