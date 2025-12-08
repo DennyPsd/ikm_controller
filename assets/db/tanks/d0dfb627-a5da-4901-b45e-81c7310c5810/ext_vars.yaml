@@ -1,8 +1,8 @@
 product_volume: 6990.0
 product_level: 3495.0
 water_level: 0.0
-product_temperature: 20.74
-vapour_temperature: 22.58
+product_temperature: 20.740000000000002
+vapour_temperature: 22.59
 product_density: 710.0
 product_at_15_density: 720.0
 hydrostatic_pressure: 18050.0
@@ -14,33 +14,33 @@ product_movement_level_measurement_speed: 0.0
 volume_product_calc_below_water: 0.0
 volume_raw_water: 0.0
 temperatures:
-  - value: 18.9
+  - value: 18.89
     level: 0.0
     name: T0
-  - value: 19.3
+  - value: 19.29
     level: 388.0
     name: T1
-  - value: 19.4
+  - value: 19.39
     level: 777.0
     name: T2
   - value: 19.4
     level: 1165.0
     name: T3
-  - value: 19.71
+  - value: 19.69
     level: 1553.0
     name: T4
-  - value: 22.99
+  - value: 23.0
     level: 1942.0
     name: T5
   - value: 22.89
     level: 2330.0
     name: T6
-  - value: 21.8
+  - value: 21.81
     level: 2718.0
     name: T7
-  - value: 22.5
+  - value: 22.51
     level: 3107.0
     name: T8
-  - value: 22.58
+  - value: 22.59
     level: 3495.0
     name: T9
