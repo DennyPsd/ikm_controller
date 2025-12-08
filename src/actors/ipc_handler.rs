@@ -1,17 +1,16 @@
 use std::collections::HashMap;
+use std::fs::File;
+
 use taxon_core::actors::ipc::errors::internal_error;
 
+use crate::actors::ipc_kmh_handler::KmhIpcHandlerMsg;
 use crate::actors::modbus::modbus_fabric::ModbusFabricMsg;
-use crate::types::kmh::KMHReportInstance;
 use crate::types::products::Product;
 use crate::types::tank_configuration::TankConfig;
 use crate::types::tanks::{BaseVars, ExtVars, Tank};
-use crate::{KMHReportListArgs, ProductListArgs, TankListArgs};
-use ikm_calc::calculation::kmh::KMHCalculator;
+use crate::{ProductListArgs, TankListArgs};
 use ractor::{Actor, ActorProcessingErr, ActorRef};
 use serde_json::{json, to_string_pretty};
-use std::fs::File;
-use std::path::Path;
 use taxon_core::prelude::{IPCActionKind, IPCActorMsg, IPCMessageCrate};
 use tracing::{error, info};
 use uuid::Uuid;
@@ -29,6 +28,10 @@ pub struct IpcHandlerState {
   pub ipc_router: ActorRef<Option<IPCActorMsg>>,
   #[allow(dead_code)]
   pub subscribers: Vec<Subscriber>,
+
+  // новый актор для kmh
+  #[allow(dead_code)]
+  pub kmh_handler: ActorRef<KmhIpcHandlerMsg>,
 }
 
 #[derive(Debug)]
@@ -69,6 +72,22 @@ impl Actor for IpcHandler {
           info!("Modbus IPC_Handler: raw msg =\n{}", s);
         }
 
+        // сначала проверяем, kmh ли это — если да, просто форвардим в kmh-актор и выходим
+        if let Some(action) = ipc_msg.as_action() {
+          let is_kmh = (action.kind == IPCActionKind::GetData
+            && action.name.as_deref() == Some("kmh_report_list"))
+            || (action.kind == IPCActionKind::SetData && action.name.as_deref() == Some("kmh_set"));
+
+          if is_kmh {
+            info!("Modbus IPC_Handler: форвардим kmh_* в KmhIpcHandler");
+            let _ = state
+              .kmh_handler
+              .send_message(KmhIpcHandlerMsg::Ipc(ipc_msg));
+            return Ok(());
+          }
+        }
+
+        // дальше вся остальная логика как раньше (tank_list, products_list, …)
         if let Some(action) = ipc_msg.as_action() {
           info!(
             "Modbus IPC_Handler: action.name={:?}, kind={:?}, target.module_name={:?}, data_ns={:?}",
@@ -120,11 +139,13 @@ impl Actor for IpcHandler {
                 return Ok(());
               }
             };
+
             let ids: Vec<_> = if !args.ids.is_empty() {
               args.ids.to_vec()
             } else {
               tanks.keys().cloned().collect()
             };
+
             for id in ids.iter() {
               let tank = tanks.get_mut(id).unwrap();
               match args.fields {
@@ -159,6 +180,7 @@ impl Actor for IpcHandler {
                         })
                         .ok()
                     });
+
                   let path = format!("assets/db/tanks/{id}/config.yaml");
                   tank.config = File::open(&path[..])
                     .map_err(|err| {
@@ -173,6 +195,7 @@ impl Actor for IpcHandler {
                         })
                         .ok()
                     });
+
                   let path = format!("assets/db/tanks/{id}/ext_vars.yaml");
                   tank.ext_vars = File::open(&path[..])
                     .map_err(|err| {
@@ -190,25 +213,21 @@ impl Actor for IpcHandler {
                 }
               }
             }
+
             let data = tanks
               .into_iter()
               .filter_map(|(id, v)| if ids.contains(&id) { Some(v) } else { None })
               .collect::<Vec<_>>();
-            if let Some(msg) = ipc_msg.to_replay_msg(Some(json!({"data":data})), None) {
-              info!("products_list: отправляем ответ в ipc_router");
+
+            if let Some(msg) = ipc_msg.to_replay_msg(Some(json!({ "data": data })), None) {
+              info!("tank_list: отправляем ответ в ipc_router");
               let _ = state.ipc_router.send_message(Some(msg));
             } else {
-              error!("products_list: to_replay_msg вернул None");
+              error!("tank_list: to_replay_msg вернул None");
             }
             return Ok(());
           }
-          /*
-          // ===================== PARK_LIST =====================
-          if action.kind == IPCActionKind::GetData && action.name.as_deref() == Some("park_list") {
-            info!("Modbus IPC_Handler: обработка action 'park_list'");
-            return Ok(());
-          }
-          */
+
           // ===================== PRODUCTS_LIST =====================
           if action.kind == IPCActionKind::GetData
             && action.name.as_deref() == Some("products_list")

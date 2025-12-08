@@ -1,4 +1,8 @@
 use chrono::{DateTime, Utc};
+use ikm_calc::calculation::core::{
+  Calculation, CalculationMethod, CalculationResult, Constants, ProductType, TemperatureSensor,
+  Variables,
+};
 use ractor::{Actor, ActorProcessingErr, ActorRef};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -12,8 +16,8 @@ use crate::types::{
   tanks::{BaseVars, ExtVars, Temperature},
 };
 
-// Инициализация констант из meta. Полей много, часть пока реально не используется.
-// Чтобы clippy не ругался на dead_code, явно разрешаем.
+use ikm_calc::calculation::types::GradTableItem;
+
 #[allow(dead_code)]
 #[derive(Deserialize, Debug)]
 struct MetaConstants {
@@ -67,6 +71,7 @@ struct LevelCoefficientPoint {
 struct Meta {
   constants: MetaConstants,
   level_coefficient_points: Vec<LevelCoefficientPoint>,
+  /// grad_table: [level, volume]
   grad_table: Vec<Vec<f64>>,
 }
 
@@ -109,6 +114,7 @@ struct ExtVarsWithDate {
 
 pub struct TankCalcState {
   pub current_indices: HashMap<Uuid, usize>,
+  pub previous_results: HashMap<Uuid, CalculationResult>,
 }
 
 pub struct TankCalcActor;
@@ -139,6 +145,7 @@ impl Actor for TankCalcActor {
     info!("TankCalc запущен");
     Ok(TankCalcState {
       current_indices: HashMap::new(),
+      previous_results: HashMap::new(),
     })
   }
 
@@ -173,6 +180,7 @@ impl Actor for TankCalcActor {
         let tank_ids: Vec<Uuid> = tanks.into_iter().map(|t| t.id).collect();
 
         for tank_id in tank_ids {
+          // info!("Расчет для танка {}", tank_id);
           if let Err(e) = self.process_tank(&tank_id, state).await {
             error!("Ошибка ID tank {}: {}", tank_id, e);
           }
@@ -202,10 +210,12 @@ impl TankCalcActor {
     let meta_content = fs::read_to_string(&meta_path)?;
     let meta: Meta =
       serde_json::from_str(&meta_content).map_err(|err| format!("Cant parse meta: {err:?}"))?;
+
     // Читаем config.yaml
     let config_content = fs::read_to_string(&config_vars_path)?;
     let config: TankConfig = serde_saphyr::from_str(&config_content)
       .map_err(|err| format!("Cant parse config: {err:?}"))?;
+
     // Читаем time_series.json
     let time_series_content = fs::read_to_string(&time_series_path)?;
     let time_series: Vec<TimeSeriesEntry> = serde_json::from_str(&time_series_content)
@@ -221,202 +231,253 @@ impl TankCalcActor {
     let entry = &time_series[next_index];
     *current_index = next_index;
 
-    // Запуск расчета base и ext
-    let now = Utc::now();
-    let base_vars = self.calculate_base_vars(&meta, entry, now).data;
-    let ext_vars = self.calculate_ext_vars(&meta, &config, entry, now).data;
+    let prev_result = state.previous_results.get(tank_id).cloned();
 
-    // Запись base_vars
-    let base_yaml = serde_saphyr::to_string(&base_vars)?;
+    let calc = self.build_calculation(&meta, &config, entry, prev_result);
+
+    // Запуск расчета ядра
+    let result = match calc.calculate() {
+      Ok(res) => res,
+      Err(e) => {
+        error!("Ошибка расчета для {}: {:?}", tank_id, e);
+        return Ok(());
+      }
+    };
+
+    // info!(
+    //   "Танк {}: результат расчёта ts={} -> масса={:.2} т, объём={:.2} м³, уровень={:.1} мм, Tср={:.2} °C, ρ={:.4} т/м³",
+    //   tank_id,
+    //   entry.ts,
+    //   result.gross_product_mass,
+    //   result.product_volume,
+    //   result.product_level,
+    //   result.product_avg_temperature,
+    //   result.product_density,
+    // );
+
+    let now = Utc::now();
+    let base_vars = self.map_calc_result_to_base(&result);
+    let ext_vars = self.map_calc_result_to_ext(&meta, &config, entry, &result);
+
+    let base_with_date = BaseVarsWithDate {
+      date: now,
+      changed_at: now,
+      data: base_vars,
+    };
+
+    let ext_with_date = ExtVarsWithDate {
+      date: now,
+      changed_at: now,
+      data: ext_vars,
+    };
+
+    // Запись base_vars (как и раньше, только данные без даты)
+    let base_yaml = serde_saphyr::to_string(&base_with_date.data)?;
     fs::write(&base_vars_path, base_yaml)?;
 
     // Запись ext_vars
-    let ext_yaml = serde_saphyr::to_string(&ext_vars)?;
+    let ext_yaml = serde_saphyr::to_string(&ext_with_date.data)?;
     fs::write(&ext_vars_path, ext_yaml)?;
 
-    // info!("Резервуар обновлен {} ", tank_id);
+    // Обновляем previous_result для этого танка
+    state.previous_results.insert(*tank_id, result);
 
     Ok(())
   }
 
-  fn calculate_base_vars(
-    &self,
-    meta: &Meta,
-    entry: &TimeSeriesEntry,
-    now: DateTime<Utc>,
-  ) -> BaseVarsWithDate {
-    // РАСЧЕТ BASE_VARS. Можно поменять под наши задачи
-    let weight = meta.constants.pontoon_weight * 3.0;
-    let work_calc_vol = entry.h_measured * 2.0;
-    let product_avg_temp = ((entry.t0
-      + entry.t1
-      + entry.t2
-      + entry.t3
-      + entry.t4
-      + entry.t5
-      + entry.t6
-      + entry.t7
-      + entry.t8
-      + entry.t9)
-      / 10.0)
-      .round();
-    let product_dens = entry.density;
-
-    BaseVarsWithDate {
-      date: now,
-      changed_at: now,
-      data: BaseVars {
-        weight,
-        work_calc_vol,
-        product_avg_temp,
-        product_dens,
-      },
-    }
-  }
-
-  fn calculate_ext_vars(
+  /// Собираем структуру Calculation из meta/config/entry и предыдущего результата
+  fn build_calculation(
     &self,
     meta: &Meta,
     config: &TankConfig,
     entry: &TimeSeriesEntry,
-    now: DateTime<Utc>,
-  ) -> ExtVarsWithDate {
-    // РАСЧЕТ EXT_VARS
-    let product_volume = entry.h_measured * 2.0;
-    let product_level = entry.h_measured;
-    let water_level = 0.0;
-    let product_temperature = (entry.t0 + entry.t9) / 2.0;
-    let vapour_temperature = entry.t9;
-    let product_density = entry.density;
-    let product_at_15_density = meta.constants.product_density_15;
-    let hydrostatic_pressure = entry.p1;
-    let vapour_pressure = entry.p3;
-    let reserve_capacity_up_max = meta.constants.h_max_level;
-    let reserve_product_up_min = meta.constants.h_critical_level;
-    let product_movement_consumption = 0.0;
-    let product_movement_level_measurement_speed = 0.0;
-    let volume_product_calc_below_water = 0.0;
-    let volume_raw_water = 0.0;
+    prev_result: Option<CalculationResult>,
+  ) -> Calculation {
+    let c = &meta.constants;
+
+    let calc_constants = Constants {
+      calculation_method: CalculationMethod::try_from(c.calculation_method as u8)
+        .unwrap_or_default(),
+      product_type: ProductType::try_from(c.product_type as u8).unwrap_or_default(),
+      pontoon_weight: Some(c.pontoon_weight),
+
+      tank_wall_alpha: c.tank_wall_alpha,
+      distance_abs_error_limit: c.distance_abs_error_limit,
+      p1_measuring_range_max: c.p1_measuring_range_max,
+      pressure1_proc_error_limit: c.pressure1_proc_error_limit,
+      pressure3_max_limit: c.pressure3_max_limit,
+      pressure3_proc_error_limit: c.pressure3_proc_error_limit,
+      max_level_abs_error: c.max_level_abs_error,
+      water_level_abs_error_limit: c.water_level_abs_error_limit,
+      grad_error_limit: c.grad_error_limit,
+      temp_abs_error_limit: c.temp_abs_error_limit,
+      calc_error_limit: c.calc_error_limit,
+      structure_base_height: c.structure_base_height,
+
+      tank_product_density: Some(c.tank_product_density),
+      product_density_15: Some(c.product_density_15),
+      g: c.g,
+      air_density: c.air_density,
+      product_initial_boil_temp: c.product_initial_boil_temp,
+      p1_p3_distance: c.p1_p3_distance,
+      h_calibration_coefficient: c.h_calibration_coefficient,
+      h_critical_level: c.h_critical_level,
+      hysteresis_temperature_sensor_level: c.hysteresis_temperature_sensor_level,
+      hysteresis_product_level_for_method_type: c.hysteresis_product_level_for_method_type,
+      h_max_level: c.h_max_level,
+      reference_point: c.reference_point,
+      pressure_sensor_to_reference_point: c.pressure_sensor_to_reference_point,
+      density_abs_error_limit: c.density_abs_error_limit,
+      water_mass_fraction_abs_error_limit: c.water_mass_fraction_abs_error_limit,
+      mechanical_impurities_abs_error_limit: c.mechanical_impurities_abs_error_limit,
+      chlorides_mass_fraction_abs_error_limit: c.chlorides_mass_fraction_abs_error_limit,
+      water_mass_pct: c.water_mass_pct,
+      mech_impurities_mass_pct: c.mech_impurities_mass_pct,
+      chloride_salts_mass_pct: c.chloride_salts_mass_pct,
+    };
+
+    let graduation_table: Vec<GradTableItem> = meta
+      .grad_table
+      .iter()
+      .filter_map(|row| {
+        if row.len() >= 2 {
+          Some(GradTableItem {
+            level: row[0],
+            volume: row[1],
+            epsilon: if row.len() >= 3 { row[2] } else { 0.0 },
+          })
+        } else {
+          None
+        }
+      })
+      .collect();
+
+    let temp_levels: HashMap<_, f64> = config
+      .levels_of_point_sensors
+      .points
+      .iter()
+      .map(|p| (p.id.to_uppercase(), p.value as f64))
+      .collect();
+
+    let level_temps_vec = vec![
+      ("T0", entry.t0),
+      ("T1", entry.t1),
+      ("T2", entry.t2),
+      ("T3", entry.t3),
+      ("T4", entry.t4),
+      ("T5", entry.t5),
+      ("T6", entry.t6),
+      ("T7", entry.t7),
+      ("T8", entry.t8),
+      ("T9", entry.t9),
+    ];
+
+    let level_temps = level_temps_vec
+      .into_iter()
+      .filter_map(|(name, temp)| {
+        let level = temp_levels.get(name)?;
+        Some(TemperatureSensor {
+          temperature: temp,
+          calibration_coefficient: 0.0,
+          t_level: *level,
+        })
+      })
+      .collect::<Vec<_>>();
+
+    let calc_variables = Variables {
+      timestamp: entry.ts,
+      pressure1: entry.p1,
+      pressure3: entry.p3,
+      product_level_measured: entry.h_measured,
+      water_level: entry.h_v,
+      level_temps: Some(level_temps),
+      product_density_from_sensor: Some(entry.density),
+    };
+
+    Calculation {
+      graduation_table,
+      constants: calc_constants,
+      variables: calc_variables,
+      previous_result: prev_result,
+      // Пока без отдельного результата "10 секунд назад"
+      results_offset_10: None,
+      // None => будет использован DEFAULT_EVAPORATION_CONSTANTS из ядра
+      beta_coefficients: None,
+    }
+  }
+
+  /// Маппинг CalculationResult -> BaseVars
+  fn map_calc_result_to_base(&self, result: &CalculationResult) -> BaseVars {
+    BaseVars {
+      // Масса – брутто из ядра (тонны)
+      weight: result.gross_product_mass,
+      // Рабочий объем – V при рабочих условиях
+      work_calc_vol: result.product_volume,
+      // Средняя температура продукта
+      product_avg_temp: result.product_avg_temperature,
+      // Плотность при условиях измерения
+      product_dens: result.product_density,
+    }
+  }
+
+  /// Маппинг CalculationResult -> ExtVars
+  fn map_calc_result_to_ext(
+    &self,
+    meta: &Meta,
+    config: &TankConfig,
+    entry: &TimeSeriesEntry,
+    result: &CalculationResult,
+  ) -> ExtVars {
     let temperature_levels: HashMap<_, _> = config
       .levels_of_point_sensors
       .points
       .iter()
       .map(|v| (v.id.to_uppercase(), v.clone()))
       .collect();
-    let temperatures = vec![
-      Temperature {
-        value: entry.t0,
-        name: "T0".to_string(),
-        level: temperature_levels
-          .get("T0")
-          .cloned()
-          .unwrap_or_default()
-          .value,
-      },
-      Temperature {
-        value: entry.t1,
-        name: "T1".to_string(),
-        level: temperature_levels
-          .get("T1")
-          .cloned()
-          .unwrap_or_default()
-          .value,
-      },
-      Temperature {
-        value: entry.t2,
-        name: "T2".to_string(),
-        level: temperature_levels
-          .get("T2")
-          .cloned()
-          .unwrap_or_default()
-          .value,
-      },
-      Temperature {
-        value: entry.t3,
-        name: "T3".to_string(),
-        level: temperature_levels
-          .get("T3")
-          .cloned()
-          .unwrap_or_default()
-          .value,
-      },
-      Temperature {
-        value: entry.t4,
-        name: "T4".to_string(),
-        level: temperature_levels
-          .get("T4")
-          .cloned()
-          .unwrap_or_default()
-          .value,
-      },
-      Temperature {
-        value: entry.t5,
-        name: "T5".to_string(),
-        level: temperature_levels
-          .get("T5")
-          .cloned()
-          .unwrap_or_default()
-          .value,
-      },
-      Temperature {
-        value: entry.t6,
-        name: "T6".to_string(),
-        level: temperature_levels
-          .get("T6")
-          .cloned()
-          .unwrap_or_default()
-          .value,
-      },
-      Temperature {
-        value: entry.t7,
-        name: "T7".to_string(),
-        level: temperature_levels
-          .get("T7")
-          .cloned()
-          .unwrap_or_default()
-          .value,
-      },
-      Temperature {
-        value: entry.t8,
-        name: "T8".to_string(),
-        level: temperature_levels
-          .get("T8")
-          .cloned()
-          .unwrap_or_default()
-          .value,
-      },
-      Temperature {
-        value: entry.t9,
-        name: "T9".to_string(),
-        level: temperature_levels
-          .get("T9")
-          .cloned()
-          .unwrap_or_default()
-          .value,
-      },
+
+    let temps_src = vec![
+      ("T0", entry.t0),
+      ("T1", entry.t1),
+      ("T2", entry.t2),
+      ("T3", entry.t3),
+      ("T4", entry.t4),
+      ("T5", entry.t5),
+      ("T6", entry.t6),
+      ("T7", entry.t7),
+      ("T8", entry.t8),
+      ("T9", entry.t9),
     ];
 
-    ExtVarsWithDate {
-      date: now,
-      changed_at: now,
-      data: ExtVars {
-        product_volume: Some(product_volume),
-        product_level: Some(product_level),
-        water_level: Some(water_level),
-        product_temperature: Some(product_temperature),
-        vapour_temperature: Some(vapour_temperature),
-        product_density: Some(product_density),
-        product_at_15_density: Some(product_at_15_density),
-        hydrostatic_pressure: Some(hydrostatic_pressure),
-        vapour_pressure: Some(vapour_pressure),
-        reserve_capacity_up_max: Some(reserve_capacity_up_max),
-        reserve_product_up_min: Some(reserve_product_up_min),
-        product_movement_consumption: Some(product_movement_consumption),
-        product_movement_level_measurement_speed: Some(product_movement_level_measurement_speed),
-        volume_product_calc_below_water: Some(volume_product_calc_below_water),
-        volume_raw_water: Some(volume_raw_water),
-        temperatures,
-      },
+    let temperatures = temps_src
+      .into_iter()
+      .map(|(name, value)| Temperature {
+        value,
+        name: name.to_string(),
+        level: temperature_levels
+          .get(name)
+          .cloned()
+          .unwrap_or_default()
+          .value,
+      })
+      .collect();
+
+    ExtVars {
+      product_volume: Some(result.product_volume),
+      product_level: Some(result.product_level),
+      water_level: Some(entry.h_v),
+      product_temperature: Some(result.product_avg_temperature),
+      vapour_temperature: Some(result.vapor_avg_temperature),
+      product_density: Some(result.product_density),
+      product_at_15_density: Some(result.product_density_15),
+      hydrostatic_pressure: Some(entry.p1),
+      vapour_pressure: Some(entry.p3),
+      reserve_capacity_up_max: Some(meta.constants.h_max_level),
+      reserve_product_up_min: Some(meta.constants.h_critical_level),
+      product_movement_consumption: Some(0.0),
+      product_movement_level_measurement_speed: Some(result.velocity_product_level),
+      volume_product_calc_below_water: Some(result.water_volume),
+      volume_raw_water: Some(result.water_volume),
+      temperatures,
     }
   }
 }
