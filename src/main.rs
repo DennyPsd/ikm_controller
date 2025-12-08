@@ -12,6 +12,7 @@ use taxon_core::utils::asyncapi::AsyncapiBuilder;
 use crate::actors::ipc_handler::{IpcHandler, IpcHandlerMsg, IpcHandlerState};
 use crate::actors::modbus::config::ModbusSettings;
 use crate::actors::modbus::modbus_fabric::ModbusFabricActor;
+use crate::actors::tank_calc::TankCalcActor;
 use clap::Parser;
 pub use msg_def::*;
 pub use taxon_core::prelude::*;
