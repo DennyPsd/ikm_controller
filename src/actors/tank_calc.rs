@@ -180,6 +180,7 @@ impl Actor for TankCalcActor {
         let tank_ids: Vec<Uuid> = tanks.into_iter().map(|t| t.id).collect();
 
         for tank_id in tank_ids {
+          // info!("Расчет для танка {}", tank_id);
           if let Err(e) = self.process_tank(&tank_id, state).await {
             error!("Ошибка ID tank {}: {}", tank_id, e);
           }
@@ -242,6 +243,17 @@ impl TankCalcActor {
         return Ok(());
       }
     };
+
+    // info!(
+    //   "Танк {}: результат расчёта ts={} -> масса={:.2} т, объём={:.2} м³, уровень={:.1} мм, Tср={:.2} °C, ρ={:.4} т/м³",
+    //   tank_id,
+    //   entry.ts,
+    //   result.gross_product_mass,
+    //   result.product_volume,
+    //   result.product_level,
+    //   result.product_avg_temperature,
+    //   result.product_density,
+    // );
 
     let now = Utc::now();
     let base_vars = self.map_calc_result_to_base(&result);

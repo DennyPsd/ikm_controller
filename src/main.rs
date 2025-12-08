@@ -1,7 +1,9 @@
 mod actors;
 mod msg_def;
 mod types;
+
 use crate::actors::ipc_handler::{IpcHandler, IpcHandlerMsg, IpcHandlerState};
+use crate::actors::ipc_kmh_handler::{KmhIpcHandler, KmhIpcHandlerState};
 use crate::actors::modbus::config::ModbusSettings;
 use crate::actors::modbus::modbus_fabric::ModbusFabricActor;
 use crate::actors::tank_calc::TankCalcActor;
@@ -20,16 +22,14 @@ struct Args {
   #[arg(long)]
   build_shared_types: bool,
 }
+
 fn main() -> Result<(), ModuleError> {
-  // for _ in 0..2 {
-  //   let id = Uuid::now_v7();
-  //   println!("{id}");
-  // }
   let args = Args::parse();
   if args.build_shared_types {
     let _ = ikm_controller_client_api().commit_bindings("ikm_controller");
     exit(0);
   }
+
   Module::init(IPCRole::Router).map(|module| {
     module.run(async |_cfg, module, ipc_router, _| {
       // Чтение modbus_settings.yaml
@@ -39,7 +39,6 @@ fn main() -> Result<(), ModuleError> {
         serde_saphyr::from_str(&yaml_content)
           .map_err(|e| ModuleError::Run("parse settings".into(), e.into()))?
       };
-      //info!("Loaded modbus settings: {:?}", modbus_settings);
       info!("Настройки ModBus загружены!");
 
       // ----- ModbusFabric ---------
@@ -62,12 +61,23 @@ fn main() -> Result<(), ModuleError> {
         .await
         .map_err(|err| ModuleError::SpawnErr("SerialScanner".into(), err))?;
 
+      // ----- KmhIpcHandler ---------
+      let kmh_state = KmhIpcHandlerState {
+        ipc_router: ipc_router.clone(),
+      };
+      let (kmh_handler, _kmh_handle) = module
+        .spawn_linked(Some("KmhIpcHandler".into()), KmhIpcHandler, kmh_state)
+        .await
+        .map_err(|err| ModuleError::SpawnErr("KmhIpcHandler".into(), err))?;
+
       // ----- IpcHandler ---------
       let handler_state = IpcHandlerState {
         hart_fabric: modbus_fabric.clone(),
         ipc_router: ipc_router.clone(),
         subscribers: vec![],
+        kmh_handler,
       };
+
       let (ipc_handler, _ipc_handler_handle) = module
         .spawn_linked(Some("ClientIpcHandler".into()), IpcHandler, handler_state)
         .await
@@ -83,7 +93,6 @@ fn main() -> Result<(), ModuleError> {
         .await
         .map_err(|err| ModuleError::SpawnErr("TankCalcActor".into(), err))?;
 
-      // Сканирование портов делает SerialScanner
       Ok(())
     })
   })?
