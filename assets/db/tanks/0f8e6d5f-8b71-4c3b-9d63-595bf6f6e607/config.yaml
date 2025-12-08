@@ -1,7 +1,7 @@
 basic_data:
-  name: Tank-5
+  name: Tank-7
   reservoir_park: Парк 1
-  group: Группа 2
+  group: Группа 1
   tank_type: vertical
   nominal_capacity: "12070"
   density_stored_liquid_according: "738"
