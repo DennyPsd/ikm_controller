@@ -203,7 +203,7 @@ impl TankCalcActor {
     // Берем индекс из "ts" в time_series.json, с учетом того, что они могут повторяться
     let current_index = state.current_indices.entry(*tank_id).or_insert(0);
     let mut next_index = *current_index;
-    let mut last_ts = if *current_index > 0 {
+    let last_ts = if *current_index > 0 {
       time_series[*current_index - 1].ts
     } else {
       0
