@@ -133,77 +133,9 @@ impl IPCMessageDef for TankConfigSet {
     IPCMessageDir::Receive
   }
 }
+
 // ////////////////////////////
-/// Получения списка КМХ отчетов
-
-#[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq, Eq, Hash)]
-pub struct KMHReportList;
-
-#[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq, Eq, Hash)]
-pub enum KMHReportListFields {
-  Minimal,
-  All,
-  Exact(Vec<SmolStr>),
-}
-
-#[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq, Eq, Hash)]
-pub struct KMHReportListArgs {
-  pub ids: Vec<Uuid>,
-  pub fields: KMHReportListFields,
-}
-
-#[derive(Default, Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
-pub struct KMHReportListReply {
-  /// Tanks
-  pub data: Vec<KMHReportInstance>,
-}
-
-impl IPCMessageDef for KMHReportList {
-  type Args = KMHReportListArgs;
-  type Reply = KMHReportListReply;
-  type ErrorArgs = ();
-
-  fn action() -> Option<IPCActionKind> {
-    Some(IPCActionKind::GetData)
-  }
-  fn target() -> Option<IPCTarget> {
-    Some(IPCTarget {
-      data_ns: Some("KMHReport".into()),
-      ..ActionTargetKind::Data.to_target()
-    })
-  }
-  fn direction() -> IPCMessageDir {
-    IPCMessageDir::Receive
-  }
-}
-/// Изменение настроек цистерны
-
-#[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
-pub struct KMHReportSet;
-
-impl IPCMessageDef for KMHReportSet {
-  /// [TankConfig] - Настройки цистерны
-  type Args = KMHReportInstance;
-  /// [TankConfig] - Настройки цистерны
-  type Reply = KMHReportInstance;
-  type ErrorArgs = ();
-
-  fn action() -> Option<IPCActionKind> {
-    Some(IPCActionKind::SetData)
-  }
-  fn target() -> Option<IPCTarget> {
-    Some(IPCTarget {
-      data_ns: Some("KMHReport".into()),
-      // data_id: Some(Uuid::max()),
-      ..ActionTargetKind::Device.to_target()
-    })
-  }
-  fn direction() -> IPCMessageDir {
-    IPCMessageDir::Receive
-  }
-}
-// ////////////////////////////
-/// Получения списка КМХ отчетов
+/// Получения списка событий
 
 #[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq, Eq, Hash)]
 pub struct EventList;
@@ -246,7 +178,7 @@ impl IPCMessageDef for EventList {
   }
 }
 // ////////////////////////////
-/// Получения списка КМХ отчетов
+/// Получения списка правил событий
 
 #[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq, Eq, Hash)]
 pub struct EventRuleList;
@@ -288,15 +220,15 @@ impl IPCMessageDef for EventRuleList {
     IPCMessageDir::Receive
   }
 }
-/// Изменение настроек цистерны
+/// Сохранение/изменение правила события
 
 #[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
 pub struct EventRuleSet;
 
 impl IPCMessageDef for EventRuleSet {
-  /// [TankConfig] - Настройки цистерны
+  /// [FacilityEventRule] - Правило события
   type Args = FacilityEventRule;
-  /// [TankConfig] - Настройки цистерны
+  /// [FacilityEventRule] - Правило события
   type Reply = FacilityEventRule;
   type ErrorArgs = ();
 
@@ -400,20 +332,155 @@ impl IPCMessageDef for ProductList {
   }
 }
 
+
 // ////////////////////////////
+/// Получения списка КМХ отчетов
+
+#[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq, Eq, Hash)]
+pub struct KMHReportList;
+
+#[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq, Eq, Hash)]
+pub enum KMHReportListFields {
+  Minimal, //все кроме дата
+  All,
+  Exact(Vec<SmolStr>),
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq, Eq, Hash)]
+pub struct KMHReportListArgs {
+  pub ids: Vec<Uuid>,
+  pub fields: KMHReportListFields,
+}
+
+#[derive(Default, Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
+pub struct KMHReportListReply {
+  /// Tanks
+  pub data: Vec<KMHReportInstance>,
+}
+
+impl IPCMessageDef for KMHReportList {
+  type Args = KMHReportListArgs;
+  type Reply = KMHReportListReply;
+  type ErrorArgs = ();
+
+  fn action() -> Option<IPCActionKind> {
+    Some(IPCActionKind::GetData)
+  }
+  fn target() -> Option<IPCTarget> {
+    Some(IPCTarget {
+      data_ns: Some("KMHReport".into()),
+      ..ActionTargetKind::Data.to_target()
+    })
+  }
+  fn direction() -> IPCMessageDir {
+    IPCMessageDir::Receive
+  }
+}
+/// Изменение настроек цистерны
+
+#[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
+pub struct KMHReportSet;
+
+impl IPCMessageDef for KMHReportSet {
+  /// [KMHReportInstance] - КМХ отчёт
+  type Args = KMHReportInstance;
+  /// [KMHReportInstance] - КМХ отчёт
+  type Reply = KMHReportInstance;
+  type ErrorArgs = ();
+
+  fn action() -> Option<IPCActionKind> {
+    Some(IPCActionKind::SetData)
+  }
+  fn target() -> Option<IPCTarget> {
+    Some(IPCTarget {
+      data_ns: Some("KMHReport".into()),
+      // data_id: Some(Uuid::max()),
+      ..ActionTargetKind::Device.to_target()
+    })
+  }
+  fn direction() -> IPCMessageDir {
+    IPCMessageDir::Receive
+  }
+}
+
+// ////////////////////////////
+/// KMHReportCreate — создать новый КМХ-отчёт (болванка) для устройства
+
+#[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq, Eq, Hash)]
+pub struct KMHReportCreate;
+
+#[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq, Eq, Hash)]
+pub struct KMHReportCreateArgs {
+  /// ID устройства/резервуара, для которого создаётся отчёт
+  pub device_id: Uuid,
+}
+
+impl IPCMessageDef for KMHReportCreate {
+  type Args = KMHReportCreateArgs;
+  type Reply = KMHReportInstance;
+  type ErrorArgs = ();
+
+  fn action() -> Option<IPCActionKind> {
+    Some(IPCActionKind::GetData)
+  }
+
+  fn target() -> Option<IPCTarget> {
+    Some(IPCTarget {
+      data_ns: Some("KMHReport".into()),
+      ..ActionTargetKind::Data.to_target()
+    })
+  }
+
+  fn direction() -> IPCMessageDir {
+    IPCMessageDir::Receive
+  }
+}
+
+// ////////////////////////////
+/// KMHReportCalc — пересчитать КМХ-отчёт без сохранения
+
+#[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
+pub struct KMHReportCalc;
+
+impl IPCMessageDef for KMHReportCalc {
+  /// [KMHReportInstance] - входные данные отчёта
+  type Args = KMHReportInstance;
+  /// [KMHReportInstance] - пересчитанный отчёт
+  type Reply = KMHReportInstance;
+  type ErrorArgs = ();
+
+  fn action() -> Option<IPCActionKind> {
+    // чистый расчёт, без записи — тоже можно отнести к GetData
+    Some(IPCActionKind::GetData)
+  }
+
+  fn target() -> Option<IPCTarget> {
+    Some(IPCTarget {
+      data_ns: Some("KMHReport".into()),
+      ..ActionTargetKind::Data.to_target()
+    })
+  }
+
+  fn direction() -> IPCMessageDir {
+    IPCMessageDir::Receive
+  }
+}
+
 
 #[allow(dead_code)]
 pub fn ikm_controller_client_api() -> AsyncapiBuilder {
   AsyncapiBuilder::new(IPCRole::Router)
-    .operation::<TankList, ()>()
-    .operation::<TankConfigSet, ()>()
-    .operation::<EventList, ()>()
-    .operation::<EventRuleList, ()>()
-    .operation::<EventRuleSet, ()>()
-    .operation::<ParkList, ()>()
-    .operation::<ProductList, ()>()
-    .operation::<KMHReportList, ()>()
-    .operation::<KMHReportSet, ()>()
-    .operation::<UserLogin, ()>()
-    .operation::<UserLogout, ()>()
+      .operation::<TankList, ()>()
+      .operation::<TankConfigSet, ()>()
+      .operation::<EventList, ()>()
+      .operation::<EventRuleList, ()>()
+      .operation::<EventRuleSet, ()>()
+      .operation::<ParkList, ()>()
+      .operation::<ProductList, ()>()
+      .operation::<KMHReportList, ()>()
+      .operation::<KMHReportSet, ()>()
+      .operation::<KMHReportCreate, ()>()
+      .operation::<KMHReportCalc, ()>()
+      .operation::<UserLogin, ()>()
+      .operation::<UserLogout, ()>()
 }
