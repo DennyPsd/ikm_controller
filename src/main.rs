@@ -83,6 +83,12 @@ fn main() -> Result<(), ModuleError> {
         .subscribe(ipc_handler, |msg| Some(IpcHandlerMsg::Ipc(*Box::new(msg))))
         .map_err(|err| ModuleError::Run("ClientIpcHandler".into(), err))?;
 
+      // ----- TankCalcActor ---------
+      let (_tank_calc_actor, _tank_calc_handle) = module
+        .spawn_linked(Some("TankCalcActor".into()), TankCalcActor::new(), ())
+        .await
+        .map_err(|err| ModuleError::SpawnErr("TankCalcActor".into(), err))?;
+
       // Сканирование портов делает SerialScanner
       Ok(())
     })
