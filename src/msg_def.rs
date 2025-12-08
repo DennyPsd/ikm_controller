@@ -411,7 +411,7 @@ pub struct KMHReportCreate;
 
 #[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq, Eq, Hash)]
 pub struct KMHReportCreateArgs {
-  /// ID устройства/резервуара, для которого создаётся отчёт
+  /// ID танка/резервуара, для которого создаётся отчёт
   pub device_id: Uuid,
 }
 

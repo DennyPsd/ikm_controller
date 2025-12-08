@@ -20,46 +20,6 @@ use ikm_calc::calculation::types::GradTableItem;
 
 #[allow(dead_code)]
 #[derive(Deserialize, Debug)]
-struct MetaConstants {
-  calculation_method: i32,
-  product_type: i32,
-  pontoon_weight: f64,
-  tank_wall_alpha: f64,
-  distance_abs_error_limit: f64,
-  p1_measuring_range_max: f64,
-  pressure1_proc_error_limit: f64,
-  pressure3_max_limit: f64,
-  pressure3_proc_error_limit: f64,
-  max_level_abs_error: f64,
-  water_level_abs_error_limit: f64,
-  grad_error_limit: f64,
-  temp_abs_error_limit: f64,
-  calc_error_limit: f64,
-  structure_base_height: f64,
-  tank_product_density: f64,
-  g: f64,
-  air_density: f64,
-  product_initial_boil_temp: f64,
-  p1_p3_distance: f64,
-  h_calibration_coefficient: f64,
-  h_critical_level: f64,
-  hysteresis_temperature_sensor_level: f64,
-  hysteresis_product_level_for_method_type: f64,
-  h_max_level: f64,
-  reference_point: f64,
-  pressure_sensor_to_reference_point: f64,
-  density_abs_error_limit: f64,
-  water_mass_fraction_abs_error_limit: f64,
-  mechanical_impurities_abs_error_limit: f64,
-  chlorides_mass_fraction_abs_error_limit: f64,
-  water_mass_pct: f64,
-  mech_impurities_mass_pct: f64,
-  chloride_salts_mass_pct: f64,
-  product_density_15: f64,
-}
-
-#[allow(dead_code)]
-#[derive(Deserialize, Debug)]
 struct LevelCoefficientPoint {
   id: String,
   level_mm: f64,
@@ -69,7 +29,7 @@ struct LevelCoefficientPoint {
 #[allow(dead_code)]
 #[derive(Deserialize, Debug)]
 struct Meta {
-  constants: MetaConstants,
+  constants: Constants,
   level_coefficient_points: Vec<LevelCoefficientPoint>,
   /// grad_table: [level, volume]
   grad_table: Vec<Vec<f64>>,
@@ -299,7 +259,7 @@ impl TankCalcActor {
       calculation_method: CalculationMethod::try_from(c.calculation_method as u8)
         .unwrap_or_default(),
       product_type: ProductType::try_from(c.product_type as u8).unwrap_or_default(),
-      pontoon_weight: Some(c.pontoon_weight),
+      pontoon_weight: c.pontoon_weight,
 
       tank_wall_alpha: c.tank_wall_alpha,
       distance_abs_error_limit: c.distance_abs_error_limit,
@@ -314,8 +274,8 @@ impl TankCalcActor {
       calc_error_limit: c.calc_error_limit,
       structure_base_height: c.structure_base_height,
 
-      tank_product_density: Some(c.tank_product_density),
-      product_density_15: Some(c.product_density_15),
+      tank_product_density: c.tank_product_density,
+      product_density_15:c.product_density_15,
       g: c.g,
       air_density: c.air_density,
       product_initial_boil_temp: c.product_initial_boil_temp,
