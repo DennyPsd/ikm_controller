@@ -1,24 +1,18 @@
 mod actors;
 mod msg_def;
-mod tank_calc;
 mod types;
 
-use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio, exit};
-use std::{fs, io, thread};
-
-use actors::serial_scanner::SerialScannerActor;
-use taxon_core::utils::asyncapi::AsyncapiBuilder;
-
 use crate::actors::ipc_handler::{IpcHandler, IpcHandlerMsg, IpcHandlerState};
+use crate::actors::ipc_kmh_handler::{KmhIpcHandler, KmhIpcHandlerState};
 use crate::actors::modbus::config::ModbusSettings;
 use crate::actors::modbus::modbus_fabric::ModbusFabricActor;
-use crate::tank_calc::TankCalcActor;
+use crate::actors::tank_calc::TankCalcActor;
+use actors::serial_scanner::SerialScannerActor;
 use clap::Parser;
 pub use msg_def::*;
+use std::process::exit;
 pub use taxon_core::prelude::*;
 use tracing::info;
-use uuid::Uuid;
 
 /// Simple program to greet a person
 #[derive(Parser, Debug)]
@@ -28,16 +22,14 @@ struct Args {
   #[arg(long)]
   build_shared_types: bool,
 }
+
 fn main() -> Result<(), ModuleError> {
-  for _ in 0..2 {
-    let id = Uuid::now_v7();
-    println!("{id}");
-  }
   let args = Args::parse();
   if args.build_shared_types {
-    let _ = _build_shared("ikm_controller", ikm_controller_client_api());
+    let _ = ikm_controller_client_api().commit_bindings("ikm_controller");
     exit(0);
   }
+
   Module::init(IPCRole::Router).map(|module| {
     module.run(async |_cfg, module, ipc_router, _| {
       // Чтение modbus_settings.yaml
@@ -47,7 +39,6 @@ fn main() -> Result<(), ModuleError> {
         serde_saphyr::from_str(&yaml_content)
           .map_err(|e| ModuleError::Run("parse settings".into(), e.into()))?
       };
-      //info!("Loaded modbus settings: {:?}", modbus_settings);
       info!("Настройки ModBus загружены!");
 
       // ----- ModbusFabric ---------
@@ -70,12 +61,23 @@ fn main() -> Result<(), ModuleError> {
         .await
         .map_err(|err| ModuleError::SpawnErr("SerialScanner".into(), err))?;
 
+      // ----- KmhIpcHandler ---------
+      let kmh_state = KmhIpcHandlerState {
+        ipc_router: ipc_router.clone(),
+      };
+      let (kmh_handler, _kmh_handle) = module
+        .spawn_linked(Some("KmhIpcHandler".into()), KmhIpcHandler, kmh_state)
+        .await
+        .map_err(|err| ModuleError::SpawnErr("KmhIpcHandler".into(), err))?;
+
       // ----- IpcHandler ---------
       let handler_state = IpcHandlerState {
         hart_fabric: modbus_fabric.clone(),
         ipc_router: ipc_router.clone(),
         subscribers: vec![],
+        kmh_handler,
       };
+
       let (ipc_handler, _ipc_handler_handle) = module
         .spawn_linked(Some("ClientIpcHandler".into()), IpcHandler, handler_state)
         .await
@@ -91,120 +93,7 @@ fn main() -> Result<(), ModuleError> {
         .await
         .map_err(|err| ModuleError::SpawnErr("TankCalcActor".into(), err))?;
 
-      // Сканирование портов делает SerialScanner
       Ok(())
     })
   })?
-}
-fn _build_shared(path: impl Into<PathBuf>, builder: AsyncapiBuilder) -> Result<(), anyhow::Error> {
-  let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
-  let schema_path = Path::new(&manifest_dir)
-    .join("../shared-types/")
-    .join(path.into());
-  let _ = fs::create_dir_all(schema_path.join("./components"));
-  let res = builder.commit2path(schema_path.clone());
-  match res {
-    Err(err) => {
-      println!("Schemas wrote to '{schema_path:?}' error: {err}");
-      exit(1);
-    }
-    Ok(_) => {
-      println!("Schemas wrote to '{schema_path:?}'");
-    }
-  }
-  // Validate Schema
-  let path_env = std::env::var("Path").unwrap();
-  let mut asyncapi = Command::new(if cfg!(target_os = "windows") {
-    "asyncapi.cmd"
-  } else {
-    "asyncapi"
-  });
-  asyncapi
-    .env("Path", path_env.clone())
-    .env("PATH", path_env.clone())
-    .arg("validate")
-    .arg(schema_path.join("asyncapi.yaml"))
-    .stdout(Stdio::inherit())
-    .stderr(Stdio::inherit())
-    .spawn()
-    .expect("Schema Validation  error")
-    .wait()
-    .expect("Schema Validation  error");
-  // Create bindings:
-  let _ = fs::create_dir_all(schema_path.join("./bindings/ts"));
-  let _ = fs::create_dir_all(schema_path.join("./bindings/csharp"));
-  let mut entries = fs::read_dir(schema_path.join("./components"))?
-    .map(|res| res.map(|e| e.path()))
-    .collect::<Result<Vec<_>, io::Error>>()?;
-  entries.sort();
-  let jobs: Vec<_> = entries
-    .into_iter()
-    .map(|entry| {
-      let path_env = path_env.clone();
-      let schema_path = schema_path.clone();
-      thread::spawn(move || {
-        let quicktype_cmd = if cfg!(target_os = "windows") {
-          "quicktype.cmd"
-        } else {
-          "quicktype"
-        };
-        let fname = entry
-          .file_stem()
-          .unwrap()
-          .to_str()
-          .unwrap()
-          .replace(".schema", "");
-        println!("Run 'quicktype.cs' for '{fname}'...");
-        Command::new(quicktype_cmd)
-          .env("Path", path_env.clone())
-          .env("PATH", path_env.clone())
-          .arg("--no-combine-classes")
-          .arg("-o")
-          .arg(
-            schema_path
-              .join("./bindings/csharp")
-              .join(format!("./{fname}.cs")),
-          )
-          .arg("-s")
-          .arg("schema")
-          .arg(entry.to_str().unwrap())
-          .stdout(Stdio::inherit())
-          .stderr(Stdio::inherit())
-          .spawn()
-          .expect("Schema Validation  error")
-          .wait()
-          .expect("Schema Validation  error");
-        println!("Run 'quicktype_cmd.ts' for '{fname}'...");
-        Command::new(quicktype_cmd)
-          .env("Path", path_env.clone())
-          .env("PATH", path_env.clone())
-          .arg("--just-types")
-          .arg("--no-combine-classes")
-          .arg("--prefer-types")
-          .arg("--prefer-unions")
-          .arg("--converters")
-          .arg("all-objects")
-          .arg("-o")
-          .arg(
-            schema_path
-              .join("./bindings/ts")
-              .join(format!("./{fname}.ts")),
-          )
-          .arg("-s")
-          .arg("schema")
-          .arg(entry.to_str().unwrap())
-          .stdout(Stdio::inherit())
-          .stderr(Stdio::inherit())
-          .spawn()
-          .expect("Schema Validation  error")
-          .wait()
-          .expect("Schema Validation  error");
-      })
-    })
-    .collect();
-  for job in jobs {
-    let _ = job.join();
-  }
-
-  Ok(())
 }

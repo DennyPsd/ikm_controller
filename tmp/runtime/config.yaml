@@ -1,9 +1,0 @@
-data_path: ./data
-static_path: ./data/static
-zmq_router_addr: tcp://127.0.0.1:5556
-ws_addr: ws://0.0.0.0/ws
-http_addr: http://0.0.0.0/
-identity: 019af9f9-0c3b-7622-8430-dea8f077be54
-tui: true
-log_level: Debug
-log_format_json: false

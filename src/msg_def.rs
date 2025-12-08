@@ -1,16 +1,17 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use smol_str::SmolStr;
+use taxon_core::infrastructure::device::{FacilityEvent, FacilityEventRule};
 use taxon_core::infrastructure::user::User;
 use taxon_core::prelude::*;
 use taxon_core::utils::asyncapi::AsyncapiBuilder;
 use uuid::Uuid;
 
-use crate::types::parks::Park;
 use crate::types::products::Product;
 use crate::types::tank_configuration::TankConfig;
 use crate::types::tanks::Tank;
-
+use crate::types::{kmh::KMHReportInstance, parks::Park};
+// use ikm_calc::calculation::kmh::{KMHCalculator, KMHReport};
 // ////////////////////////////
 /// Авторизация
 #[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq, Eq, Hash)]
@@ -133,6 +134,187 @@ impl IPCMessageDef for TankConfigSet {
   }
 }
 // ////////////////////////////
+/// Получения списка КМХ отчетов
+
+#[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq, Eq, Hash)]
+pub struct KMHReportList;
+
+#[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq, Eq, Hash)]
+pub enum KMHReportListFields {
+  Minimal,
+  All,
+  Exact(Vec<SmolStr>),
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq, Eq, Hash)]
+pub struct KMHReportListArgs {
+  pub ids: Vec<Uuid>,
+  pub fields: KMHReportListFields,
+}
+
+#[derive(Default, Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
+pub struct KMHReportListReply {
+  /// Tanks
+  pub data: Vec<KMHReportInstance>,
+}
+
+impl IPCMessageDef for KMHReportList {
+  type Args = KMHReportListArgs;
+  type Reply = KMHReportListReply;
+  type ErrorArgs = ();
+
+  fn action() -> Option<IPCActionKind> {
+    Some(IPCActionKind::GetData)
+  }
+  fn target() -> Option<IPCTarget> {
+    Some(IPCTarget {
+      data_ns: Some("KMHReport".into()),
+      ..ActionTargetKind::Data.to_target()
+    })
+  }
+  fn direction() -> IPCMessageDir {
+    IPCMessageDir::Receive
+  }
+}
+/// Изменение настроек цистерны
+
+#[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
+pub struct KMHReportSet;
+
+impl IPCMessageDef for KMHReportSet {
+  /// [TankConfig] - Настройки цистерны
+  type Args = KMHReportInstance;
+  /// [TankConfig] - Настройки цистерны
+  type Reply = KMHReportInstance;
+  type ErrorArgs = ();
+
+  fn action() -> Option<IPCActionKind> {
+    Some(IPCActionKind::SetData)
+  }
+  fn target() -> Option<IPCTarget> {
+    Some(IPCTarget {
+      data_ns: Some("KMHReport".into()),
+      // data_id: Some(Uuid::max()),
+      ..ActionTargetKind::Device.to_target()
+    })
+  }
+  fn direction() -> IPCMessageDir {
+    IPCMessageDir::Receive
+  }
+}
+// ////////////////////////////
+/// Получения списка КМХ отчетов
+
+#[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq, Eq, Hash)]
+pub struct EventList;
+
+#[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq, Eq, Hash)]
+pub enum EventListFields {
+  Minimal,
+  All,
+  Exact(Vec<SmolStr>),
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq, Eq, Hash)]
+pub struct EventListArgs {
+  pub ids: Vec<Uuid>,
+  pub fields: EventListFields,
+}
+
+#[derive(Default, Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
+pub struct EventListReply {
+  /// Tanks
+  pub data: Vec<FacilityEvent>,
+}
+
+impl IPCMessageDef for EventList {
+  type Args = EventListArgs;
+  type Reply = EventListReply;
+  type ErrorArgs = ();
+
+  fn action() -> Option<IPCActionKind> {
+    Some(IPCActionKind::GetData)
+  }
+  fn target() -> Option<IPCTarget> {
+    Some(IPCTarget {
+      data_ns: Some("FacilityEvent".into()),
+      ..ActionTargetKind::Data.to_target()
+    })
+  }
+  fn direction() -> IPCMessageDir {
+    IPCMessageDir::Receive
+  }
+}
+// ////////////////////////////
+/// Получения списка КМХ отчетов
+
+#[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq, Eq, Hash)]
+pub struct EventRuleList;
+
+#[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq, Eq, Hash)]
+pub enum EventRuleListFields {
+  Minimal,
+  All,
+  Exact(Vec<SmolStr>),
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq, Eq, Hash)]
+pub struct EventRuleListArgs {
+  pub ids: Vec<Uuid>,
+  pub fields: EventListFields,
+}
+
+#[derive(Default, Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
+pub struct EventRuleListReply {
+  /// Tanks
+  pub data: Vec<FacilityEventRule>,
+}
+
+impl IPCMessageDef for EventRuleList {
+  type Args = EventRuleListArgs;
+  type Reply = EventRuleListReply;
+  type ErrorArgs = ();
+
+  fn action() -> Option<IPCActionKind> {
+    Some(IPCActionKind::GetData)
+  }
+  fn target() -> Option<IPCTarget> {
+    Some(IPCTarget {
+      data_ns: Some("FacilityEventRule".into()),
+      ..ActionTargetKind::Data.to_target()
+    })
+  }
+  fn direction() -> IPCMessageDir {
+    IPCMessageDir::Receive
+  }
+}
+/// Изменение настроек цистерны
+
+#[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
+pub struct EventRuleSet;
+
+impl IPCMessageDef for EventRuleSet {
+  /// [TankConfig] - Настройки цистерны
+  type Args = FacilityEventRule;
+  /// [TankConfig] - Настройки цистерны
+  type Reply = FacilityEventRule;
+  type ErrorArgs = ();
+
+  fn action() -> Option<IPCActionKind> {
+    Some(IPCActionKind::SetData)
+  }
+  fn target() -> Option<IPCTarget> {
+    Some(IPCTarget {
+      data_ns: Some("FacilityEventRule".into()),
+      // data_id: Some(Uuid::max()),
+      ..ActionTargetKind::Device.to_target()
+    })
+  }
+  fn direction() -> IPCMessageDir {
+    IPCMessageDir::Receive
+  }
+}
+// ////////////////////////////
 /// ParkList
 
 #[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq, Eq, Hash)]
@@ -223,14 +405,15 @@ impl IPCMessageDef for ProductList {
 #[allow(dead_code)]
 pub fn ikm_controller_client_api() -> AsyncapiBuilder {
   AsyncapiBuilder::new(IPCRole::Router)
-    .module_name("IkmController")
-    .version("0.1.1")
-    .zmq_server("ikm_controller", true)
-    .zmq_server("ddngine", false)
     .operation::<TankList, ()>()
     .operation::<TankConfigSet, ()>()
+    .operation::<EventList, ()>()
+    .operation::<EventRuleList, ()>()
+    .operation::<EventRuleSet, ()>()
     .operation::<ParkList, ()>()
     .operation::<ProductList, ()>()
+    .operation::<KMHReportList, ()>()
+    .operation::<KMHReportSet, ()>()
     .operation::<UserLogin, ()>()
     .operation::<UserLogout, ()>()
 }
