@@ -127,7 +127,7 @@ impl Actor for ModbusWorker {
     (timings, stream, fabric, port_name, port_cfg): Self::Arguments,
   ) -> Result<Self::State, ActorProcessingErr> {
     info!(port = %port_name, "ModbusWorker: запущен (stream активен)");
-    
+
     let mut polls = Vec::<PollItem>::new();
     for slave in &port_cfg.slaves {
       for reg in &slave.registers {
@@ -384,10 +384,10 @@ impl Actor for ModbusWorker {
           }
 
           let _ = writeln!(&mut report, "+-------+---------+----------------------+");
-          
+
           info!(port = %state.port_name, "{}", report);
         }
-        
+
         state.current_index = (state.current_index + 1) % state.polls.len();
 
         let _poll_handle = myself.send_after(Duration::from_millis(state.polling_ms), || {

@@ -1,7 +1,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use smol_str::SmolStr;
-use taxon_core::infrastructure::device::{FacilityDiagnosticDef, FacilityEvent, FacilityEventRule};
+use taxon_core::infrastructure::device::{FacilityEvent, FacilityEventRule};
 use taxon_core::infrastructure::user::User;
 use taxon_core::prelude::*;
 use taxon_core::utils::asyncapi::AsyncapiBuilder;
@@ -11,7 +11,7 @@ use crate::types::products::Product;
 use crate::types::tank_configuration::TankConfig;
 use crate::types::tanks::Tank;
 use crate::types::{kmh::KMHReportInstance, parks::Park};
-use ikm_calc::calculation::kmh::{KMHCalculator, KMHReport};
+// use ikm_calc::calculation::kmh::{KMHCalculator, KMHReport};
 // ////////////////////////////
 /// Авторизация
 #[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq, Eq, Hash)]

@@ -1,4 +1,4 @@
-use ikm_calc::calculation::kmh::{KMHCalculator, KMHReport};
+use ikm_calc::calculation::kmh::KMHReport;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use taxon_core::infrastructure::facility::SharedData;
@@ -15,6 +15,7 @@ impl SharedData for KMHReportInstance {
   }
 }
 #[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
+#[allow(dead_code)]
 pub struct KMHGraduationTable {
   pub id: Uuid,
   pub data: Vec<Vec<f64>>,

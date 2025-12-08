@@ -1,22 +1,15 @@
 mod actors;
 mod msg_def;
 mod types;
-
-use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio, exit};
-use std::{fs, io, thread};
-
-use actors::serial_scanner::SerialScannerActor;
-use taxon_core::utils::asyncapi::AsyncapiBuilder;
-
 use crate::actors::ipc_handler::{IpcHandler, IpcHandlerMsg, IpcHandlerState};
 use crate::actors::modbus::config::ModbusSettings;
 use crate::actors::modbus::modbus_fabric::ModbusFabricActor;
+use actors::serial_scanner::SerialScannerActor;
 use clap::Parser;
 pub use msg_def::*;
+use std::process::exit;
 pub use taxon_core::prelude::*;
 use tracing::info;
-use uuid::Uuid;
 
 /// Simple program to greet a person
 #[derive(Parser, Debug)]
@@ -27,10 +20,10 @@ struct Args {
   build_shared_types: bool,
 }
 fn main() -> Result<(), ModuleError> {
-  for _ in 0..2 {
-    let id = Uuid::now_v7();
-    println!("{id}");
-  }
+  // for _ in 0..2 {
+  //   let id = Uuid::now_v7();
+  //   println!("{id}");
+  // }
   let args = Args::parse();
   if args.build_shared_types {
     let _ = ikm_controller_client_api().commit_bindings("ikm_controller");
