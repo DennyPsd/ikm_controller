@@ -1,19 +1,19 @@
-use std::fs::{self, File};
 use chrono::Local;
 use smol_str::SmolStr;
+use std::fs::{self, File};
 
-use crate::{KMHReportListArgs, KMHReportCreateArgs};
 use crate::types::kmh::KMHReportInstance;
+use crate::types::tank_configuration::TankConfig;
 use crate::types::tanks::Tank;
+use crate::{KMHReportCreateArgs, KMHReportListArgs};
 use ikm_calc::calculation::kmh::{KMHCalculator, KMHReport};
 use ractor::{Actor, ActorProcessingErr, ActorRef};
 use serde_json::json;
 use taxon_core::actors::ipc::errors::internal_error;
-use taxon_core::prelude::{IPCActionKind, IPCActorMsg, IPCMessageCrate};
 use taxon_core::infrastructure::facility::SharedData;
+use taxon_core::prelude::{IPCActionKind, IPCActorMsg, IPCMessageCrate};
 use tracing::{error, info};
 use uuid::Uuid;
-use crate::types::tank_configuration::TankConfig;
 
 pub struct KmhIpcHandlerState {
   pub ipc_router: ActorRef<Option<IPCActorMsg>>,
@@ -50,31 +50,30 @@ impl Actor for KmhIpcHandler {
     match msg {
       KmhIpcHandlerMsg::Ipc(ipc_msg) => {
         if let Some(action) = ipc_msg.as_action() {
-
           // ===================== KMH_REPORT_LIST =====================
           if action.kind == IPCActionKind::GetData
-              && action.name.as_deref() == Some("kmh_report_list")
-              && action.args.is_some()
+            && action.name.as_deref() == Some("kmh_report_list")
+            && action.args.is_some()
           {
             info!("KmhIpcHandler: обработка action 'kmh_report_list'");
 
             let args =
-                match serde_json::from_value::<KMHReportListArgs>(action.args.clone().unwrap()) {
-                  Ok(args) => args,
-                  Err(err) => {
-                    let err = internal_error(action.name.clone(), None)
-                        .with_message(format!("kmh_report_list: {}", err));
+              match serde_json::from_value::<KMHReportListArgs>(action.args.clone().unwrap()) {
+                Ok(args) => args,
+                Err(err) => {
+                  let err = internal_error(action.name.clone(), None)
+                    .with_message(format!("kmh_report_list: {}", err));
 
-                    info!("kmh_report_list: шлём ошибку в ipc_router (bad args)");
-                    let _ = state
-                        .ipc_router
-                        .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
-                        .map_err(|err| {
-                          error!("kmh_report_list: to_replay_msg {}", err);
-                        });
-                    return Ok(());
-                  }
-                };
+                  info!("kmh_report_list: шлём ошибку в ipc_router (bad args)");
+                  let _ = state
+                    .ipc_router
+                    .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                    .map_err(|err| {
+                      error!("kmh_report_list: to_replay_msg {}", err);
+                    });
+                  return Ok(());
+                }
+              };
 
             info!(
               "kmh_report_list: ids.len() = {}, fields = {:?}",
@@ -130,11 +129,9 @@ impl Actor for KmhIpcHandler {
                   // если директории нет — считаем, что просто ещё нет отчётов
                   if err.kind() != std::io::ErrorKind::NotFound {
                     let err = internal_error(action.name.clone(), None)
-                        .with_message(format!("kmh_report_list: read_dir {dir_path}: {err:?}"));
+                      .with_message(format!("kmh_report_list: read_dir {dir_path}: {err:?}"));
 
-                    if let Some(msg) =
-                        ipc_msg.to_replay_msg(Option::<()>::None, Some(err))
-                    {
+                    if let Some(msg) = ipc_msg.to_replay_msg(Option::<()>::None, Some(err)) {
                       info!("kmh_report_list: шлём ошибку в ipc_router (read_dir)");
                       let _ = state.ipc_router.send_message(Some(msg));
                     } else {
@@ -162,10 +159,7 @@ impl Actor for KmhIpcHandler {
                     }
                   },
                   Err(err) => {
-                    info!(
-                      "kmh_report_list: нет файла отчёта {} ({err:?})",
-                      file_path
-                    );
+                    info!("kmh_report_list: нет файла отчёта {} ({err:?})", file_path);
                   }
                 }
               }
@@ -185,30 +179,29 @@ impl Actor for KmhIpcHandler {
 
           // ===================== KMH_REPORT_CREATE =====================
           if action.kind == IPCActionKind::GetData
-              && action.name.as_deref() == Some("kmh_report_create")
-              && action.args.is_some()
+            && action.name.as_deref() == Some("kmh_report_create")
+            && action.args.is_some()
           {
             info!("KmhIpcHandler: обработка action 'kmh_report_create'");
 
             // 0. Парсим аргументы: { device_id: Uuid }
-            let args = match serde_json::from_value::<KMHReportCreateArgs>(
-              action.args.clone().unwrap(),
-            ) {
-              Ok(args) => args,
-              Err(err) => {
-                let err = internal_error(action.name.clone(), None)
+            let args =
+              match serde_json::from_value::<KMHReportCreateArgs>(action.args.clone().unwrap()) {
+                Ok(args) => args,
+                Err(err) => {
+                  let err = internal_error(action.name.clone(), None)
                     .with_message(format!("kmh_report_create: {}", err));
 
-                info!("kmh_report_create: шлём ошибку в ipc_router (bad args)");
-                let _ = state
+                  info!("kmh_report_create: шлём ошибку в ipc_router (bad args)");
+                  let _ = state
                     .ipc_router
                     .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
                     .map_err(|err| {
                       error!("kmh_report_create: to_replay_msg {}", err);
                     });
-                return Ok(());
-              }
-            };
+                  return Ok(());
+                }
+              };
 
             info!(
               "kmh_report_create: создание болванки отчёта для tank/device_id={}",
@@ -218,20 +211,18 @@ impl Actor for KmhIpcHandler {
             // 1. Читаем tanks.yaml и ищем нужный танк
             let tanks_path = "assets/db/tanks.yaml";
             let tanks: Vec<Tank> = match File::open(tanks_path)
-                .map_err(|err| {
+              .map_err(|err| {
+                internal_error(action.name.clone(), None).with_message(format!("{err:?}"))
+              })
+              .and_then(|reader| {
+                serde_saphyr::from_reader::<File, Vec<Tank>>(reader).map_err(|err| {
                   internal_error(action.name.clone(), None).with_message(format!("{err:?}"))
                 })
-                .and_then(|reader| {
-                  serde_saphyr::from_reader::<File, Vec<Tank>>(reader).map_err(|err| {
-                    internal_error(action.name.clone(), None).with_message(format!("{err:?}"))
-                  })
-                }) {
+              }) {
               Ok(data) => data,
               Err(err) => {
                 if let Some(msg) = ipc_msg.to_replay_msg(Option::<()>::None, Some(err)) {
-                  info!(
-                    "kmh_report_create: шлём ошибку в ipc_router (read/parse tanks.yaml)"
-                  );
+                  info!("kmh_report_create: шлём ошибку в ipc_router (read/parse tanks.yaml)");
                   let _ = state.ipc_router.send_message(Some(msg));
                 } else {
                   error!(
@@ -245,11 +236,10 @@ impl Actor for KmhIpcHandler {
             let tank = match tanks.into_iter().find(|t| t.id == args.device_id) {
               Some(t) => t,
               None => {
-                let err = internal_error(action.name.clone(), None)
-                    .with_message(format!(
-                      "kmh_report_create: tank with id={} not found",
-                      args.device_id
-                    ));
+                let err = internal_error(action.name.clone(), None).with_message(format!(
+                  "kmh_report_create: tank with id={} not found",
+                  args.device_id
+                ));
 
                 if let Some(msg) = ipc_msg.to_replay_msg(Option::<()>::None, Some(err)) {
                   info!("kmh_report_create: шлём ошибку в ipc_router (tank not found)");
@@ -286,7 +276,7 @@ impl Actor for KmhIpcHandler {
             // утилита для парсинга f64 из Option<String> (с запятой/точкой)
             let parse_opt_f64 = |s: &Option<String>| {
               s.as_ref()
-                  .and_then(|v| v.replace(',', ".").parse::<f64>().ok())
+                .and_then(|v| v.replace(',', ".").parse::<f64>().ok())
             };
 
             // 3. Собираем KMHReport, ЗАПОЛНЯЯ ТОЛЬКО ТО, ЧТО ЕСТЬ В КОНФИГУРАЦИИ
@@ -311,8 +301,8 @@ impl Actor for KmhIpcHandler {
               // ΔH — предел абсолютной погрешности измерения уровня
               if let Some(dh) = parse_opt_f64(
                 &cfg
-                    .measurement_accuracy_indicators
-                    .limit_permissible_absolute_measurement_reservoir_level,
+                  .measurement_accuracy_indicators
+                  .limit_permissible_absolute_measurement_reservoir_level,
               ) {
                 kmh_report.delta_height = dh;
               }
@@ -345,8 +335,9 @@ impl Actor for KmhIpcHandler {
             // 6. Создаём директорию и пишем файл assets/db/kmh_reports/{id}.json
             let dir_path = "assets/db/kmh_reports";
             if let Err(err) = fs::create_dir_all(dir_path) {
-              let err = internal_error(action.name.clone(), None)
-                  .with_message(format!("kmh_report_create: create_dir_all {dir_path}: {err:?}"));
+              let err = internal_error(action.name.clone(), None).with_message(format!(
+                "kmh_report_create: create_dir_all {dir_path}: {err:?}"
+              ));
 
               if let Some(msg) = ipc_msg.to_replay_msg(Option::<()>::None, Some(err)) {
                 info!("kmh_report_create: шлём ошибку в ipc_router (create_dir_all)");
@@ -365,15 +356,13 @@ impl Actor for KmhIpcHandler {
 
             if let Err(err) = write_result {
               let err = internal_error(action.name.clone(), None)
-                  .with_message(format!("kmh_report_create: write {:?}: {err:?}", file_path));
+                .with_message(format!("kmh_report_create: write {:?}: {err:?}", file_path));
 
               if let Some(msg) = ipc_msg.to_replay_msg(Option::<()>::None, Some(err)) {
                 info!("kmh_report_create: шлём ошибку в ipc_router (write)");
                 let _ = state.ipc_router.send_message(Some(msg));
               } else {
-                error!(
-        "kmh_report_create: to_replay_msg вернул None при ошибке записи файла"
-      );
+                error!("kmh_report_create: to_replay_msg вернул None при ошибке записи файла");
               }
               return Ok(());
             }
@@ -381,9 +370,9 @@ impl Actor for KmhIpcHandler {
             // 7. Отправляем обратно уже заполненный KMHReportInstance
             if let Some(msg) = ipc_msg.to_replay_msg(Some(json!(kmh_instance)), None) {
               info!(
-      "kmh_report_create: отправляем созданный отчёт id={} в ipc_router",
-      report_id
-    );
+                "kmh_report_create: отправляем созданный отчёт id={} в ipc_router",
+                report_id
+              );
               let _ = state.ipc_router.send_message(Some(msg));
             } else {
               error!("kmh_report_create: to_replay_msg вернул None");
@@ -392,31 +381,30 @@ impl Actor for KmhIpcHandler {
             return Ok(());
           }
 
-
           // ===================== KMH_REPORT_CALC =====================
           if action.kind == IPCActionKind::GetData
-              && action.name.as_deref() == Some("kmh_report_calc")
-              && action.args.is_some()
+            && action.name.as_deref() == Some("kmh_report_calc")
+            && action.args.is_some()
           {
             info!("KmhIpcHandler: обработка action 'kmh_report_calc'");
 
             let mut kmh_instance =
-                match serde_json::from_value::<KMHReportInstance>(action.args.clone().unwrap()) {
-                  Ok(v) => v,
-                  Err(err) => {
-                    let err = internal_error(action.name.clone(), None)
-                        .with_message(format!("kmh_report_calc: {}", err));
+              match serde_json::from_value::<KMHReportInstance>(action.args.clone().unwrap()) {
+                Ok(v) => v,
+                Err(err) => {
+                  let err = internal_error(action.name.clone(), None)
+                    .with_message(format!("kmh_report_calc: {}", err));
 
-                    info!("kmh_report_calc: шлём ошибку в ipc_router (bad args)");
-                    let _ = state
-                        .ipc_router
-                        .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
-                        .map_err(|err| {
-                          error!("kmh_report_calc: to_replay_msg {}", err);
-                        });
-                    return Ok(());
-                  }
-                };
+                  info!("kmh_report_calc: шлём ошибку в ipc_router (bad args)");
+                  let _ = state
+                    .ipc_router
+                    .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                    .map_err(|err| {
+                      error!("kmh_report_calc: to_replay_msg {}", err);
+                    });
+                  return Ok(());
+                }
+              };
 
             info!(
               "kmh_report_calc: расчёт КМХ для report_id={}",
@@ -442,30 +430,33 @@ impl Actor for KmhIpcHandler {
 
           // ===================== KMH_SET (сохранить с пересчётом) =====================
           if action.kind == IPCActionKind::SetData
-              && action.name.as_deref() == Some("kmh_set")
-              && action.args.is_some()
+            && action.name.as_deref() == Some("kmh_set")
+            && action.args.is_some()
           {
             info!("KmhIpcHandler: обработка action 'kmh_set'");
 
             let mut kmh_instance =
-                match serde_json::from_value::<KMHReportInstance>(action.args.clone().unwrap()) {
-                  Ok(v) => v,
-                  Err(err) => {
-                    let err = internal_error(action.name.clone(), None)
-                        .with_message(format!("kmh_set: {}", err));
+              match serde_json::from_value::<KMHReportInstance>(action.args.clone().unwrap()) {
+                Ok(v) => v,
+                Err(err) => {
+                  let err = internal_error(action.name.clone(), None)
+                    .with_message(format!("kmh_set: {}", err));
 
-                    info!("kmh_set: шлём ошибку в ipc_router (bad args)");
-                    let _ = state
-                        .ipc_router
-                        .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
-                        .map_err(|err| {
-                          error!("kmh_set: to_replay_msg {}", err);
-                        });
-                    return Ok(());
-                  }
-                };
+                  info!("kmh_set: шлём ошибку в ipc_router (bad args)");
+                  let _ = state
+                    .ipc_router
+                    .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                    .map_err(|err| {
+                      error!("kmh_set: to_replay_msg {}", err);
+                    });
+                  return Ok(());
+                }
+              };
 
-            info!("kmh_set: пересчёт и сохранение КМХ для report_id={}", kmh_instance.id);
+            info!(
+              "kmh_set: пересчёт и сохранение КМХ для report_id={}",
+              kmh_instance.id
+            );
 
             let mut calc = KMHCalculator {
               report: kmh_instance.data.clone(),
@@ -476,7 +467,7 @@ impl Actor for KmhIpcHandler {
             let dir_path = "assets/db/kmh_reports";
             if let Err(err) = fs::create_dir_all(dir_path) {
               let err = internal_error(action.name.clone(), None)
-                  .with_message(format!("kmh_set: create_dir_all {dir_path}: {err:?}"));
+                .with_message(format!("kmh_set: create_dir_all {dir_path}: {err:?}"));
 
               if let Some(msg) = ipc_msg.to_replay_msg(Option::<()>::None, Some(err)) {
                 info!("kmh_set: шлём ошибку в ipc_router (create_dir_all)");
@@ -495,7 +486,7 @@ impl Actor for KmhIpcHandler {
 
             if let Err(err) = write_result {
               let err = internal_error(action.name.clone(), None)
-                  .with_message(format!("kmh_set: write {:?}: {err:?}", file_path));
+                .with_message(format!("kmh_set: write {:?}: {err:?}", file_path));
 
               if let Some(msg) = ipc_msg.to_replay_msg(Option::<()>::None, Some(err)) {
                 info!("kmh_set: шлём ошибку в ipc_router (write)");

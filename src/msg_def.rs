@@ -332,7 +332,6 @@ impl IPCMessageDef for ProductList {
   }
 }
 
-
 // ////////////////////////////
 /// Получения списка КМХ отчетов
 
@@ -466,21 +465,20 @@ impl IPCMessageDef for KMHReportCalc {
   }
 }
 
-
 #[allow(dead_code)]
 pub fn ikm_controller_client_api() -> AsyncapiBuilder {
   AsyncapiBuilder::new(IPCRole::Router)
-      .operation::<TankList, ()>()
-      .operation::<TankConfigSet, ()>()
-      .operation::<EventList, ()>()
-      .operation::<EventRuleList, ()>()
-      .operation::<EventRuleSet, ()>()
-      .operation::<ParkList, ()>()
-      .operation::<ProductList, ()>()
-      .operation::<KMHReportList, ()>()
-      .operation::<KMHReportSet, ()>()
-      .operation::<KMHReportCreate, ()>()
-      .operation::<KMHReportCalc, ()>()
-      .operation::<UserLogin, ()>()
-      .operation::<UserLogout, ()>()
+    .operation::<TankList, ()>()
+    .operation::<TankConfigSet, ()>()
+    .operation::<EventList, ()>()
+    .operation::<EventRuleList, ()>()
+    .operation::<EventRuleSet, ()>()
+    .operation::<ParkList, ()>()
+    .operation::<ProductList, ()>()
+    .operation::<KMHReportList, ()>()
+    .operation::<KMHReportSet, ()>()
+    .operation::<KMHReportCreate, ()>()
+    .operation::<KMHReportCalc, ()>()
+    .operation::<UserLogin, ()>()
+    .operation::<UserLogout, ()>()
 }
