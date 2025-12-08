@@ -1,6 +1,10 @@
 {
   "constants": {
+<<<<<<< HEAD
     "calculation_method": 2,
+=======
+    "calculation_method": 1,
+>>>>>>> tank-calc-simulation
     "product_type": 1,
     "pontoon_weight": 2877,
     "tank_wall_alpha": 0.0000125,

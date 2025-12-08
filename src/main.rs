@@ -4,6 +4,7 @@ mod types;
 use crate::actors::ipc_handler::{IpcHandler, IpcHandlerMsg, IpcHandlerState};
 use crate::actors::modbus::config::ModbusSettings;
 use crate::actors::modbus::modbus_fabric::ModbusFabricActor;
+use crate::actors::tank_calc::TankCalcActor;
 use actors::serial_scanner::SerialScannerActor;
 use clap::Parser;
 pub use msg_def::*;
@@ -75,6 +76,12 @@ fn main() -> Result<(), ModuleError> {
       ipc_router
         .subscribe(ipc_handler, |msg| Some(IpcHandlerMsg::Ipc(*Box::new(msg))))
         .map_err(|err| ModuleError::Run("ClientIpcHandler".into(), err))?;
+
+      // ----- TankCalcActor ---------
+      let (_tank_calc_actor, _tank_calc_handle) = module
+        .spawn_linked(Some("TankCalcActor".into()), TankCalcActor::new(), ())
+        .await
+        .map_err(|err| ModuleError::SpawnErr("TankCalcActor".into(), err))?;
 
       // Сканирование портов делает SerialScanner
       Ok(())
