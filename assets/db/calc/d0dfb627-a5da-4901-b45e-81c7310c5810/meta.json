@@ -1,10 +1,6 @@
 {
   "constants": {
-<<<<<<< HEAD
-    "calculation_method": 1,
-=======
     "calculation_method": 2,
->>>>>>> tank-calc-simulation
     "product_type": 1,
     "pontoon_weight": 2877,
     "tank_wall_alpha": 0.0000125,
@@ -41,16 +37,16 @@
     "product_density_15": 720
   },
   "level_coefficient_points": [
-    { "id": "t0", "level_mm": 750,  "kti": 15 },
+    { "id": "t0", "level_mm": 750, "kti": 15 },
     { "id": "t1", "level_mm": 2000, "kti": 15 },
     { "id": "t2", "level_mm": 3500, "kti": 50 },
     { "id": "t3", "level_mm": 5000, "kti": -20 },
     { "id": "t4", "level_mm": 6500, "kti": -20 },
     { "id": "t5", "level_mm": 8000, "kti": -20 },
-    { "id": "t6", "level_mm": 11000,"kti": -20 },
-    { "id": "t7", "level_mm": 13000,"kti": -20 },
-    { "id": "t8", "level_mm": 16000,"kti": -20 },
-    { "id": "t9", "level_mm": 19000,"kti": -20 }
+    { "id": "t6", "level_mm": 11000, "kti": -20 },
+    { "id": "t7", "level_mm": 13000, "kti": -20 },
+    { "id": "t8", "level_mm": 16000, "kti": -20 },
+    { "id": "t9", "level_mm": 19000, "kti": -20 }
   ],
   "grad_table": [
     [0.0, 0.79, 0.0],

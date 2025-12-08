@@ -7,3 +7,5 @@ logs
 .roo
 tmp
 vendor
+~$*
+**/~$*

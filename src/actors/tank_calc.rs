@@ -169,7 +169,7 @@ impl Actor for TankCalcActor {
           }
         }
 
-        let _ = myself.send_after(Duration::from_secs(10), || TankCalcMsg::Tick);
+        let _ = myself.send_after(Duration::from_secs(2), || TankCalcMsg::Tick);
       }
     }
 
@@ -190,11 +190,13 @@ impl TankCalcActor {
 
     // Читаем meta.json
     let meta_content = fs::read_to_string(&meta_path)?;
-    let meta: Meta = serde_json::from_str(&meta_content)?;
+    let meta: Meta =
+      serde_json::from_str(&meta_content).map_err(|err| format!("Cant parse meta:{err:?}"))?;
 
     // Читаем time_series.json
     let time_series_content = fs::read_to_string(&time_series_path)?;
-    let time_series: Vec<TimeSeriesEntry> = serde_json::from_str(&time_series_content)?;
+    let time_series: Vec<TimeSeriesEntry> = serde_json::from_str(&time_series_content)
+      .map_err(|err| format!("Cant parse time_series:{err:?}"))?;
 
     if time_series.is_empty() {
       return Ok(());
@@ -225,20 +227,20 @@ impl TankCalcActor {
 
     // Запуск расчета base и ext
     let now = Utc::now();
-    let base_vars = self.calculate_base_vars(&meta, entry, now);
-    let ext_vars = self.calculate_ext_vars(&meta, entry, now);
+    let base_vars = self.calculate_base_vars(&meta, entry, now).data;
+    let ext_vars = self.calculate_ext_vars(&meta, entry, now).data;
 
     // Запись base_vars
     let base_yaml = serde_saphyr::to_string(&base_vars)?;
-    let existing_base = fs::read_to_string(&base_vars_path).unwrap_or_default();
-    let base_content = format!("---\n{}\n{}", base_yaml, existing_base);
-    fs::write(&base_vars_path, base_content)?;
+    //let existing_base = fs::read_to_string(&base_vars_path).unwrap_or_default();
+    //let base_content = format!("---\n{}\n{}", base_yaml, existing_base);
+    fs::write(&base_vars_path, base_yaml)?;
 
     // Запись ext_vars
     let ext_yaml = serde_saphyr::to_string(&ext_vars)?;
-    let existing_ext = fs::read_to_string(&ext_vars_path).unwrap_or_default();
-    let ext_content = format!("---\n{}\n{}", ext_yaml, existing_ext);
-    fs::write(&ext_vars_path, ext_content)?;
+    // let existing_ext = fs::read_to_string(&ext_vars_path).unwrap_or_default();
+    // let ext_content = format!("---\n{}\n{}", ext_yaml, existing_ext);
+    fs::write(&ext_vars_path, ext_yaml)?;
 
     //info!("Резервуар обновлен {} ", tank_id);
 
