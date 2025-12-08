@@ -28,7 +28,7 @@ pub struct TankBasicData {
 pub struct LevelPointSensor {
   pub id: String,
   pub index: i32,
-  pub value: String,
+  pub value: u32,
 }
 
 #[derive(Default, Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]

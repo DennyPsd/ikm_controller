@@ -61,6 +61,6 @@ pub struct ExtVars {
 #[derive(Default, Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
 pub struct Temperature {
   pub value: f64,
-  // pub level: f64,
+  pub level: u32,
   pub name: String,
 }

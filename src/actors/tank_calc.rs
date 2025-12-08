@@ -7,7 +7,10 @@ use std::time::Duration;
 use tracing::{error, info};
 use uuid::Uuid;
 
-use crate::types::tanks::{BaseVars, ExtVars, Temperature};
+use crate::types::{
+  tank_configuration::TankConfig,
+  tanks::{BaseVars, ExtVars, Temperature},
+};
 
 //Инициализация констант из meta. Избыточно, но вдруг понадобятся другие.
 #[derive(Deserialize, Debug)]
@@ -185,14 +188,18 @@ impl TankCalcActor {
   ) -> Result<(), Box<dyn std::error::Error>> {
     let meta_path = format!("assets/db/calc/{}/meta.json", tank_id);
     let time_series_path = format!("assets/db/calc/{}/time_series.json", tank_id);
+    let config_vars_path = format!("assets/db/tanks/{}/config.yaml", tank_id);
     let base_vars_path = format!("assets/db/tanks/{}/base_vars.yaml", tank_id);
     let ext_vars_path = format!("assets/db/tanks/{}/ext_vars.yaml", tank_id);
 
     // Читаем meta.json
     let meta_content = fs::read_to_string(&meta_path)?;
     let meta: Meta =
-      serde_json::from_str(&meta_content).map_err(|err| format!("Cant parse meta:{err:?}"))?;
-
+      serde_json::from_str(&meta_content).map_err(|err| format!("Cant parse meta: {err:?}"))?;
+    // Читаем config.yaml
+    let config_content = fs::read_to_string(&config_vars_path)?;
+    let config: TankConfig = serde_saphyr::from_str(&config_content)
+      .map_err(|err| format!("Cant parse config: {err:?}"))?;
     // Читаем time_series.json
     let time_series_content = fs::read_to_string(&time_series_path)?;
     let time_series: Vec<TimeSeriesEntry> = serde_json::from_str(&time_series_content)
@@ -204,31 +211,14 @@ impl TankCalcActor {
 
     // Берем индекс из "ts" в time_series.json, с учетом того, что они могут повторяться
     let current_index = state.current_indices.entry(*tank_id).or_insert(0);
-    let mut next_index = *current_index;
-    let last_ts = if *current_index > 0 {
-      time_series[*current_index - 1].ts
-    } else {
-      0
-    };
-
-    for (i, entry) in time_series.iter().enumerate().skip(*current_index) {
-      if entry.ts != last_ts {
-        next_index = i;
-        break;
-      }
-    }
-
-    if next_index >= time_series.len() {
-      next_index = 0;
-    }
-
+    let next_index = (*current_index + 1) % time_series.len();
     let entry = &time_series[next_index];
-    *current_index = next_index + 1;
+    *current_index = next_index;
 
     // Запуск расчета base и ext
     let now = Utc::now();
     let base_vars = self.calculate_base_vars(&meta, entry, now).data;
-    let ext_vars = self.calculate_ext_vars(&meta, entry, now).data;
+    let ext_vars = self.calculate_ext_vars(&meta, &config, entry, now).data;
 
     // Запись base_vars
     let base_yaml = serde_saphyr::to_string(&base_vars)?;
@@ -285,6 +275,7 @@ impl TankCalcActor {
   fn calculate_ext_vars(
     &self,
     meta: &Meta,
+    config: &TankConfig,
     entry: &TimeSeriesEntry,
     now: DateTime<Utc>,
   ) -> ExtVarsWithDate {
@@ -304,46 +295,102 @@ impl TankCalcActor {
     let product_movement_level_measurement_speed = 0.0;
     let volume_product_calc_below_water = 0.0;
     let volume_raw_water = 0.0;
+    let temperature_levels: HashMap<_, _> = config
+      .levels_of_point_sensors
+      .points
+      .iter()
+      .map(|v| (v.id.to_uppercase(), v.clone()))
+      .collect();
     let temperatures = vec![
       Temperature {
         value: entry.t0,
         name: "T0".to_string(),
+        level: temperature_levels
+          .get("T0")
+          .cloned()
+          .unwrap_or_default()
+          .value,
       },
       Temperature {
         value: entry.t1,
         name: "T1".to_string(),
+        level: temperature_levels
+          .get("T1")
+          .cloned()
+          .unwrap_or_default()
+          .value,
       },
       Temperature {
         value: entry.t2,
         name: "T2".to_string(),
+        level: temperature_levels
+          .get("T2")
+          .cloned()
+          .unwrap_or_default()
+          .value,
       },
       Temperature {
         value: entry.t3,
         name: "T3".to_string(),
+        level: temperature_levels
+          .get("T3")
+          .cloned()
+          .unwrap_or_default()
+          .value,
       },
       Temperature {
         value: entry.t4,
         name: "T4".to_string(),
+        level: temperature_levels
+          .get("T4")
+          .cloned()
+          .unwrap_or_default()
+          .value,
       },
       Temperature {
         value: entry.t5,
         name: "T5".to_string(),
+        level: temperature_levels
+          .get("T5")
+          .cloned()
+          .unwrap_or_default()
+          .value,
       },
       Temperature {
         value: entry.t6,
         name: "T6".to_string(),
+        level: temperature_levels
+          .get("T6")
+          .cloned()
+          .unwrap_or_default()
+          .value,
       },
       Temperature {
         value: entry.t7,
         name: "T7".to_string(),
+        level: temperature_levels
+          .get("T7")
+          .cloned()
+          .unwrap_or_default()
+          .value,
       },
       Temperature {
         value: entry.t8,
         name: "T8".to_string(),
+        level: temperature_levels
+          .get("T8")
+          .cloned()
+          .unwrap_or_default()
+          .value,
       },
       Temperature {
         value: entry.t9,
         name: "T9".to_string(),
+        level: temperature_levels
+          .get("T9")
+          .cloned()
+          .unwrap_or_default()
+          .value,
       },
     ];
 
