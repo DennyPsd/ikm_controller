@@ -4,9 +4,13 @@ use std::fs::{self, File};
 
 use crate::types::kmh::KMHReportInstance;
 use crate::types::tank_configuration::TankConfig;
-use crate::types::tanks::Tank;
+use crate::types::tanks::{BaseVars, ExtVars, Tank};
 use crate::{KMHReportCreateArgs, KMHReportListArgs};
-use ikm_calc::calculation::kmh::{KMHCalculator, KMHReport};
+
+use crate::actors::tank_calc::Meta;
+
+use crate::types::type_traits::KMHReportExt;
+use ikm_calc::calculation::kmh::{KMHCalculator, KMHReport, TapeClass};
 use ractor::{Actor, ActorProcessingErr, ActorRef};
 use serde_json::json;
 use taxon_core::actors::ipc::errors::internal_error;
@@ -251,8 +255,12 @@ impl Actor for KmhIpcHandler {
               }
             };
 
-            // 2. Подтягиваем только базовую конфигурацию танка (TankConfig)
+            // 2. Подтягиваем конфиг + base_vars + ext_vars + meta для этого танка
             let config_path = format!("assets/db/tanks/{}/config.yaml", args.device_id);
+            let base_vars_path = format!("assets/db/tanks/{}/base_vars.yaml", args.device_id);
+            let ext_vars_path = format!("assets/db/tanks/{}/ext_vars.yaml", args.device_id);
+            let meta_path = format!("assets/db/calc/{}/meta.json", args.device_id);
+
             let config: Option<TankConfig> = match File::open(&config_path) {
               Ok(f) => match serde_saphyr::from_reader::<File, TankConfig>(f) {
                 Ok(v) => Some(v),
@@ -273,15 +281,120 @@ impl Actor for KmhIpcHandler {
               }
             };
 
+            let base_vars: Option<BaseVars> = match File::open(&base_vars_path) {
+              Ok(f) => match serde_saphyr::from_reader::<File, BaseVars>(f) {
+                Ok(v) => Some(v),
+                Err(err) => {
+                  error!(
+                    "kmh_report_create: не удалось распарсить base_vars {}: {err:?}",
+                    base_vars_path
+                  );
+                  None
+                }
+              },
+              Err(err) => {
+                info!(
+                  "kmh_report_create: нет base_vars для {} ({err:?})",
+                  args.device_id
+                );
+                None
+              }
+            };
+
+            let ext_vars: Option<ExtVars> = match File::open(&ext_vars_path) {
+              Ok(f) => match serde_saphyr::from_reader::<File, ExtVars>(f) {
+                Ok(v) => Some(v),
+                Err(err) => {
+                  error!(
+                    "kmh_report_create: не удалось распарсить ext_vars {}: {err:?}",
+                    ext_vars_path
+                  );
+                  None
+                }
+              },
+              Err(err) => {
+                info!(
+                  "kmh_report_create: нет ext_vars для {} ({err:?})",
+                  args.device_id
+                );
+                None
+              }
+            };
+
+            let meta: Option<Meta> = match File::open(&meta_path) {
+              Ok(f) => match serde_json::from_reader::<File, Meta>(f) {
+                Ok(v) => Some(v),
+                Err(err) => {
+                  error!(
+                    "kmh_report_create: не удалось распарсить meta {}: {err:?}",
+                    meta_path
+                  );
+                  None
+                }
+              },
+              Err(err) => {
+                info!(
+                  "kmh_report_create: нет meta для calc/{} ({err:?})",
+                  args.device_id
+                );
+                None
+              }
+            };
+
             // утилита для парсинга f64 из Option<String> (с запятой/точкой)
             let parse_opt_f64 = |s: &Option<String>| {
               s.as_ref()
                 .and_then(|v| v.replace(',', ".").parse::<f64>().ok())
             };
 
-            // 3. Собираем KMHReport, ЗАПОЛНЯЯ ТОЛЬКО ТО, ЧТО ЕСТЬ В КОНФИГУРАЦИИ
-            let mut kmh_report = KMHReport::default();
+            // 3. Базовая «болванка» KMHReport
+            let mut kmh_report = KMHReport {
+              // Окружение
+              air_temperature_outside: 0.0,
+              air_pressure_outside: 0.0,
+              wind_speed: 0.0,
+              gas_layer_height_measured_points: Vec::new(),
+              measured_height: 0.0,
+              nominal_height: 0.0,
+              delta_height: 0.0,
 
+              // Плотности
+              density_verified: 0.0,
+              density_measured: 0.0,
+              density_measured_controlled: (0.0, 0.0, 0.0),
+
+              // Объёмы / массы
+              product_volume_measured: 0.0,
+              volume_coarse: 0.0,
+              air_temp_verify: 0.0,
+              pontoon_mass: 0.0,
+              product_mass_measured: 0.0,
+
+              // Температура паров
+              vapor_temp: 0.0,
+
+              // Рулетка / допуски
+              tape_class: TapeClass::default(),
+              delta_v_max: 0.0,
+              delta_m_max: 0.0,
+              ruler_alpha_coefficient: 0.0,
+              wall_alpha_coefficient: 0.0,
+              pressure_coefficient: 0.0,
+
+              // Каналы
+              level_channels: None,
+              temperature_channels: Vec::new(),
+              mass_channels: None,
+              volume_channels: None,
+              density_channels: None,
+            };
+
+            // 3.1. Если есть meta.json — обогащаем через Constants → KMHReport
+            if let Some(m) = &meta {
+              kmh_report.apply_constants(&m.constants);
+            }
+
+            // 3.2. Если есть config.yaml — переопределяем то, что явно задано в конфиге
             if let Some(cfg) = &config {
               // HБ — базовая высота резервуара
               if let Some(h) = parse_opt_f64(&cfg.basic_data.basic_height) {
@@ -307,14 +420,18 @@ impl Actor for KmhIpcHandler {
                 kmh_report.delta_height = dh;
               }
 
-              // Остальные поля KMHReport остаются как в Default (0.0 / пустые),
-              // т.к. в базовой конфигурации явных источников для них НЕТ.
+              // Остальные поля KMHReport из конфига пока не трогаем — оператор + расчёт.
+            }
+
+            // 3.3. Если есть base_vars + ext_vars — обогащаем измерениями
+            if let (Some(base), Some(ext)) = (&base_vars, &ext_vars) {
+              kmh_report.apply_base_ext(base, ext);
             }
 
             // 4. DataLink<Tank> через SharedData::new_link_to()
             let tank_link = tank.new_link_to();
 
-            // 5. Собираем KMHReportInstance (описание / софт — тут как раз «чётко забитые» константы)
+            // 5. Собираем KMHReportInstance
             let now = Local::now();
             let report_id = Uuid::now_v7();
 
