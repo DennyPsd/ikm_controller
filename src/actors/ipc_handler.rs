@@ -238,14 +238,14 @@ impl Actor for IpcHandler {
               Ok(args) => args,
               Err(err) => {
                 let err = internal_error(action.name.clone(), None)
-                  .with_message(format!("tank_list: {}", err));
+                  .with_message(format!("tank_config_set: {}", err));
 
-                info!("tank_list: шлём ошибку в ipc_router (read_to_string)");
+                info!("tank_config_set: шлём ошибку в ipc_router (read_to_string)");
                 let _ = state
                   .ipc_router
                   .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
                   .map_err(|err| {
-                    error!("tank_list: to_replay_msg {}", err);
+                    error!("tank_config_set: to_replay_msg {}", err);
                   });
                 return Ok(());
               }

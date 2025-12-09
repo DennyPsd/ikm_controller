@@ -2,6 +2,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use smol_str::SmolStr;
 use taxon_core::infrastructure::device::{FacilityEvent, FacilityEventRule};
+use taxon_core::infrastructure::facility::DataChange;
 use taxon_core::infrastructure::user::User;
 use taxon_core::prelude::*;
 use taxon_core::utils::asyncapi::AsyncapiBuilder;
@@ -63,7 +64,49 @@ impl IPCMessageDef for UserLogout {
     IPCMessageDir::Receive
   }
 }
+// ////////////////////////////
+/// Получения списка измен
 
+#[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq, Eq, Hash)]
+pub struct DataChangeList;
+
+// #[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq, Eq, Hash)]
+// pub enum TankListFields {
+//   Minimal,
+//   All,
+//   Exact(Vec<SmolStr>),
+// }
+
+// #[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq, Eq, Hash)]
+// pub struct TankListArgs {
+//   pub ids: Vec<Uuid>,
+//   pub fields: TankListFields,
+// }
+
+#[derive(Default, Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
+pub struct DataChangeListReply {
+  /// Tanks
+  pub data: Vec<DataChange>,
+}
+
+impl IPCMessageDef for DataChangeList {
+  type Args = ();
+  type Reply = DataChangeListReply;
+  type ErrorArgs = ();
+
+  fn action() -> Option<IPCActionKind> {
+    Some(IPCActionKind::GetData)
+  }
+  fn target() -> Option<IPCTarget> {
+    Some(IPCTarget {
+      data_ns: Some("DataChange".into()),
+      ..ActionTargetKind::Data.to_target()
+    })
+  }
+  fn direction() -> IPCMessageDir {
+    IPCMessageDir::Receive
+  }
+}
 // ////////////////////////////
 /// Получения списка цистерн
 
@@ -107,6 +150,7 @@ impl IPCMessageDef for TankList {
     IPCMessageDir::Receive
   }
 }
+
 /// Изменение настроек цистерны
 
 #[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
