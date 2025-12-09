@@ -435,12 +435,8 @@ impl TankCalcActor {
           if ev_state.exceed_started_ts.is_none() {
             ev_state.exceed_started_ts = Some(entry_ts);
           }
-
-          let threshold_secs = (if let Some(dur) = threshold.clone() {
-            dur
-          } else {
-            0.0
-          }) as i32;
+          #[allow(clippy::manual_unwrap_or)]
+          let threshold_secs = (if let Some(dur) = *threshold { dur } else { 0.0 }) as i32;
 
           if let Some(start_ts) = ev_state.exceed_started_ts {
             let secs = entry_ts.saturating_sub(start_ts) as i32;

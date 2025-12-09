@@ -56,6 +56,7 @@ rand = { version = "0.8", default-features = false, features = [
   "rand_chacha",
 ] }
 xlsx-handlebars = "0.2.2"
+base64 = "0.22.1"
 #------------ data types ------------#
 chrono = { version = "^0.4", default-features = false, features = [
   "serde",
