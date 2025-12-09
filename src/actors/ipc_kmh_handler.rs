@@ -683,7 +683,7 @@ impl Actor for KmhIpcHandler {
               kmh_instance.id
             );
 
-            // БЕЗ пересчёта! Просто пишем как есть
+
             let dir_path = "assets/db/kmh_reports";
             if let Err(err) = fs::create_dir_all(dir_path) {
               let err = internal_error(action.name.clone(), None).with_message(format!(
