@@ -469,27 +469,30 @@ impl Actor for KmhIpcHandler {
             // 3.2. Если есть config.yaml — переопределяем то, что явно задано в конфиге
             if let Some(cfg) = &config {
               // HБ — базовая высота резервуара
-              if let Some(h) = parse_opt_f64(&cfg.basic_data.basic_height) {
-                kmh_report.nominal_height = h;
+              if let Some(h) = &cfg.basic_data.basic_height {
+                kmh_report.nominal_height = h.clone() as f64;
               }
 
               // αст — линейное расширение стенки резервуара
-              if let Some(a) = parse_opt_f64(&cfg.construction.linear_expansion) {
-                kmh_report.wall_alpha_coefficient = a;
+              if let Some(a) = &cfg.construction.linear_expansion {
+                kmh_report.wall_alpha_coefficient = a.clone() as f64;
               }
 
               // m(понтона) — масса понтона
-              if let Some(m) = parse_opt_f64(&cfg.construction.mass_floating_coating) {
-                kmh_report.pontoon_mass = m;
+              if let Some(m) = &cfg.construction.mass_floating_coating {
+                kmh_report.pontoon_mass = m.clone() as f64;
               }
 
               // ΔH — предел абсолютной погрешности измерения уровня
-              if let Some(dh) = parse_opt_f64(
-                &cfg
-                  .measurement_accuracy_indicators
-                  .limit_permissible_absolute_measurement_reservoir_level,
-              ) {
-                kmh_report.delta_height = dh;
+              if let Some(dh) = &cfg
+                .measurement_accuracy_indicators
+                .limit_permissible_absolute_measurement_reservoir_level
+              {
+                kmh_report.delta_height = dh.clone() as f64;
+              }
+              // Температура воздуха при поверке резервуара
+              if let Some(dh) = &cfg.basic_data.air_temp_verify {
+                kmh_report.air_temp_verify = dh.clone() as f64;
               }
 
               // Остальные поля KMHReport из конфига пока не трогаем — оператор + расчёт.

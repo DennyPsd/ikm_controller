@@ -255,7 +255,9 @@ impl CalculationResultExt for CalculationResult {
           .get(name)
           .cloned()
           .unwrap_or_default()
-          .value,
+          .value
+          .round()
+          .abs() as u32,
       })
       .collect();
 
