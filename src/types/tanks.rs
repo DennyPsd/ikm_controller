@@ -53,8 +53,6 @@ pub struct Tank {
   pub base_vars: Option<BaseVars>,
   /// Внешние переменные
   pub ext_vars: Option<ExtVars>,
-  /// Параметры отображения
-  pub display_params: Option<TankDisplay>,
   /// Конфигурация
   pub config: Option<TankConfig>,
 }

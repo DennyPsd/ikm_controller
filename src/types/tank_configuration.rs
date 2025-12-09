@@ -30,15 +30,15 @@ pub struct TankBasicData {
   /** Тип цистерны */
   pub tank_type: Option<String>,
   /** Номинальная емкость */
-  pub nominal_capacity: Option<f64>,
+  pub nominal_capacity: Option<String>,
   /** Плотность хранимой жидкости по данным */
-  pub density_stored_liquid_according: Option<f64>,
+  pub density_stored_liquid_according: Option<String>,
   /** Базовая высота */
-  pub basic_height: Option<f64>,
+  pub basic_height: Option<String>,
   /** Продукт */
   pub product: Option<String>,
   /** Максимальный допустимый уровень продукта */
-  pub maximum_allowable_product_level: Option<f64>,
+  pub maximum_allowable_product_level: Option<String>,
 }
 
 /** Точечный датчик уровня */
@@ -66,9 +66,9 @@ pub struct LevelsOfPointSensors {
 #[derive(Default, Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
 pub struct Construction {
   /** Линейное расширение */
-  pub linear_expansion: Option<f64>,
+  pub linear_expansion: Option<String>,
   /** Масса плавающего покрытия */
-  pub mass_floating_coating: Option<f64>,
+  pub mass_floating_coating: Option<String>,
 }
 
 /** Метод расчета массы */
@@ -92,25 +92,25 @@ pub struct MassCalculationMethod {
 #[derive(Default, Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
 pub struct MeasurementAccuracyIndicators {
   /** Допустимая абсолютная погрешность */
-  pub limit_permissible_absolute_error: Option<f64>,
+  pub limit_permissible_absolute_error: Option<String>,
   /** Предел гидростатического устройства */
-  pub hydrostatic_device_limit: Option<f64>,
+  pub hydrostatic_device_limit: Option<String>,
   /** Предел давления устройства */
-  pub pressure_device_limit: Option<f64>,
+  pub pressure_device_limit: Option<String>,
   /** Допустимая абсолютная погрешность измерения уровня резервуара */
-  pub limit_permissible_absolute_measurement_reservoir_level: Option<f64>,
+  pub limit_permissible_absolute_measurement_reservoir_level: Option<String>,
   /** Допустимая абсолютная погрешность измерения уровня сырой воды */
-  pub limit_permissible_absolute_measurement_level_raw_water: Option<f64>,
+  pub limit_permissible_absolute_measurement_level_raw_water: Option<String>,
   /** Допустимая абсолютная погрешность измерения температуры продуктов и паров */
-  pub limit_permissible_absolute_measurement_temp_products_and_vapours: Option<f64>,
+  pub limit_permissible_absolute_measurement_temp_products_and_vapours: Option<String>,
   /** Допустимая абсолютная погрешность измерения плотности нефти */
-  pub limit_permissible_absolute_measurement_oil_densities: Option<f64>,
+  pub limit_permissible_absolute_measurement_oil_densities: Option<String>,
   /** Калибровочная таблица чертежа */
-  pub drawing_calibration_table: Option<f64>,
+  pub drawing_calibration_table: Option<String>,
   /** ВПИ гидростатического устройства */
-  pub hydrostatic_device_vpi: Option<f64>,
+  pub hydrostatic_device_vpi: Option<String>,
   /** ВПИ давления устройства */
-  pub pressure_device_vpi: Option<f64>,
+  pub pressure_device_vpi: Option<String>,
 }
 
 /** Калибровка */
