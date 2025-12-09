@@ -1,19 +1,20 @@
-use std::collections::HashMap;
-use std::fs::{self, File};
-use base64::engine::general_purpose;
-use chrono::Local;
-use taxon_core::actors::ipc::errors::internal_error;
-use taxon_core::infrastructure::facility::DataChange;
-
 use crate::actors::ipc_kmh_handler::KmhIpcHandlerMsg;
 use crate::actors::modbus::modbus_fabric::ModbusFabricMsg;
 use crate::types::products::Product;
 use crate::types::tank_configuration::TankConfig;
 use crate::types::tanks::{BaseVars, ExtVars, Tank};
 use crate::{EventListArgs, EventRuleListArgs, LoadGradTableArgs, ProductListArgs, TankListArgs};
+use base64::Engine;
+use base64::engine::general_purpose;
+use chrono::Local;
 use ractor::{Actor, ActorProcessingErr, ActorRef};
+use serde_json::Value;
 use serde_json::{json, to_string_pretty};
+use std::collections::HashMap;
+use std::fs::{self, File};
+use taxon_core::actors::ipc::errors::internal_error;
 use taxon_core::infrastructure::device::{FacilityEvent, FacilityEventRule};
+use taxon_core::infrastructure::facility::DataChange;
 use taxon_core::prelude::{IPCActionKind, IPCActorMsg, IPCMessageCrate};
 use tracing::{error, info};
 use uuid::Uuid;
@@ -625,45 +626,43 @@ impl Actor for IpcHandler {
             return Ok(());
           }
 
-
-
           // ===================== LOAD_GRAD_TABLE =====================
           if action.kind == IPCActionKind::SetData
-              && action.name.as_deref() == Some("load_grad_table")
+            && action.name.as_deref() == Some("load_grad_table")
           {
             info!("load_grad_table: обработка запроса");
 
             if action.args.is_none() {
               let err = internal_error(action.name.clone(), None)
-                  .with_message("load_grad_table: empty args");
+                .with_message("load_grad_table: empty args");
 
               info!("load_grad_table: шлём ошибку в ipc_router (empty args)");
               let _ = state
-                  .ipc_router
-                  .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
-                  .map_err(|err| {
-                    error!("load_grad_table: to_replay_msg {}", err);
-                  });
+                .ipc_router
+                .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                .map_err(|err| {
+                  error!("load_grad_table: to_replay_msg {}", err);
+                });
               return Ok(());
             }
 
             let args =
-                match serde_json::from_value::<LoadGradTableArgs>(action.args.clone().unwrap()) {
-                  Ok(args) => args,
-                  Err(err) => {
-                    let err = internal_error(action.name.clone(), None)
-                        .with_message(format!("load_grad_table: bad args: {}", err));
+              match serde_json::from_value::<LoadGradTableArgs>(action.args.clone().unwrap()) {
+                Ok(args) => args,
+                Err(err) => {
+                  let err = internal_error(action.name.clone(), None)
+                    .with_message(format!("load_grad_table: bad args: {}", err));
 
-                    error!("load_grad_table: bad args: {err:?}");
-                    let _ = state
-                        .ipc_router
-                        .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
-                        .map_err(|err| {
-                          error!("load_grad_table: to_replay_msg {}", err);
-                        });
-                    return Ok(());
-                  }
-                };
+                  error!("load_grad_table: bad args: {err:?}");
+                  let _ = state
+                    .ipc_router
+                    .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                    .map_err(|err| {
+                      error!("load_grad_table: to_replay_msg {}", err);
+                    });
+                  return Ok(());
+                }
+              };
 
             let device_id = args.device_id;
             info!("load_grad_table: device_id = {device_id}");
@@ -672,15 +671,15 @@ impl Actor for IpcHandler {
               Ok(bytes) => bytes,
               Err(err) => {
                 let err = internal_error(action.name.clone(), None)
-                    .with_message(format!("load_grad_table: base64 decode error: {}", err));
+                  .with_message(format!("load_grad_table: base64 decode error: {}", err));
 
                 error!("load_grad_table: base64 decode error: {err:?}");
                 let _ = state
-                    .ipc_router
-                    .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
-                    .map_err(|err| {
-                      error!("load_grad_table: to_replay_msg {}", err);
-                    });
+                  .ipc_router
+                  .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                  .map_err(|err| {
+                    error!("load_grad_table: to_replay_msg {}", err);
+                  });
                 return Ok(());
               }
             };
@@ -689,15 +688,15 @@ impl Actor for IpcHandler {
               Ok(s) => s,
               Err(err) => {
                 let err = internal_error(action.name.clone(), None)
-                    .with_message(format!("load_grad_table: utf8 error: {}", err));
+                  .with_message(format!("load_grad_table: utf8 error: {}", err));
 
                 error!("load_grad_table: utf8 error: {err:?}");
                 let _ = state
-                    .ipc_router
-                    .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
-                    .map_err(|err| {
-                      error!("load_grad_table: to_replay_msg {}", err);
-                    });
+                  .ipc_router
+                  .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                  .map_err(|err| {
+                    error!("load_grad_table: to_replay_msg {}", err);
+                  });
                 return Ok(());
               }
             };
@@ -712,9 +711,9 @@ impl Actor for IpcHandler {
 
               if line_no == 0 {
                 let first_token = line
-                    .split(|c| c == ',' || c == ';' || c == '\t')
-                    .find(|t| !t.trim().is_empty())
-                    .unwrap_or("");
+                  .split([',', ';', '\t'])
+                  .find(|t| !t.trim().is_empty())
+                  .unwrap_or("");
                 if first_token.parse::<f64>().is_err() {
                   info!("load_grad_table: skip header line: {}", line);
                   continue;
@@ -722,18 +721,17 @@ impl Actor for IpcHandler {
               }
 
               let parts: Vec<_> = line
-                  .split(|c| c == ',' || c == ';' || c == '\t')
-                  .map(|s| s.trim())
-                  .filter(|s| !s.is_empty())
-                  .collect();
+                .split([',', ';', '\t'])
+                .map(|s| s.trim())
+                .filter(|s| !s.is_empty())
+                .collect();
 
               if parts.len() < 3 {
-                let err = internal_error(action.name.clone(), None)
-                    .with_message(format!(
-                      "load_grad_table: line {}: expected at least 3 columns, got {}",
-                      line_no + 1,
-                      parts.len()
-                    ));
+                let err = internal_error(action.name.clone(), None).with_message(format!(
+                  "load_grad_table: line {}: expected at least 3 columns, got {}",
+                  line_no + 1,
+                  parts.len()
+                ));
 
                 error!(
                   "load_grad_table: некорректное количество колонок в строке {}: {:?}",
@@ -741,11 +739,11 @@ impl Actor for IpcHandler {
                   parts
                 );
                 let _ = state
-                    .ipc_router
-                    .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
-                    .map_err(|err| {
-                      error!("load_grad_table: to_replay_msg {}", err);
-                    });
+                  .ipc_router
+                  .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                  .map_err(|err| {
+                    error!("load_grad_table: to_replay_msg {}", err);
+                  });
                 return Ok(());
               }
 
@@ -764,11 +762,11 @@ impl Actor for IpcHandler {
                     parts[0]
                   );
                   let _ = state
-                      .ipc_router
-                      .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
-                      .map_err(|err| {
-                        error!("load_grad_table: to_replay_msg {}", err);
-                      });
+                    .ipc_router
+                    .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                    .map_err(|err| {
+                      error!("load_grad_table: to_replay_msg {}", err);
+                    });
                   return Ok(());
                 }
               };
@@ -788,11 +786,11 @@ impl Actor for IpcHandler {
                     parts[1]
                   );
                   let _ = state
-                      .ipc_router
-                      .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
-                      .map_err(|err| {
-                        error!("load_grad_table: to_replay_msg {}", err);
-                      });
+                    .ipc_router
+                    .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                    .map_err(|err| {
+                      error!("load_grad_table: to_replay_msg {}", err);
+                    });
                   return Ok(());
                 }
               };
@@ -812,11 +810,11 @@ impl Actor for IpcHandler {
                     parts[2]
                   );
                   let _ = state
-                      .ipc_router
-                      .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
-                      .map_err(|err| {
-                        error!("load_grad_table: to_replay_msg {}", err);
-                      });
+                    .ipc_router
+                    .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                    .map_err(|err| {
+                      error!("load_grad_table: to_replay_msg {}", err);
+                    });
                   return Ok(());
                 }
               };
@@ -836,18 +834,18 @@ impl Actor for IpcHandler {
               Ok(content) => content,
               Err(err) => {
                 let err = internal_error(action.name.clone(), None)
-                    .with_message(format!("load_grad_table: can't read meta.json: {err:?}"));
+                  .with_message(format!("load_grad_table: can't read meta.json: {err:?}"));
 
                 error!(
                   "load_grad_table: не удалось прочитать {}: {err:?}",
                   meta_path
                 );
                 let _ = state
-                    .ipc_router
-                    .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
-                    .map_err(|err| {
-                      error!("load_grad_table: to_replay_msg {}", err);
-                    });
+                  .ipc_router
+                  .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                  .map_err(|err| {
+                    error!("load_grad_table: to_replay_msg {}", err);
+                  });
                 return Ok(());
               }
             };
@@ -856,60 +854,58 @@ impl Actor for IpcHandler {
               Ok(v) => v,
               Err(err) => {
                 let err = internal_error(action.name.clone(), None)
-                    .with_message(format!("load_grad_table: can't parse meta.json: {}", err));
+                  .with_message(format!("load_grad_table: can't parse meta.json: {}", err));
 
                 error!(
                   "load_grad_table: не удалось распарсить {}: {err:?}",
                   meta_path
                 );
                 let _ = state
-                    .ipc_router
-                    .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
-                    .map_err(|err| {
-                      error!("load_grad_table: to_replay_msg {}", err);
-                    });
+                  .ipc_router
+                  .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                  .map_err(|err| {
+                    error!("load_grad_table: to_replay_msg {}", err);
+                  });
                 return Ok(());
               }
             };
 
-            meta["grad_table"] = serde_json::to_value(&grad_table).unwrap_or_else(|_| {
-              json!(grad_table)
-            });
+            meta["grad_table"] =
+              serde_json::to_value(&grad_table).unwrap_or_else(|_| json!(grad_table));
 
             let new_meta = match to_string_pretty(&meta) {
               Ok(s) => s,
               Err(err) => {
-                let err = internal_error(action.name.clone(), None)
-                    .with_message(format!("load_grad_table: serialize meta.json error: {}", err));
+                let err = internal_error(action.name.clone(), None).with_message(format!(
+                  "load_grad_table: serialize meta.json error: {}",
+                  err
+                ));
 
                 error!(
                   "load_grad_table: ошибка сериализации meta.json для {}: {err:?}",
                   meta_path
                 );
                 let _ = state
-                    .ipc_router
-                    .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
-                    .map_err(|err| {
-                      error!("load_grad_table: to_replay_msg {}", err);
-                    });
+                  .ipc_router
+                  .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                  .map_err(|err| {
+                    error!("load_grad_table: to_replay_msg {}", err);
+                  });
                 return Ok(());
               }
             };
 
             if let Err(err) = fs::write(&meta_path, new_meta) {
               let err = internal_error(action.name.clone(), None)
-                  .with_message(format!("load_grad_table: write meta.json error: {err:?}"));
+                .with_message(format!("load_grad_table: write meta.json error: {err:?}"));
 
-              error!(
-                "load_grad_table: ошибка записи {}: {err:?}",
-                meta_path
-              );
+              error!("load_grad_table: ошибка записи {}: {err:?}", meta_path);
               let _ = state
-                  .ipc_router
-                  .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
-                  .map_err(|err| {
-                    error!("load_grad_table: to_replay_msg {}", err);
-                  });
+                .ipc_router
+                .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                .map_err(|err| {
+                  error!("load_grad_table: to_replay_msg {}", err);
+                });
               return Ok(());
             }
 

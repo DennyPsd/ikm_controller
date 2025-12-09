@@ -545,7 +545,6 @@ impl IPCMessageDef for LoadGradTable {
   }
 }
 
-
 #[allow(dead_code)]
 pub fn ikm_controller_client_api() -> AsyncapiBuilder {
   AsyncapiBuilder::new(IPCRole::Router)
