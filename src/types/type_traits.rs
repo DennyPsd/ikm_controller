@@ -218,6 +218,8 @@ impl CalculationResultExt for CalculationResult {
       product_dens: format!("{:.3}", self.product_density)
         .parse::<f64>()
         .unwrap(),
+      // Текущий уровень (берём product_level из расчёта)
+      level: self.product_level,
     }
   }
 

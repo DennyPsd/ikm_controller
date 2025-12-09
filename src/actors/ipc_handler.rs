@@ -10,9 +10,10 @@ use crate::actors::modbus::modbus_fabric::ModbusFabricMsg;
 use crate::types::products::Product;
 use crate::types::tank_configuration::TankConfig;
 use crate::types::tanks::{BaseVars, ExtVars, Tank};
-use crate::{ProductListArgs, TankListArgs};
+use crate::{EventListArgs, EventRuleListArgs, ProductListArgs, TankListArgs};
 use ractor::{Actor, ActorProcessingErr, ActorRef};
 use serde_json::{json, to_string_pretty};
+use taxon_core::infrastructure::device::{FacilityEvent, FacilityEventRule};
 use taxon_core::prelude::{IPCActionKind, IPCActorMsg, IPCMessageCrate};
 use tracing::{error, info};
 use uuid::Uuid;
@@ -229,6 +230,7 @@ impl Actor for IpcHandler {
             }
             return Ok(());
           }
+
           // ===================== TankConfigSet =====================
           if action.kind == IPCActionKind::SetData
             && action.name.as_deref() == Some("tank_config_set")
@@ -259,11 +261,12 @@ impl Actor for IpcHandler {
             let old_config: TankConfig = serde_saphyr::from_str(&config_content)
               .map_err(|err| format!("Cant parse config: {err:?}"))?;
             let new_config = args;
-            let change =
+            let _change =
               DataChange::generate_changes(&old_config, &new_config, "admin".into(), Local::now());
 
             return Ok(());
           }
+
           // ===================== PRODUCTS_LIST =====================
           if action.kind == IPCActionKind::GetData
             && action.name.as_deref() == Some("products_list")
@@ -348,6 +351,275 @@ impl Actor for IpcHandler {
               let _ = state.ipc_router.send_message(Some(msg));
             } else {
               error!("products_list: to_replay_msg вернул None");
+            }
+
+            return Ok(());
+          }
+
+          // ===================== EVENT_LIST =====================
+          if action.kind == IPCActionKind::GetData
+            && action.name.as_deref() == Some("event_list")
+            && action.args.is_some()
+          {
+            info!("event_list: обработка запроса");
+
+            let args = match serde_json::from_value::<EventListArgs>(action.args.clone().unwrap()) {
+              Ok(args) => args,
+              Err(err) => {
+                let err = internal_error(action.name.clone(), None)
+                  .with_message(format!("event_list: {}", err));
+
+                info!("event_list: шлём ошибку в ipc_router (bad args)");
+                let _ = state
+                  .ipc_router
+                  .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                  .map_err(|err| {
+                    error!("event_list: to_replay_msg {}", err);
+                  });
+                return Ok(());
+              }
+            };
+
+            info!(
+              "event_list: ids.len() = {}, fields = {:?}",
+              args.ids.len(),
+              args.fields
+            );
+
+            let path = "assets/db/events.yaml";
+            let events: Vec<FacilityEvent> = match fs::read_to_string(path)
+              .map_err(|err| {
+                internal_error(action.name.clone(), None).with_message(format!("{err:?}"))
+              })
+              .and_then(|content| {
+                serde_saphyr::from_str(&content).map_err(|err| {
+                  internal_error(action.name.clone(), None).with_message(format!("{err:?}"))
+                })
+              }) {
+              Ok(list) => list,
+              Err(err) => {
+                if let Some(msg) = ipc_msg.to_replay_msg(Option::<()>::None, Some(err)) {
+                  info!("event_list: шлём ошибку в ipc_router (read/parse)");
+                  let _ = state.ipc_router.send_message(Some(msg));
+                } else {
+                  error!("event_list: to_replay_msg вернул None при ошибке чтения/парсинга");
+                }
+                return Ok(());
+              }
+            };
+
+            let data: Vec<FacilityEvent> = if args.ids.is_empty() {
+              events
+            } else {
+              let ids = args.ids;
+              events.into_iter().filter(|e| ids.contains(&e.id)).collect()
+            };
+
+            if let Some(msg) = ipc_msg.to_replay_msg(Some(json!({ "data": data })), None) {
+              info!("event_list: отправляем ответ в ipc_router");
+              let _ = state.ipc_router.send_message(Some(msg));
+            } else {
+              error!("event_list: to_replay_msg вернул None");
+            }
+
+            return Ok(());
+          }
+
+          // ===================== EVENT_RULE_LIST =====================
+          if action.kind == IPCActionKind::GetData
+            && action.name.as_deref() == Some("event_rule_list")
+            && action.args.is_some()
+          {
+            info!("event_rule_list: обработка запроса");
+
+            let args =
+              match serde_json::from_value::<EventRuleListArgs>(action.args.clone().unwrap()) {
+                Ok(args) => args,
+                Err(err) => {
+                  let err = internal_error(action.name.clone(), None)
+                    .with_message(format!("event_rule_list: {}", err));
+
+                  info!("event_rule_list: шлём ошибку в ipc_router (bad args)");
+                  let _ = state
+                    .ipc_router
+                    .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                    .map_err(|err| {
+                      error!("event_rule_list: to_replay_msg {}", err);
+                    });
+                  return Ok(());
+                }
+              };
+
+            info!(
+              "event_rule_list: ids.len() = {}, fields = {:?}",
+              args.ids.len(),
+              args.fields
+            );
+
+            let path = "assets/db/eventrules.yaml";
+            let rules: Vec<FacilityEventRule> = match fs::read_to_string(path)
+              .map_err(|err| {
+                internal_error(action.name.clone(), None).with_message(format!("{err:?}"))
+              })
+              .and_then(|content| {
+                serde_saphyr::from_str(&content).map_err(|err| {
+                  internal_error(action.name.clone(), None).with_message(format!("{err:?}"))
+                })
+              }) {
+              Ok(list) => list,
+              Err(err) => {
+                if let Some(msg) = ipc_msg.to_replay_msg(Option::<()>::None, Some(err)) {
+                  info!("event_rule_list: шлём ошибку в ipc_router (read/parse)");
+                  let _ = state.ipc_router.send_message(Some(msg));
+                } else {
+                  error!("event_rule_list: to_replay_msg вернул None при ошибке чтения/парсинга");
+                }
+                return Ok(());
+              }
+            };
+
+            let data: Vec<FacilityEventRule> = if args.ids.is_empty() {
+              rules
+            } else {
+              let ids = args.ids;
+              rules
+                .into_iter()
+                .filter(|r| {
+                  let rule_id = match r {
+                    FacilityEventRule::LimitsExceeded { id, .. } => id,
+                    FacilityEventRule::HartStatus { id, .. } => id,
+                  };
+                  ids.contains(rule_id)
+                })
+                .collect()
+            };
+
+            if let Some(msg) = ipc_msg.to_replay_msg(Some(json!({ "data": data })), None) {
+              info!("event_rule_list: отправляем ответ в ipc_router");
+              let _ = state.ipc_router.send_message(Some(msg));
+            } else {
+              error!("event_rule_list: to_replay_msg вернул None");
+            }
+
+            return Ok(());
+          }
+
+          // ===================== EVENT_RULE_SET =====================
+          if action.kind == IPCActionKind::SetData
+            && action.name.as_deref() == Some("event_rule_set")
+          {
+            info!("event_rule_set: обработка запроса");
+
+            if action.args.is_none() {
+              let err = internal_error(action.name.clone(), None)
+                .with_message("event_rule_set: empty args");
+
+              info!("event_rule_set: шлём ошибку в ipc_router (empty args)");
+              let _ = state
+                .ipc_router
+                .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                .map_err(|err| {
+                  error!("event_rule_set: to_replay_msg {}", err);
+                });
+              return Ok(());
+            }
+
+            let rule: FacilityEventRule = match serde_json::from_value(action.args.clone().unwrap())
+            {
+              Ok(r) => r,
+              Err(err) => {
+                let err = internal_error(action.name.clone(), None)
+                  .with_message(format!("event_rule_set: {}", err));
+
+                info!("event_rule_set: шлём ошибку в ipc_router (bad args)");
+                let _ = state
+                  .ipc_router
+                  .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                  .map_err(|err| {
+                    error!("event_rule_set: to_replay_msg {}", err);
+                  });
+                return Ok(());
+              }
+            };
+
+            let rule_id = match &rule {
+              FacilityEventRule::LimitsExceeded { id, .. } => *id,
+              FacilityEventRule::HartStatus { id, .. } => *id,
+            };
+
+            let path = "assets/db/eventrules.yaml";
+
+            let mut rules: Vec<FacilityEventRule> = match fs::read_to_string(path)
+              .map_err(|err| {
+                internal_error(action.name.clone(), None).with_message(format!("{err:?}"))
+              })
+              .and_then(|content| {
+                serde_saphyr::from_str(&content).map_err(|err| {
+                  internal_error(action.name.clone(), None).with_message(format!("{err:?}"))
+                })
+              }) {
+              Ok(list) => list,
+              Err(err) => {
+                // если файла нет или он битый — начнём с пустого списка
+                error!(
+                  "event_rule_set: не удалось прочитать/распарсить {}, начинаем с пустого списка: {err:?}",
+                  path
+                );
+                Vec::new()
+              }
+            };
+
+            if let Some(pos) = rules.iter().position(|r| {
+              let id = match r {
+                FacilityEventRule::LimitsExceeded { id, .. } => id,
+                FacilityEventRule::HartStatus { id, .. } => id,
+              };
+              *id == rule_id
+            }) {
+              info!("event_rule_set: обновляем существующее правило {}", rule_id);
+              rules[pos] = rule.clone();
+            } else {
+              info!("event_rule_set: добавляем новое правило {}", rule_id);
+              rules.push(rule.clone());
+            }
+
+            match serde_saphyr::to_string(&rules) {
+              Ok(yaml) => {
+                if let Err(err) = fs::write(path, yaml) {
+                  let err = internal_error(action.name.clone(), None)
+                    .with_message(format!("event_rule_set: write error: {err:?}"));
+
+                  error!("event_rule_set: ошибка записи eventrules.yaml: {err:?}");
+                  let _ = state
+                    .ipc_router
+                    .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                    .map_err(|err| {
+                      error!("event_rule_set: to_replay_msg {}", err);
+                    });
+                  return Ok(());
+                }
+              }
+              Err(err) => {
+                let err = internal_error(action.name.clone(), None)
+                  .with_message(format!("event_rule_set: serialize error: {err:?}"));
+
+                error!("event_rule_set: ошибка сериализации списка правил: {err:?}");
+                let _ = state
+                  .ipc_router
+                  .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                  .map_err(|err| {
+                    error!("event_rule_set: to_replay_msg {}", err);
+                  });
+                return Ok(());
+              }
+            }
+
+            // В ответ отдаём само правило (Reply = FacilityEventRule)
+            if let Some(msg) = ipc_msg.to_replay_msg(Some(json!(rule)), None) {
+              info!("event_rule_set: отправляем ответ в ipc_router");
+              let _ = state.ipc_router.send_message(Some(msg));
+            } else {
+              error!("event_rule_set: to_replay_msg вернул None");
             }
 
             return Ok(());

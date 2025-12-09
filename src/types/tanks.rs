@@ -20,14 +20,6 @@ pub struct BaseVars {
   pub product_avg_temp: f64,
   /// Плотность продукта
   pub product_dens: f64,
-  /// Минимальный уровень цистерны
-  pub min_tank_level: f64,
-  /// Максимальный уровень цистерны
-  pub max_tank_level: f64,
-  /// Минимальный уровень
-  pub min_level: Option<f64>,
-  /// Максимальный уровень
-  pub max_level: Option<f64>,
   /// Текущий уровень
   pub level: f64,
 }
