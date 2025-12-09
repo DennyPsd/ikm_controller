@@ -1,3 +1,4 @@
+use crate::types::tanks::Tank;
 use chrono::{DateTime, Local};
 use ikm_calc::calculation::kmh::KMHReport;
 use schemars::JsonSchema;
@@ -5,7 +6,6 @@ use serde::{Deserialize, Serialize};
 use smol_str::SmolStr;
 use taxon_core::infrastructure::facility::{DataLink, SharedData};
 use uuid::Uuid;
-use crate::types::tanks::Tank;
 
 #[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
 pub struct KMHReportInstance {

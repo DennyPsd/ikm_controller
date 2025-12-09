@@ -1,7 +1,6 @@
 use chrono::{DateTime, Utc};
 use ikm_calc::calculation::core::{
-  Calculation, CalculationMethod, CalculationResult, Constants, ProductType, TemperatureSensor,
-  Variables,
+  Calculation, CalculationResult, Constants, TemperatureSensor, Variables,
 };
 use ractor::{Actor, ActorProcessingErr, ActorRef};
 use serde::{Deserialize, Serialize};
@@ -13,51 +12,52 @@ use uuid::Uuid;
 
 use crate::types::{
   tank_configuration::TankConfig,
-  tanks::{BaseVars, ExtVars, Temperature},
+  tanks::{BaseVars, ExtVars},
 };
 
+use crate::types::type_traits::CalculationResultExt;
 use ikm_calc::calculation::types::GradTableItem;
 
 #[allow(dead_code)]
 #[derive(Deserialize, Debug)]
-struct LevelCoefficientPoint {
-  id: String,
-  level_mm: f64,
-  kti: f64,
+pub struct LevelCoefficientPoint {
+  pub id: String,
+  pub level_mm: f64,
+  pub kti: f64,
 }
 
 #[allow(dead_code)]
 #[derive(Deserialize, Debug)]
-struct Meta {
-  constants: Constants,
-  level_coefficient_points: Vec<LevelCoefficientPoint>,
-  /// grad_table: [level, volume]
-  grad_table: Vec<Vec<f64>>,
+pub struct Meta {
+  pub constants: Constants,
+  pub level_coefficient_points: Vec<LevelCoefficientPoint>,
+  /// grad_table: [level, volume, epsilon?]
+  pub grad_table: Vec<Vec<f64>>,
 }
 
 #[allow(dead_code)]
 #[derive(Deserialize, Debug)]
-struct TimeSeriesEntry {
-  ts: i64,
-  p1: f64,
-  p3: f64,
-  h_measured: f64,
-  h_v: f64,
-  density: f64,
-  t0: f64,
-  t1: f64,
-  t2: f64,
-  t3: f64,
-  t4: f64,
-  t5: f64,
-  t6: f64,
-  t7: f64,
-  t8: f64,
-  t9: f64,
+pub struct TimeSeriesEntry {
+  pub ts: i64,
+  pub p1: f64,
+  pub p3: f64,
+  pub h_measured: f64,
+  pub h_v: f64,
+  pub density: f64,
+  pub t0: f64,
+  pub t1: f64,
+  pub t2: f64,
+  pub t3: f64,
+  pub t4: f64,
+  pub t5: f64,
+  pub t6: f64,
+  pub t7: f64,
+  pub t8: f64,
+  pub t9: f64,
 }
 
 #[derive(Serialize, Debug)]
-struct BaseVarsWithDate {
+pub struct BaseVarsWithDate {
   date: DateTime<Utc>,
   changed_at: DateTime<Utc>,
   #[serde(flatten)]
@@ -65,7 +65,7 @@ struct BaseVarsWithDate {
 }
 
 #[derive(Serialize, Debug)]
-struct ExtVarsWithDate {
+pub struct ExtVarsWithDate {
   date: DateTime<Utc>,
   changed_at: DateTime<Utc>,
   #[serde(flatten)]
@@ -206,20 +206,11 @@ impl TankCalcActor {
       }
     };
 
-    // info!(
-    //   "Танк {}: результат расчёта ts={} -> масса={:.2} т, объём={:.2} м³, уровень={:.1} мм, Tср={:.2} °C, ρ={:.4} т/м³",
-    //   tank_id,
-    //   entry.ts,
-    //   result.gross_product_mass,
-    //   result.product_volume,
-    //   result.product_level,
-    //   result.product_avg_temperature,
-    //   result.product_density,
-    // );
-
     let now = Utc::now();
-    let base_vars = self.map_calc_result_to_base(&result);
-    let ext_vars = self.map_calc_result_to_ext(&meta, &config, entry, &result);
+
+    // Маппинг через экстеншен
+    let base_vars = result.to_base_vars();
+    let ext_vars = result.to_ext_vars(&meta, &config, entry);
 
     let base_with_date = BaseVarsWithDate {
       date: now,
@@ -255,48 +246,8 @@ impl TankCalcActor {
     entry: &TimeSeriesEntry,
     prev_result: Option<CalculationResult>,
   ) -> Calculation {
-    let c = &meta.constants;
-
-    let calc_constants = Constants {
-      calculation_method: CalculationMethod::try_from(c.calculation_method as u8)
-        .unwrap_or_default(),
-      product_type: ProductType::try_from(c.product_type as u8).unwrap_or_default(),
-      pontoon_weight: c.pontoon_weight,
-
-      tank_wall_alpha: c.tank_wall_alpha,
-      distance_abs_error_limit: c.distance_abs_error_limit,
-      p1_measuring_range_max: c.p1_measuring_range_max,
-      pressure1_proc_error_limit: c.pressure1_proc_error_limit,
-      pressure3_max_limit: c.pressure3_max_limit,
-      pressure3_proc_error_limit: c.pressure3_proc_error_limit,
-      max_level_abs_error: c.max_level_abs_error,
-      water_level_abs_error_limit: c.water_level_abs_error_limit,
-      grad_error_limit: c.grad_error_limit,
-      temp_abs_error_limit: c.temp_abs_error_limit,
-      calc_error_limit: c.calc_error_limit,
-      structure_base_height: c.structure_base_height,
-
-      tank_product_density: c.tank_product_density,
-      product_density_15:c.product_density_15,
-      g: c.g,
-      air_density: c.air_density,
-      product_initial_boil_temp: c.product_initial_boil_temp,
-      p1_p3_distance: c.p1_p3_distance,
-      h_calibration_coefficient: c.h_calibration_coefficient,
-      h_critical_level: c.h_critical_level,
-      hysteresis_temperature_sensor_level: c.hysteresis_temperature_sensor_level,
-      hysteresis_product_level_for_method_type: c.hysteresis_product_level_for_method_type,
-      h_max_level: c.h_max_level,
-      reference_point: c.reference_point,
-      pressure_sensor_to_reference_point: c.pressure_sensor_to_reference_point,
-      density_abs_error_limit: c.density_abs_error_limit,
-      water_mass_fraction_abs_error_limit: c.water_mass_fraction_abs_error_limit,
-      mechanical_impurities_abs_error_limit: c.mechanical_impurities_abs_error_limit,
-      chlorides_mass_fraction_abs_error_limit: c.chlorides_mass_fraction_abs_error_limit,
-      water_mass_pct: c.water_mass_pct,
-      mech_impurities_mass_pct: c.mech_impurities_mass_pct,
-      chloride_salts_mass_pct: c.chloride_salts_mass_pct,
-    };
+    // Constants уже десериализованы как есть
+    let calc_constants: Constants = meta.constants;
 
     let graduation_table: Vec<GradTableItem> = meta
       .grad_table
@@ -365,81 +316,6 @@ impl TankCalcActor {
       results_offset_10: None,
       // None => будет использован DEFAULT_EVAPORATION_CONSTANTS из ядра
       beta_coefficients: None,
-    }
-  }
-
-  /// Маппинг CalculationResult -> BaseVars
-  fn map_calc_result_to_base(&self, result: &CalculationResult) -> BaseVars {
-    BaseVars {
-      // Масса – брутто из ядра (тонны)
-      weight: result.gross_product_mass,
-      // Рабочий объем – V при рабочих условиях
-      work_calc_vol: result.product_volume,
-      // Средняя температура продукта
-      product_avg_temp: result.product_avg_temperature,
-      // Плотность при условиях измерения
-      product_dens: result.product_density,
-    }
-  }
-
-  /// Маппинг CalculationResult -> ExtVars
-  fn map_calc_result_to_ext(
-    &self,
-    meta: &Meta,
-    config: &TankConfig,
-    entry: &TimeSeriesEntry,
-    result: &CalculationResult,
-  ) -> ExtVars {
-    let temperature_levels: HashMap<_, _> = config
-      .levels_of_point_sensors
-      .points
-      .iter()
-      .map(|v| (v.id.to_uppercase(), v.clone()))
-      .collect();
-
-    let temps_src = vec![
-      ("T0", entry.t0),
-      ("T1", entry.t1),
-      ("T2", entry.t2),
-      ("T3", entry.t3),
-      ("T4", entry.t4),
-      ("T5", entry.t5),
-      ("T6", entry.t6),
-      ("T7", entry.t7),
-      ("T8", entry.t8),
-      ("T9", entry.t9),
-    ];
-
-    let temperatures = temps_src
-      .into_iter()
-      .map(|(name, value)| Temperature {
-        value,
-        name: name.to_string(),
-        level: temperature_levels
-          .get(name)
-          .cloned()
-          .unwrap_or_default()
-          .value,
-      })
-      .collect();
-
-    ExtVars {
-      product_volume: Some(result.product_volume),
-      product_level: Some(result.product_level),
-      water_level: Some(entry.h_v),
-      product_temperature: Some(result.product_avg_temperature),
-      vapour_temperature: Some(result.vapor_avg_temperature),
-      product_density: Some(result.product_density),
-      product_at_15_density: Some(result.product_density_15),
-      hydrostatic_pressure: Some(entry.p1),
-      vapour_pressure: Some(entry.p3),
-      reserve_capacity_up_max: Some(meta.constants.h_max_level),
-      reserve_product_up_min: Some(meta.constants.h_critical_level),
-      product_movement_consumption: Some(0.0),
-      product_movement_level_measurement_speed: Some(result.velocity_product_level),
-      volume_product_calc_below_water: Some(result.water_volume),
-      volume_raw_water: Some(result.water_volume),
-      temperatures,
     }
   }
 }
