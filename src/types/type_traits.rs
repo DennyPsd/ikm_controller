@@ -203,13 +203,21 @@ impl CalculationResultExt for CalculationResult {
     BaseVars {
       // Масса – брутто из ядра (тонны)
       // weight: self.gross_product_mass,
-      weight: self.gross_product_mass / 1000.0,
+      weight: format!("{:.3}", self.gross_product_mass / 1000.0)
+        .parse::<f64>()
+        .unwrap(),
       // Рабочий объем – V при рабочих условиях
-      work_calc_vol: self.product_volume,
+      work_calc_vol: format!("{:.3}", self.product_volume)
+        .parse::<f64>()
+        .unwrap(),
       // Средняя температура продукта
-      product_avg_temp: self.product_avg_temperature,
+      product_avg_temp: format!("{:.3}", self.product_avg_temperature)
+        .parse::<f64>()
+        .unwrap(),
       // Плотность при условиях измерения
-      product_dens: self.product_density,
+      product_dens: format!("{:.3}", self.product_density)
+        .parse::<f64>()
+        .unwrap(),
     }
   }
 
