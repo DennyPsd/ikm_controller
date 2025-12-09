@@ -20,11 +20,6 @@ pub struct BaseVars {
   pub product_avg_temp: f64,
   /// Плотность продукта
   pub product_dens: f64,
-}
-
-/// Параметры отображения цистерны
-#[derive(Default, Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
-pub struct TankDisplay {
   /// Минимальный уровень цистерны
   pub min_tank_level: f64,
   /// Максимальный уровень цистерны

@@ -30,15 +30,15 @@ pub struct TankBasicData {
   /** Тип цистерны */
   pub tank_type: Option<String>,
   /** Номинальная емкость */
-  pub nominal_capacity: Option<String>,
+  pub nominal_capacity: Option<f64>,
   /** Плотность хранимой жидкости по данным */
-  pub density_stored_liquid_according: Option<String>,
+  pub density_stored_liquid_according: Option<f64>,
   /** Базовая высота */
-  pub basic_height: Option<String>,
+  pub basic_height: Option<f64>,
   /** Продукт */
   pub product: Option<String>,
   /** Максимальный допустимый уровень продукта */
-  pub maximum_allowable_product_level: Option<String>,
+  pub maximum_allowable_product_level: Option<f64>,
 }
 
 /** Точечный датчик уровня */
@@ -56,7 +56,7 @@ pub struct LevelPointSensor {
 #[derive(Default, Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
 pub struct LevelsOfPointSensors {
   /** Гистерезис */
-  pub hysteresis: Option<String>,
+  pub hysteresis: Option<f64>,
   /** Точки датчиков */
   #[serde(default)]
   pub points: Vec<LevelPointSensor>,
@@ -66,9 +66,9 @@ pub struct LevelsOfPointSensors {
 #[derive(Default, Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
 pub struct Construction {
   /** Линейное расширение */
-  pub linear_expansion: Option<String>,
+  pub linear_expansion: Option<f64>,
   /** Масса плавающего покрытия */
-  pub mass_floating_coating: Option<String>,
+  pub mass_floating_coating: Option<f64>,
 }
 
 /** Метод расчета массы */
@@ -77,47 +77,47 @@ pub struct MassCalculationMethod {
   /** Метод */
   pub method: Option<String>,
   /** Уровень переключения */
-  pub switching_level: Option<String>,
+  pub switching_level: Option<f64>,
   /** Гистерезис уровня переключения */
-  pub switching_level_hysteresis: Option<String>,
+  pub switching_level_hysteresis: Option<f64>,
   /** P3-P1 */
-  pub p3_p1: Option<String>,
+  pub p3_p1: Option<f64>,
   /** Опорная точка P1 */
-  pub p1_reference_point: Option<String>,
+  pub p1_reference_point: Option<f64>,
   /** Опорная точка */
-  pub reference_point: Option<String>,
+  pub reference_point: Option<f64>,
 }
 
 /** Показатели точности измерений */
 #[derive(Default, Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
 pub struct MeasurementAccuracyIndicators {
   /** Допустимая абсолютная погрешность */
-  pub limit_permissible_absolute_error: Option<String>,
+  pub limit_permissible_absolute_error: Option<f64>,
   /** Предел гидростатического устройства */
-  pub hydrostatic_device_limit: Option<String>,
+  pub hydrostatic_device_limit: Option<f64>,
   /** Предел давления устройства */
-  pub pressure_device_limit: Option<String>,
+  pub pressure_device_limit: Option<f64>,
   /** Допустимая абсолютная погрешность измерения уровня резервуара */
-  pub limit_permissible_absolute_measurement_reservoir_level: Option<String>,
+  pub limit_permissible_absolute_measurement_reservoir_level: Option<f64>,
   /** Допустимая абсолютная погрешность измерения уровня сырой воды */
-  pub limit_permissible_absolute_measurement_level_raw_water: Option<String>,
+  pub limit_permissible_absolute_measurement_level_raw_water: Option<f64>,
   /** Допустимая абсолютная погрешность измерения температуры продуктов и паров */
-  pub limit_permissible_absolute_measurement_temp_products_and_vapours: Option<String>,
+  pub limit_permissible_absolute_measurement_temp_products_and_vapours: Option<f64>,
   /** Допустимая абсолютная погрешность измерения плотности нефти */
-  pub limit_permissible_absolute_measurement_oil_densities: Option<String>,
+  pub limit_permissible_absolute_measurement_oil_densities: Option<f64>,
   /** Калибровочная таблица чертежа */
-  pub drawing_calibration_table: Option<String>,
+  pub drawing_calibration_table: Option<f64>,
   /** ВПИ гидростатического устройства */
-  pub hydrostatic_device_vpi: Option<String>,
+  pub hydrostatic_device_vpi: Option<f64>,
   /** ВПИ давления устройства */
-  pub pressure_device_vpi: Option<String>,
+  pub pressure_device_vpi: Option<f64>,
 }
 
 /** Калибровка */
 #[derive(Default, Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
 pub struct Calibration {
   /** Коэффициент уровня */
-  pub level_coefficient: Option<String>,
+  pub level_coefficient: Option<f64>,
   /** Точечные датчики уровня */
   pub level_point_sensors: Vec<LevelPointSensor>,
 }
