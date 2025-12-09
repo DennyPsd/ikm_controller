@@ -346,7 +346,7 @@ impl TankCalcActor {
           Some(GradTableItem {
             level: row[0],
             volume: row[1],
-            epsilon: if row.len() >= 3 { row[2] } else { 0.0 },
+            // epsilon: if row.len() >= 3 { row[2].clone() } else { 0.0 },
           })
         } else {
           None
