@@ -522,7 +522,7 @@ impl TankCalcActor {
                 ends_at: None,
                 rule: rule.new_link_to(),
                 acknowledged: None,
-                value: 0.into(),
+                value: value.clone().into(),
               };
 
               info!(
