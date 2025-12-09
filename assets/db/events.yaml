@@ -1,0 +1,37 @@
+- id: 019b0336-9fa0-7041-8a9c-a57b20b6dff5
+  target:
+    type: Data
+    module_id: null
+    module_name: null
+    user_login: null
+    group_id: null
+    group_path: null
+    group_type: null
+    device_id: null
+    device_name: null
+    device_type: null
+    data_ns: Tank
+    data_id: null
+    data_path: null
+    vars_paths: null
+    protocol: null
+    event_name: null
+    event_kind: null
+    process_name: null
+    action_kind: null
+    action_name: null
+  severity: CRITICAL
+  starts_at: 2025-12-09T16:04:30.112494800+03:00
+  ends_at: null
+  rule:
+    Link:
+      ns: taxon_core::infrastructure::device::FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+      title: null
+      created_by: null
+      updated_by: null
+      created_at: null
+      updated_at: null
+  value:
+    "$serde_json::private::Number": "0"
+  acknowledged: null

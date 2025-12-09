@@ -1,3 +1,4 @@
+use crate::actors::ipc_handler::get_tank_full;
 use crate::actors::tank_calc::Meta;
 use crate::types::kmh::{KMHReportInstance, KMHReportStatus};
 use crate::types::tank_configuration::TankConfig;
@@ -5,13 +6,13 @@ use crate::types::tanks::{BaseVars, ExtVars, Tank};
 use crate::types::type_traits::KMHReportExt;
 use crate::{KMHReportCreateArgs, KMHReportListArgs, KMHReportListFields, KMHReportListReply};
 use chrono::Local;
-use ikm_calc::calculation::kmh::{KMHCalculator, KMHReport, TapeClass};
+use ikm_calc::calculation::kmh::{KMHCalculator, KMHReport, TapeClass, TemperatureSensor};
 use ractor::{Actor, ActorProcessingErr, ActorRef};
 use serde_json::json;
 use smol_str::SmolStr;
 use std::fs::{self, File};
 use taxon_core::actors::ipc::errors::internal_error;
-use taxon_core::infrastructure::facility::SharedData;
+use taxon_core::infrastructure::facility::{DataLink, SharedData};
 use taxon_core::prelude::{IPCActionKind, IPCActorMsg, IPCMessageCrate};
 use tracing::{error, info};
 use uuid::Uuid;
@@ -232,6 +233,15 @@ impl Actor for KmhIpcHandler {
               KMHReportListFields::All => {
                 // All: возвращаем всё как есть
                 reports
+                  .into_iter()
+                  .map(|mut r| {
+                    let tl = r.tank.into_link_sync();
+                    r.tank = get_tank_full(tl.id().clone())
+                      .map(|v| DataLink::Data(v))
+                      .unwrap_or(tl);
+                    r
+                  })
+                  .collect::<Vec<_>>()
               }
               KMHReportListFields::Exact(_fields) => {
                 // TODO: тонкая выборка полей по списку `fields`.
@@ -598,7 +608,52 @@ impl Actor for KmhIpcHandler {
                   return Ok(());
                 }
               };
+            let args =
+              match serde_json::from_value::<KMHReportInstance>(action.args.clone().unwrap()) {
+                Ok(args) => args,
+                Err(err) => {
+                  let err = internal_error(action.name.clone(), None)
+                    .with_message(format!("kmh_report_create: {}", err));
 
+                  info!("kmh_report_create: шлём ошибку в ipc_router (bad args)");
+                  let _ = state
+                    .ipc_router
+                    .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                    .map_err(|err| {
+                      error!("kmh_report_create: to_replay_msg {}", err);
+                    });
+                  return Ok(());
+                }
+              };
+            // let config_path = format!("assets/db/tanks/{}/config.yaml", args.tank.id());
+            // let config: Option<TankConfig> = match File::open(&config_path) {
+            //   Ok(f) => match serde_saphyr::from_reader::<File, TankConfig>(f) {
+            //     Ok(v) => Some(v),
+            //     Err(err) => {
+            //       error!(
+            //         "kmh_report_create: не удалось распарсить config {}: {err:?}",
+            //         config_path
+            //       );
+            //       None
+            //     }
+            //   },
+            //   Err(err) => {
+            //     info!(
+            //       "kmh_report_create: нет config для {} ({err:?})",
+            //       args.device_id
+            //     );
+            //     None
+            //   }
+            // };
+            // if let Some(config) = config {
+            //   kmh_instance.data.temperature_channels = config
+            //     .calibration_block
+            //     .level_point_sensors
+            //     .iter()
+            //     .map(|v| TemperatureSensor::new(v., v.tempe, 0.0))
+            // }
+
+            //Some(TemperatureSensor::new(*level, temp, 0.0))
             info!(
               "kmh_report_calc: расчёт КМХ для report_id={}",
               kmh_instance.id

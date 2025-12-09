@@ -3,7 +3,10 @@ use crate::actors::modbus::modbus_fabric::ModbusFabricMsg;
 use crate::types::products::Product;
 use crate::types::tank_configuration::TankConfig;
 use crate::types::tanks::{BaseVars, ExtVars, Tank};
-use crate::{EventListArgs, EventRuleListArgs, LoadGradTableArgs, ProductListArgs, TankListArgs};
+use crate::{
+  EventListArgs, EventRuleListArgs, LoadGradTableArgs, ProductListArgs, TankListArgs,
+  TankListFields,
+};
 use base64::Engine;
 use base64::engine::general_purpose;
 use chrono::Local;
@@ -258,12 +261,28 @@ impl Actor for IpcHandler {
               action.target.device_id.unwrap()
             );
 
-            let config_content = fs::read_to_string(&config_vars_path)?;
-            let old_config: TankConfig = serde_saphyr::from_str(&config_content)
-              .map_err(|err| format!("Cant parse config: {err:?}"))?;
+            // let config_content = fs::read_to_string(&config_vars_path)?;
+            // let old_config: TankConfig = serde_saphyr::from_str(&config_content)
+            //   .map_err(|err| format!("Cant parse config: {err:?}"))?;
             let new_config = args;
-            let _change =
-              DataChange::generate_changes(&old_config, &new_config, "admin".into(), Local::now());
+            if let Err(err) = fs::write(
+              config_vars_path,
+              serde_saphyr::to_string(&new_config).unwrap(),
+            ) {
+              let err = internal_error(action.name.clone(), None)
+                .with_message(format!("event_rule_set: write error: {err:?}"));
+
+              error!("event_rule_set: ошибка записи eventrules.yaml: {err:?}");
+              let _ = state
+                .ipc_router
+                .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                .map_err(|err| {
+                  error!("event_rule_set: to_replay_msg {}", err);
+                });
+              return Ok(());
+            }
+            // let _change =
+            //   DataChange::generate_changes(&old_config, &new_config, "admin".into(), Local::now());
 
             return Ok(());
           }
@@ -926,5 +945,110 @@ impl Actor for IpcHandler {
     }
 
     Ok(())
+  }
+}
+
+pub fn get_tank_full(id: Uuid) -> Result<Tank, anyhow::Error> {
+  let args = serde_json::from_value::<TankListArgs>(
+    serde_json::to_value(TankListArgs {
+      fields: TankListFields::All,
+      ids: vec![id],
+    })
+    .unwrap(),
+  )?;
+
+  let path = "assets/db/tanks.yaml";
+  let mut tanks_reader = File::open(path)?;
+  let mut tanks: HashMap<_, _> = serde_saphyr::from_reader::<File, Vec<Tank>>(tanks_reader)
+    .map(|v| {
+      v.into_iter()
+        .map(|v| (v.id.clone(), v))
+        .collect::<HashMap<_, _>>()
+    })
+    .map_err(|err| anyhow::Error::new(err))?;
+
+  let ids: Vec<_> = if !args.ids.is_empty() {
+    args.ids.to_vec()
+  } else {
+    tanks.keys().cloned().collect()
+  };
+
+  for id in ids.iter() {
+    let tank = tanks.get_mut(id).unwrap();
+    match args.fields {
+      crate::TankListFields::Minimal => {
+        let path = format!("assets/db/tanks/{id}/base_vars.yaml");
+        tank.base_vars = File::open(&path[..])
+          .map_err(|err| {
+            error!("{err:#?}");
+            Option::<()>::None
+          })
+          .map_or(None, |reader| {
+            serde_saphyr::from_reader::<File, BaseVars>(reader)
+              .map_err(|err| {
+                error!("{err:#?}");
+                Option::<()>::None
+              })
+              .ok()
+          });
+      }
+      _ => {
+        let path = format!("assets/db/tanks/{id}/base_vars.yaml");
+        tank.base_vars = File::open(&path[..])
+          .map_err(|err| {
+            error!("{err:#?}");
+            Option::<()>::None
+          })
+          .map_or(None, |reader| {
+            serde_saphyr::from_reader::<File, BaseVars>(reader)
+              .map_err(|err| {
+                error!("{err:#?}");
+                Option::<()>::None
+              })
+              .ok()
+          });
+
+        let path = format!("assets/db/tanks/{id}/config.yaml");
+        tank.config = File::open(&path[..])
+          .map_err(|err| {
+            error!("{err:#?}");
+            Option::<()>::None
+          })
+          .map_or(None, |reader| {
+            serde_saphyr::from_reader::<File, TankConfig>(reader)
+              .map_err(|err| {
+                error!("{err:#?}");
+                Option::<()>::None
+              })
+              .ok()
+          });
+
+        let path = format!("assets/db/tanks/{id}/ext_vars.yaml");
+        tank.ext_vars = File::open(&path[..])
+          .map_err(|err| {
+            error!("{err:#?}");
+            Option::<()>::None
+          })
+          .map_or(None, |reader| {
+            serde_saphyr::from_reader::<File, ExtVars>(reader)
+              .map_err(|err| {
+                error!("{err:#?}");
+                Option::<()>::None
+              })
+              .ok()
+          });
+      }
+    }
+  }
+
+  let data = tanks
+    .into_iter()
+    .filter_map(|(id, v)| if ids.contains(&id) { Some(v) } else { None })
+    .collect::<Vec<_>>();
+
+  if data.len() > 0 {
+    Ok(data[0].clone())
+  } else {
+    Err(anyhow::Error::msg("not_fond"))
   }
 }

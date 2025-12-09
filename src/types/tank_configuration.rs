@@ -1,8 +1,10 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+use serde_with::*;
 /** Конфигурация цистерны */
 #[derive(Default, Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
+#[skip_serializing_none]
 pub struct TankConfig {
   /** Основные данные */
   pub basic_data: TankBasicData,
@@ -20,6 +22,7 @@ pub struct TankConfig {
 
 /** Основные данные цистерны */
 #[derive(Default, Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
+#[skip_serializing_none]
 pub struct TankBasicData {
   /** Наименование */
   pub name: Option<String>,
@@ -36,7 +39,7 @@ pub struct TankBasicData {
   /** Базовая высота */
   pub basic_height: Option<f32>,
   // /** Продукт */
-  // pub product: Option<String>,
+  pub product: Option<String>,
   /** Максимальный допустимый уровень продукта */
   pub maximum_allowable_product_level: Option<f32>,
   /** Температура воздуха при поверке резервуара */
@@ -45,6 +48,7 @@ pub struct TankBasicData {
 
 /** Точечный датчик уровня */
 #[derive(Default, Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
+#[skip_serializing_none]
 pub struct LevelPointSensor {
   /** Идентификатор */
   pub id: String,
@@ -56,6 +60,7 @@ pub struct LevelPointSensor {
 
 /** Уровни точечных датчиков */
 #[derive(Default, Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
+#[skip_serializing_none]
 pub struct LevelsOfPointSensors {
   /** Гистерезис */
   pub hysteresis: Option<f64>,
@@ -66,6 +71,7 @@ pub struct LevelsOfPointSensors {
 
 /** Конструкция цистерны */
 #[derive(Default, Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
+#[skip_serializing_none]
 pub struct Construction {
   /** Линейное расширение */
   pub linear_expansion: Option<f32>,
@@ -75,6 +81,7 @@ pub struct Construction {
 
 /** Метод расчета массы */
 #[derive(Default, Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
+#[skip_serializing_none]
 pub struct MassCalculationMethod {
   /** Метод */
   pub method: Option<String>,
@@ -92,6 +99,7 @@ pub struct MassCalculationMethod {
 
 /** Показатели точности измерений */
 #[derive(Default, Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
+#[skip_serializing_none]
 pub struct MeasurementAccuracyIndicators {
   /** Допустимая абсолютная погрешность */
   pub limit_permissible_absolute_error: Option<f32>,
@@ -117,6 +125,7 @@ pub struct MeasurementAccuracyIndicators {
 
 /** Калибровка */
 #[derive(Default, Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
+#[skip_serializing_none]
 pub struct Calibration {
   /** Коэффициент уровня */
   pub level_coefficient: Option<f64>,

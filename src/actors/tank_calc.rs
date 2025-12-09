@@ -1,6 +1,7 @@
 use chrono::{DateTime, Local, Utc};
 use ikm_calc::calculation::core::{
-  Calculation, CalculationResult, Constants, TemperatureSensor, Variables,
+  Calculation, CalculationMethod, CalculationResult, Constants, ProductType, TemperatureSensor,
+  Variables,
 };
 use ractor::{Actor, ActorProcessingErr, ActorRef};
 use serde::{Deserialize, Serialize};
@@ -264,7 +265,78 @@ impl TankCalcActor {
     prev_result: Option<CalculationResult>,
   ) -> Calculation {
     // Constants уже десериализованы как есть
-    let calc_constants: Constants = meta.constants;
+    let mut calc_constants: Constants = meta.constants;
+    calc_constants.product_type = if config
+      .basic_data
+      .product
+      .clone()
+      .unwrap_or("default".into())
+      .contains("OilProduct")
+    {
+      ProductType::OilProduct
+    } else {
+      ProductType::Oil
+    };
+    calc_constants.calculation_method = match config
+      .mass_calculation_method
+      .method
+      .as_ref()
+      .map(|v| &v[..])
+    {
+      Some("1") => CalculationMethod::One,
+      Some("2") => CalculationMethod::Two,
+      Some("3") => CalculationMethod::Three,
+      Some("4") => CalculationMethod::Four,
+      _ => CalculationMethod::One,
+    };
+    calc_constants.h_critical_level = config
+      .mass_calculation_method
+      .switching_level
+      .unwrap_or(0.0);
+    calc_constants.hysteresis_product_level_for_method_type = config
+      .mass_calculation_method
+      .switching_level_hysteresis
+      .unwrap_or(0.0);
+    calc_constants.p1_p3_distance = config.mass_calculation_method.p3_p1.unwrap_or(0.0);
+    calc_constants.pressure_sensor_to_reference_point = config
+      .mass_calculation_method
+      .p1_reference_point
+      .unwrap_or(0.0);
+    calc_constants.reference_point = config
+      .mass_calculation_method
+      .reference_point
+      .unwrap_or(0.0);
+    // "pontoon_weight": 2877,
+    // "tank_wall_alpha": 0.0000125,
+
+    // "distance_abs_error_limit": 0.001,
+    // "p1_measuring_range_max": 110000,
+    // "pressure1_proc_error_limit": 0.04,
+    // "pressure3_max_limit": 10000,
+    // "pressure3_proc_error_limit": 0.04,
+    // "max_level_abs_error": 1,
+    // "water_level_abs_error_limit": 1,
+    // "grad_error_limit": 0.15,
+    // "temp_abs_error_limit": 0.5,
+    // "calc_error_limit": 0.05,
+    // "structure_base_height": 0,
+    // "tank_product_density": 738,
+
+    // "p1_p3_distance": 12758,
+    // "h_calibration_coefficient": -2,
+    // "h_critical_level": 3500,
+    // "hysteresis_temperature_sensor_level": 10,
+    // "hysteresis_product_level_for_method_type": 2,
+    // "h_max_level": 0,
+    // "reference_point": 0,
+    // "pressure_sensor_to_reference_point": 1242,
+    // "density_abs_error_limit": 1,
+    // "water_mass_fraction_abs_error_limit": 0,
+    // "mechanical_impurities_abs_error_limit": 0,
+    // "chlorides_mass_fraction_abs_error_limit": 0,
+    // "water_mass_pct": 2,
+    // "mech_impurities_mass_pct": 2,
+    // "chloride_salts_mass_pct": 3
 
     let graduation_table: Vec<GradTableItem> = meta
       .grad_table
@@ -342,7 +414,7 @@ impl TankCalcActor {
     entry_ts: i64,
     state: &mut TankCalcState,
   ) {
-    let rules_path = "assets/db/eventrules.yaml";
+    let rules_path = "assets/db/event_rules.yaml";
 
     let rules: Vec<FacilityEventRule> = match fs::read_to_string(rules_path) {
       Ok(content) => match serde_saphyr::from_str(&content) {
@@ -371,8 +443,8 @@ impl TankCalcActor {
         continue;
       };
 
-      match target.data_id {
-        Some(data_id) if data_id == *tank_id => {}
+      match &target.data_ns {
+        Some(data_ns) if data_ns == "Tank" => {}
         _ => {
           continue;
         }
@@ -450,6 +522,7 @@ impl TankCalcActor {
                 ends_at: None,
                 rule: rule.new_link_to(),
                 acknowledged: None,
+                value: 0.into(),
               };
 
               info!(
@@ -512,7 +585,7 @@ impl TankCalcActor {
       }
     };
 
-    events.push(event.clone());
+    events.insert(0, event.clone());
 
     match serde_saphyr::to_string(&events) {
       Ok(yaml) => {

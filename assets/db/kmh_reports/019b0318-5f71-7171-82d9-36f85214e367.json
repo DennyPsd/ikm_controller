@@ -1,0 +1,296 @@
+{
+  "id": "019b0318-5f71-7171-82d9-36f85214e367",
+  "title": "КМХ отчёт для цистерны 73da8844-6fa6-47d1-9ee2-d9ecef4835a4",
+  "description": null,
+  "created_by": "test",
+  "updated_by": null,
+  "created_at": "2025-12-09T15:31:44.927+03:00",
+  "updated_at": null,
+  "tank": {
+    "Data": {
+      "id": "73da8844-6fa6-47d1-9ee2-d9ecef4835a4",
+      "group": "Группа 4",
+      "product": {
+        "type": "Oil",
+        "id": "00000000-0000-0000-0000-000000000001",
+        "name": "Oil-1",
+        "product_weight_net": null,
+        "product_weight_gross": null,
+        "volume_at_15": null
+      },
+      "name": "Tank-14",
+      "status": "work",
+      "grc": "2 1",
+      "trc": "1 2",
+      "base_vars": {
+        "weight": 1299.697,
+        "work_calc_vol": 1411.914,
+        "product_avg_temp": 17.06,
+        "product_dens": 920.005,
+        "product_level": 7815.0
+      },
+      "ext_vars": {
+        "product_volume": 1411.9140380282688,
+        "product_level": 7815.0,
+        "water_level": 0.0,
+        "product_temperature": 17.06,
+        "vapour_temperature": 18.080000000000002,
+        "product_density": 920.0054850285658,
+        "product_at_15_density": 921.42037,
+        "hydrostatic_pressure": 60450.0,
+        "vapour_pressure": 1932.0,
+        "reserve_capacity_up_max": 0.0,
+        "reserve_product_up_min": 3500.0,
+        "product_movement_consumption": 0.0,
+        "product_movement_level_measurement_speed": 0.0,
+        "volume_product_calc_below_water": 0.79,
+        "volume_raw_water": 0.79,
+        "temperatures": [
+          {
+            "value": 18.5,
+            "level": 750,
+            "name": "T0"
+          },
+          {
+            "value": 15.6,
+            "level": 2000,
+            "name": "T1"
+          },
+          {
+            "value": 15.8,
+            "level": 3500,
+            "name": "T2"
+          },
+          {
+            "value": 19.1,
+            "level": 5000,
+            "name": "T3"
+          },
+          {
+            "value": 16.3,
+            "level": 6500,
+            "name": "T4"
+          },
+          {
+            "value": 15.3,
+            "level": 8000,
+            "name": "T5"
+          },
+          {
+            "value": 19.5,
+            "level": 9500,
+            "name": "T6"
+          },
+          {
+            "value": 16.7,
+            "level": 11000,
+            "name": "T7"
+          },
+          {
+            "value": 19.0,
+            "level": 12500,
+            "name": "T8"
+          },
+          {
+            "value": 19.9,
+            "level": 15000,
+            "name": "T9"
+          }
+        ],
+        "volume_coarse": 1412.0884999999998,
+        "volume_relative_error_limit": 0.18,
+        "gross_mass_relative_error_limit": 0.17946334167381453
+      },
+      "config": {
+        "basic_data": {
+          "name": "Tank-2",
+          "reservoir_park": "Парк 1",
+          "group": "Группа 1",
+          "tank_type": "vertical",
+          "nominal_capacity": 12070.0,
+          "density_stored_liquid_according": 738.0,
+          "basic_height": 12070.0,
+          "product": "Oil-1",
+          "maximum_allowable_product_level": 12070.0,
+          "air_temp_verify": null
+        },
+        "levels_of_point_sensors": {
+          "hysteresis": 2.0,
+          "points": [
+            {
+              "id": "T0",
+              "index": 0,
+              "value": 750.0
+            },
+            {
+              "id": "T1",
+              "index": 1,
+              "value": 2000.0
+            },
+            {
+              "id": "T2",
+              "index": 2,
+              "value": 3500.0
+            },
+            {
+              "id": "T3",
+              "index": 3,
+              "value": 5000.0
+            },
+            {
+              "id": "T4",
+              "index": 4,
+              "value": 6500.0
+            },
+            {
+              "id": "T5",
+              "index": 4,
+              "value": 8000.0
+            },
+            {
+              "id": "T6",
+              "index": 4,
+              "value": 9500.0
+            },
+            {
+              "id": "T7",
+              "index": 4,
+              "value": 11000.0
+            },
+            {
+              "id": "T8",
+              "index": 4,
+              "value": 12500.0
+            },
+            {
+              "id": "T9",
+              "index": 4,
+              "value": 15000.0
+            }
+          ]
+        },
+        "construction": {
+          "linear_expansion": 0.0000125,
+          "mass_floating_coating": 2877.0
+        },
+        "mass_calculation_method": {
+          "method": "1",
+          "switching_level": 3500.0,
+          "switching_level_hysteresis": 2.0,
+          "p3_p1": 12758.0,
+          "p1_reference_point": 1242.0,
+          "reference_point": 0.0
+        },
+        "measurement_accuracy_indicators": {
+          "limit_permissible_absolute_error": 0.001,
+          "hydrostatic_device_limit": 110000.0,
+          "pressure_device_limit": 10000.0,
+          "limit_permissible_absolute_measurement_reservoir_level": 1.0,
+          "limit_permissible_absolute_measurement_level_raw_water": 1.0,
+          "limit_permissible_absolute_measurement_temp_products_and_vapours": 0.5,
+          "limit_permissible_absolute_measurement_oil_densities": 1.0,
+          "drawing_calibration_table": "grad_table_v1",
+          "hydrostatic_device_vpi": null,
+          "pressure_device_vpi": null
+        },
+        "calibration_block": {
+          "level_coefficient": -2.0,
+          "level_point_sensors": [
+            {
+              "id": "T0",
+              "index": 0,
+              "value": 750.0
+            },
+            {
+              "id": "T1",
+              "index": 1,
+              "value": 2000.0
+            },
+            {
+              "id": "T2",
+              "index": 2,
+              "value": 3500.0
+            },
+            {
+              "id": "T3",
+              "index": 3,
+              "value": 5000.0
+            },
+            {
+              "id": "T4",
+              "index": 4,
+              "value": 6500.0
+            },
+            {
+              "id": "T5",
+              "index": 5,
+              "value": 8000.0
+            },
+            {
+              "id": "T6",
+              "index": 6,
+              "value": 9500.0
+            },
+            {
+              "id": "T7",
+              "index": 7,
+              "value": 11000.0
+            },
+            {
+              "id": "T8",
+              "index": 8,
+              "value": 12500.0
+            },
+            {
+              "id": "T9",
+              "index": 9,
+              "value": 15000.0
+            }
+          ]
+        }
+      },
+      "display_params": {
+        "min_tank_level": 0.0,
+        "max_tank_level": 18000.0,
+        "min_level": 0.0,
+        "max_level": 18000.05
+      }
+    }
+  },
+  "software_name": "ikm",
+  "software_version": "0.1.1",
+  "status": "FullfilRequired",
+  "data": {
+    "air_temperature_outside": 0.0,
+    "air_pressure_outside": 0.0,
+    "wind_speed": 0.0,
+    "gas_layer_height_measured_points": [],
+    "measured_height": 0.0,
+    "nominal_height": 12070.0,
+    "delta_height": 0.0,
+    "density_verified": 0.0,
+    "density_measured": 919.7927676923152,
+    "density_measured_controlled": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "product_volume_measured": 1411.7532132052268,
+    "volume_coarse": 0.0,
+    "air_temp_verify": 0.0,
+    "pontoon_mass": 2877.0,
+    "product_mass_measured": 1299.26,
+    "vapor_temp": 18.1,
+    "tape_class": "One",
+    "delta_v_max": 0.18,
+    "delta_m_max": 0.17968619067721148,
+    "ruler_alpha_coefficient": 0.0,
+    "wall_alpha_coefficient": 0.00001249999968422344,
+    "pressure_coefficient": 0.0,
+    "level_channels": null,
+    "temperature_channels": [],
+    "mass_channels": null,
+    "volume_channels": null,
+    "density_channels": null
+  }
+}

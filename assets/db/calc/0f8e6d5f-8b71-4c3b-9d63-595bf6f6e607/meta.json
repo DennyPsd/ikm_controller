@@ -4,6 +4,7 @@
     "product_type": 1,
     "pontoon_weight": 2877,
     "tank_wall_alpha": 0.0000125,
+
     "distance_abs_error_limit": 0.001,
     "p1_measuring_range_max": 110000,
     "pressure1_proc_error_limit": 0.04,
@@ -16,9 +17,7 @@
     "calc_error_limit": 0.05,
     "structure_base_height": 0,
     "tank_product_density": 738,
-    "g": 9.81,
-    "air_density": 1.225,
-    "product_initial_boil_temp": 37,
+
     "p1_p3_distance": 12758,
     "h_calibration_coefficient": -2,
     "h_critical_level": 3500,
@@ -34,19 +33,23 @@
     "water_mass_pct": 2,
     "mech_impurities_mass_pct": 2,
     "chloride_salts_mass_pct": 3,
-    "product_density_15": 720
+    "product_density_15": 720,
+
+    "g": 9.81,
+    "air_density": 1.225,
+    "product_initial_boil_temp": 37
   },
   "level_coefficient_points": [
-    { "id": "t0", "level_mm": 750,  "kti": 15 },
+    { "id": "t0", "level_mm": 750, "kti": 15 },
     { "id": "t1", "level_mm": 2000, "kti": 15 },
     { "id": "t2", "level_mm": 3500, "kti": 50 },
     { "id": "t3", "level_mm": 5000, "kti": -20 },
     { "id": "t4", "level_mm": 6500, "kti": -20 },
     { "id": "t5", "level_mm": 8000, "kti": -20 },
-    { "id": "t6", "level_mm": 11000,"kti": -20 },
-    { "id": "t7", "level_mm": 13000,"kti": -20 },
-    { "id": "t8", "level_mm": 16000,"kti": -20 },
-    { "id": "t9", "level_mm": 19000,"kti": -20 }
+    { "id": "t6", "level_mm": 11000, "kti": -20 },
+    { "id": "t7", "level_mm": 13000, "kti": -20 },
+    { "id": "t8", "level_mm": 16000, "kti": -20 },
+    { "id": "t9", "level_mm": 19000, "kti": -20 }
   ],
   "grad_table": [
     [0.0, 0.79, 0.0],

@@ -3,7 +3,7 @@ mod msg_def;
 mod types;
 
 use crate::actors::ipc_handler::{IpcHandler, IpcHandlerMsg, IpcHandlerState};
-use crate::actors::ipc_kmh_handler::{KmhIpcHandler, KmhIpcHandlerState};
+use crate::actors::ipc_kmh_handler::{KmhIpcHandler, KmhIpcHandlerMsg, KmhIpcHandlerState};
 use crate::actors::modbus::config::ModbusSettings;
 use crate::actors::modbus::modbus_fabric::ModbusFabricActor;
 use crate::actors::tank_calc::TankCalcActor;
@@ -69,7 +69,11 @@ fn main() -> Result<(), ModuleError> {
         .spawn_linked(Some("KmhIpcHandler".into()), KmhIpcHandler, kmh_state)
         .await
         .map_err(|err| ModuleError::SpawnErr("KmhIpcHandler".into(), err))?;
-
+      ipc_router
+        .subscribe(kmh_handler.clone(), |msg| {
+          Some(KmhIpcHandlerMsg::Ipc(*Box::new(msg)))
+        })
+        .map_err(|err| ModuleError::Run("KmhIpcHandler".into(), err))?;
       // ----- IpcHandler ---------
       let handler_state = IpcHandlerState {
         hart_fabric: modbus_fabric.clone(),

@@ -1,0 +1,12 @@
+- id: "41924bb1-19a8-4b25-acea-14ee2b4c39cc"
+  type: LimitsExceeded
+  max: 400
+  var_path: ["product_level"]
+  description: ""
+  help: ""
+  name: H по Массе
+  can_end: false
+  severity: CRITICAL
+  target:
+    data_ns: Tank
+    type: Data
