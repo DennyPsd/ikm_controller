@@ -7,6 +7,13 @@ use smol_str::SmolStr;
 use taxon_core::infrastructure::facility::{DataLink, SharedData};
 use uuid::Uuid;
 
+#[derive(Default, Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
+pub enum KMHReportStatus {
+  #[default]
+  FullfilRequired,
+  Positive,
+  Negative,
+}
 #[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
 pub struct KMHReportInstance {
   pub id: Uuid,
@@ -24,6 +31,8 @@ pub struct KMHReportInstance {
   pub tank: DataLink<Tank>,
   pub software_name: Option<SmolStr>,
   pub software_version: Option<SmolStr>,
+  /** Статус отчета */
+  pub status: KMHReportStatus,
   pub data: KMHReport,
 }
 

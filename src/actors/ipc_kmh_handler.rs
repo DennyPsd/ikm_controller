@@ -1,5 +1,5 @@
 use crate::actors::tank_calc::Meta;
-use crate::types::kmh::KMHReportInstance;
+use crate::types::kmh::{KMHReportInstance, KMHReportStatus};
 use crate::types::tank_configuration::TankConfig;
 use crate::types::tanks::{BaseVars, ExtVars, Tank};
 use crate::types::type_traits::KMHReportExt;
@@ -518,6 +518,7 @@ impl Actor for KmhIpcHandler {
               tank: tank_link,
               software_name: Some(SmolStr::new("ikm")),
               software_version: Some(SmolStr::new("0.1.1")),
+              status: KMHReportStatus::FullfilRequired,
               data: kmh_report,
             };
 
