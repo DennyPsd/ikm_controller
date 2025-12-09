@@ -34,8 +34,6 @@ pub struct TankDisplay {
   pub min_level: Option<f64>,
   /// Максимальный уровень
   pub max_level: Option<f64>,
-  /// Текущий уровень
-  pub level: f64,
 }
 /// Цистерна
 #[derive(Default, Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
