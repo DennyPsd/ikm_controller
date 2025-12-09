@@ -514,6 +514,7 @@ pub fn ikm_controller_client_api() -> AsyncapiBuilder {
   AsyncapiBuilder::new(IPCRole::Router)
     .operation::<TankList, ()>()
     .operation::<TankConfigSet, ()>()
+    .operation::<DataChangeList, ()>()
     .operation::<EventList, ()>()
     .operation::<EventRuleList, ()>()
     .operation::<EventRuleSet, ()>()

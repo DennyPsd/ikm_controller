@@ -230,9 +230,9 @@ impl Actor for IpcHandler {
             return Ok(());
           }
           // ===================== TankConfigSet =====================
-          if action.kind == IPCActionKind::GetData
+          if action.kind == IPCActionKind::SetData
             && action.name.as_deref() == Some("tank_config_set")
-            && action.args.is_some()
+          // && action.args.is_some()
           {
             let args = match serde_json::from_value::<TankConfig>(action.args.clone().unwrap()) {
               Ok(args) => args,
@@ -240,7 +240,7 @@ impl Actor for IpcHandler {
                 let err = internal_error(action.name.clone(), None)
                   .with_message(format!("tank_config_set: {}", err));
 
-                info!("tank_config_set: шлём ошибку в ipc_router (read_to_string)");
+                error!("tank_config_set: {err:?}");
                 let _ = state
                   .ipc_router
                   .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
