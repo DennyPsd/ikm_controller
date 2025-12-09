@@ -1,9 +1,5 @@
-weight: 450.176
-work_calc_vol: 601.698
-product_avg_temp: 19.193
+weight: 448.119
+work_calc_vol: 630.356
+product_avg_temp: 19.1
 product_dens: 710.0
-min_tank_level: 0.0
-max_tank_level: 18000.0
-min_level: 0.0
-max_level: 18000.0
-level: 3500.0
+product_level: 3509.0

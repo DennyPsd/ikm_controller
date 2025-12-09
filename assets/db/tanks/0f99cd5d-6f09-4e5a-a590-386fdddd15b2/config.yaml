@@ -1,97 +1,97 @@
 basic_data:
-  name: Tank-4
+  name: Tank-2
   reservoir_park: Парк 1
-  group: Группа 2
+  group: Группа 1
   tank_type: vertical
-  nominal_capacity: 12070
-  density_stored_liquid_according: 738
-  basic_height: 12070
+  nominal_capacity: 12070.0
+  density_stored_liquid_according: 738.0
+  basic_height: 12070.0
   product: default oil
-  maximum_allowable_product_level: 12070
+  maximum_allowable_product_level: 12070.0
 levels_of_point_sensors:
-  hysteresis: 2
+  hysteresis: 2.0
   points:
     - id: T0
       index: 0
-      value: 750
+      value: 750.0
     - id: T1
       index: 1
-      value: 2000
+      value: 2000.0
     - id: T2
       index: 2
-      value: 3500
+      value: 3500.0
     - id: T3
       index: 3
-      value: 5000
+      value: 5000.0
     - id: T4
       index: 4
-      value: 6500
+      value: 6500.0
     - id: T5
-      index: 5
-      value: 8000
+      index: 4
+      value: 8000.0
     - id: T6
-      index: 6
-      value: 9500
+      index: 4
+      value: 9500.0
     - id: T7
-      index: 7
-      value: 11000
+      index: 4
+      value: 11000.0
     - id: T8
-      index: 8
-      value: 12500
+      index: 4
+      value: 12500.0
     - id: T9
-      index: 9
-      value: 15000
+      index: 4
+      value: 15000.0
 construction:
   linear_expansion: 0.0000125
-  mass_floating_coating: 2877
+  mass_floating_coating: 2877.0
 mass_calculation_method:
   method: "1"
-  switching_level: 3500
-  switching_level_hysteresis: 2
-  p3_p1: 12758
-  p1_reference_point: 1242
-  reference_point: 0
+  switching_level: 3500.0
+  switching_level_hysteresis: 2.0
+  p3_p1: 12758.0
+  p1_reference_point: 1242.0
+  reference_point: 0.0
 measurement_accuracy_indicators:
   limit_permissible_absolute_error: 0.001
-  hydrostatic_device_limit: 110000
-  pressure_device_limit: 10000
-  limit_permissible_absolute_measurement_reservoir_level: 1
-  limit_permissible_absolute_measurement_level_raw_water: 1
+  hydrostatic_device_limit: 110000.0
+  pressure_device_limit: 10000.0
+  limit_permissible_absolute_measurement_reservoir_level: 1.0
+  limit_permissible_absolute_measurement_level_raw_water: 1.0
   limit_permissible_absolute_measurement_temp_products_and_vapours: 0.5
-  limit_permissible_absolute_measurement_oil_densities: 1
+  limit_permissible_absolute_measurement_oil_densities: 1.0
   drawing_calibration_table: grad_table_v1
   hydrostatic_device_vpi: null
   pressure_device_vpi: null
 calibration_block:
-  level_coefficient: -2
+  level_coefficient: -2.0
   level_point_sensors:
     - id: T0
       index: 0
-      value: 750
+      value: 750.0
     - id: T1
       index: 1
-      value: 2000
+      value: 2000.0
     - id: T2
       index: 2
-      value: 3500
+      value: 3500.0
     - id: T3
       index: 3
-      value: 5000
+      value: 5000.0
     - id: T4
       index: 4
-      value: 6500
+      value: 6500.0
     - id: T5
       index: 5
-      value: 8000
+      value: 8000.0
     - id: T6
       index: 6
-      value: 9500
+      value: 9500.0
     - id: T7
       index: 7
-      value: 11000
+      value: 11000.0
     - id: T8
       index: 8
-      value: 12500
+      value: 12500.0
     - id: T9
       index: 9
-      value: 15000
+      value: 15000.0
