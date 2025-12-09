@@ -198,7 +198,7 @@ pub struct EventRuleListArgs {
 
 #[derive(Default, Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
 pub struct EventRuleListReply {
-  /// Tanks
+  /// Список
   pub data: Vec<FacilityEventRule>,
 }
 
