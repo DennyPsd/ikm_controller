@@ -1,7 +1,8 @@
 use std::collections::HashMap;
-use std::fs::File;
+use std::fs::{self, File};
 
 use taxon_core::actors::ipc::errors::internal_error;
+use taxon_core::infrastructure::facility::DataChange;
 
 use crate::actors::ipc_kmh_handler::KmhIpcHandlerMsg;
 use crate::actors::modbus::modbus_fabric::ModbusFabricMsg;
@@ -227,7 +228,41 @@ impl Actor for IpcHandler {
             }
             return Ok(());
           }
+          // ===================== TankConfigSet =====================
+          if action.kind == IPCActionKind::GetData
+            && action.name.as_deref() == Some("tank_config_set")
+            && action.args.is_some()
+          {
+            let args = match serde_json::from_value::<TankConfig>(action.args.clone().unwrap()) {
+              Ok(args) => args,
+              Err(err) => {
+                let err = internal_error(action.name.clone(), None)
+                  .with_message(format!("tank_list: {}", err));
 
+                info!("tank_list: шлём ошибку в ipc_router (read_to_string)");
+                let _ = state
+                  .ipc_router
+                  .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                  .map_err(|err| {
+                    error!("tank_list: to_replay_msg {}", err);
+                  });
+                return Ok(());
+              }
+            };
+            let config_vars_path = format!(
+              "assets/db/tanks/{}/config.yaml",
+              action.target.device_id.unwrap()
+            );
+
+            let config_content = fs::read_to_string(&config_vars_path)?;
+            let old_config: TankConfig = serde_saphyr::from_str(&config_content)
+              .map_err(|err| format!("Cant parse config: {err:?}"))?;
+            let new_config = args;
+            let change =
+              DataChange::generate_changes(&old_config, &new_config, "admin".into(), Local::now());
+
+            return Ok(());
+          }
           // ===================== PRODUCTS_LIST =====================
           if action.kind == IPCActionKind::GetData
             && action.name.as_deref() == Some("products_list")
