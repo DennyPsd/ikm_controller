@@ -202,7 +202,8 @@ impl CalculationResultExt for CalculationResult {
   fn to_base_vars(&self) -> BaseVars {
     BaseVars {
       // Масса – брутто из ядра (тонны)
-      weight: self.gross_product_mass,
+      // weight: self.gross_product_mass,
+      weight: self.gross_product_mass / 1000.0,
       // Рабочий объем – V при рабочих условиях
       work_calc_vol: self.product_volume,
       // Средняя температура продукта
