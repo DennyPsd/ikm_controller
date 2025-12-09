@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::fs::{self, File};
-
+use base64::engine::general_purpose;
 use chrono::Local;
 use taxon_core::actors::ipc::errors::internal_error;
 use taxon_core::infrastructure::facility::DataChange;
@@ -10,7 +10,7 @@ use crate::actors::modbus::modbus_fabric::ModbusFabricMsg;
 use crate::types::products::Product;
 use crate::types::tank_configuration::TankConfig;
 use crate::types::tanks::{BaseVars, ExtVars, Tank};
-use crate::{EventListArgs, EventRuleListArgs, ProductListArgs, TankListArgs};
+use crate::{EventListArgs, EventRuleListArgs, LoadGradTableArgs, ProductListArgs, TankListArgs};
 use ractor::{Actor, ActorProcessingErr, ActorRef};
 use serde_json::{json, to_string_pretty};
 use taxon_core::infrastructure::device::{FacilityEvent, FacilityEventRule};
@@ -621,6 +621,302 @@ impl Actor for IpcHandler {
             } else {
               error!("event_rule_set: to_replay_msg вернул None");
             }
+
+            return Ok(());
+          }
+
+
+
+          // ===================== LOAD_GRAD_TABLE =====================
+          if action.kind == IPCActionKind::SetData
+              && action.name.as_deref() == Some("load_grad_table")
+          {
+            info!("load_grad_table: обработка запроса");
+
+            if action.args.is_none() {
+              let err = internal_error(action.name.clone(), None)
+                  .with_message("load_grad_table: empty args");
+
+              info!("load_grad_table: шлём ошибку в ipc_router (empty args)");
+              let _ = state
+                  .ipc_router
+                  .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                  .map_err(|err| {
+                    error!("load_grad_table: to_replay_msg {}", err);
+                  });
+              return Ok(());
+            }
+
+            let args =
+                match serde_json::from_value::<LoadGradTableArgs>(action.args.clone().unwrap()) {
+                  Ok(args) => args,
+                  Err(err) => {
+                    let err = internal_error(action.name.clone(), None)
+                        .with_message(format!("load_grad_table: bad args: {}", err));
+
+                    error!("load_grad_table: bad args: {err:?}");
+                    let _ = state
+                        .ipc_router
+                        .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                        .map_err(|err| {
+                          error!("load_grad_table: to_replay_msg {}", err);
+                        });
+                    return Ok(());
+                  }
+                };
+
+            let device_id = args.device_id;
+            info!("load_grad_table: device_id = {device_id}");
+
+            let decoded = match general_purpose::STANDARD.decode(args.table.trim()) {
+              Ok(bytes) => bytes,
+              Err(err) => {
+                let err = internal_error(action.name.clone(), None)
+                    .with_message(format!("load_grad_table: base64 decode error: {}", err));
+
+                error!("load_grad_table: base64 decode error: {err:?}");
+                let _ = state
+                    .ipc_router
+                    .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                    .map_err(|err| {
+                      error!("load_grad_table: to_replay_msg {}", err);
+                    });
+                return Ok(());
+              }
+            };
+
+            let csv_str = match String::from_utf8(decoded) {
+              Ok(s) => s,
+              Err(err) => {
+                let err = internal_error(action.name.clone(), None)
+                    .with_message(format!("load_grad_table: utf8 error: {}", err));
+
+                error!("load_grad_table: utf8 error: {err:?}");
+                let _ = state
+                    .ipc_router
+                    .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                    .map_err(|err| {
+                      error!("load_grad_table: to_replay_msg {}", err);
+                    });
+                return Ok(());
+              }
+            };
+
+            let mut grad_table: Vec<[f64; 3]> = Vec::new();
+
+            for (line_no, line) in csv_str.lines().enumerate() {
+              let line = line.trim();
+              if line.is_empty() {
+                continue;
+              }
+
+              if line_no == 0 {
+                let first_token = line
+                    .split(|c| c == ',' || c == ';' || c == '\t')
+                    .find(|t| !t.trim().is_empty())
+                    .unwrap_or("");
+                if first_token.parse::<f64>().is_err() {
+                  info!("load_grad_table: skip header line: {}", line);
+                  continue;
+                }
+              }
+
+              let parts: Vec<_> = line
+                  .split(|c| c == ',' || c == ';' || c == '\t')
+                  .map(|s| s.trim())
+                  .filter(|s| !s.is_empty())
+                  .collect();
+
+              if parts.len() < 3 {
+                let err = internal_error(action.name.clone(), None)
+                    .with_message(format!(
+                      "load_grad_table: line {}: expected at least 3 columns, got {}",
+                      line_no + 1,
+                      parts.len()
+                    ));
+
+                error!(
+                  "load_grad_table: некорректное количество колонок в строке {}: {:?}",
+                  line_no + 1,
+                  parts
+                );
+                let _ = state
+                    .ipc_router
+                    .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                    .map_err(|err| {
+                      error!("load_grad_table: to_replay_msg {}", err);
+                    });
+                return Ok(());
+              }
+
+              let h: f64 = match parts[0].replace(',', ".").parse() {
+                Ok(v) => v,
+                Err(err) => {
+                  let err = internal_error(action.name.clone(), None).with_message(format!(
+                    "load_grad_table: line {}: bad level value '{}': {}",
+                    line_no + 1,
+                    parts[0],
+                    err
+                  ));
+                  error!(
+                    "load_grad_table: parse error line {} col 1: {} ({err:?})",
+                    line_no + 1,
+                    parts[0]
+                  );
+                  let _ = state
+                      .ipc_router
+                      .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                      .map_err(|err| {
+                        error!("load_grad_table: to_replay_msg {}", err);
+                      });
+                  return Ok(());
+                }
+              };
+
+              let v: f64 = match parts[1].replace(',', ".").parse() {
+                Ok(v) => v,
+                Err(err) => {
+                  let err = internal_error(action.name.clone(), None).with_message(format!(
+                    "load_grad_table: line {}: bad volume value '{}': {}",
+                    line_no + 1,
+                    parts[1],
+                    err
+                  ));
+                  error!(
+                    "load_grad_table: parse error line {} col 2: {} ({err:?})",
+                    line_no + 1,
+                    parts[1]
+                  );
+                  let _ = state
+                      .ipc_router
+                      .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                      .map_err(|err| {
+                        error!("load_grad_table: to_replay_msg {}", err);
+                      });
+                  return Ok(());
+                }
+              };
+
+              let dv: f64 = match parts[2].replace(',', ".").parse() {
+                Ok(v) => v,
+                Err(err) => {
+                  let err = internal_error(action.name.clone(), None).with_message(format!(
+                    "load_grad_table: line {}: bad dV value '{}': {}",
+                    line_no + 1,
+                    parts[2],
+                    err
+                  ));
+                  error!(
+                    "load_grad_table: parse error line {} col 3: {} ({err:?})",
+                    line_no + 1,
+                    parts[2]
+                  );
+                  let _ = state
+                      .ipc_router
+                      .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                      .map_err(|err| {
+                        error!("load_grad_table: to_replay_msg {}", err);
+                      });
+                  return Ok(());
+                }
+              };
+
+              grad_table.push([h, v, dv]);
+            }
+
+            info!(
+              "load_grad_table: распарсили {} строк градуировочной таблицы",
+              grad_table.len()
+            );
+
+            let calc_dir = format!("assets/db/calc/{device_id}");
+            let meta_path = format!("{calc_dir}/meta.json");
+
+            let meta_content = match fs::read_to_string(&meta_path) {
+              Ok(content) => content,
+              Err(err) => {
+                let err = internal_error(action.name.clone(), None)
+                    .with_message(format!("load_grad_table: can't read meta.json: {err:?}"));
+
+                error!(
+                  "load_grad_table: не удалось прочитать {}: {err:?}",
+                  meta_path
+                );
+                let _ = state
+                    .ipc_router
+                    .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                    .map_err(|err| {
+                      error!("load_grad_table: to_replay_msg {}", err);
+                    });
+                return Ok(());
+              }
+            };
+
+            let mut meta: Value = match serde_json::from_str(&meta_content) {
+              Ok(v) => v,
+              Err(err) => {
+                let err = internal_error(action.name.clone(), None)
+                    .with_message(format!("load_grad_table: can't parse meta.json: {}", err));
+
+                error!(
+                  "load_grad_table: не удалось распарсить {}: {err:?}",
+                  meta_path
+                );
+                let _ = state
+                    .ipc_router
+                    .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                    .map_err(|err| {
+                      error!("load_grad_table: to_replay_msg {}", err);
+                    });
+                return Ok(());
+              }
+            };
+
+            meta["grad_table"] = serde_json::to_value(&grad_table).unwrap_or_else(|_| {
+              json!(grad_table)
+            });
+
+            let new_meta = match to_string_pretty(&meta) {
+              Ok(s) => s,
+              Err(err) => {
+                let err = internal_error(action.name.clone(), None)
+                    .with_message(format!("load_grad_table: serialize meta.json error: {}", err));
+
+                error!(
+                  "load_grad_table: ошибка сериализации meta.json для {}: {err:?}",
+                  meta_path
+                );
+                let _ = state
+                    .ipc_router
+                    .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                    .map_err(|err| {
+                      error!("load_grad_table: to_replay_msg {}", err);
+                    });
+                return Ok(());
+              }
+            };
+
+            if let Err(err) = fs::write(&meta_path, new_meta) {
+              let err = internal_error(action.name.clone(), None)
+                  .with_message(format!("load_grad_table: write meta.json error: {err:?}"));
+
+              error!(
+                "load_grad_table: ошибка записи {}: {err:?}",
+                meta_path
+              );
+              let _ = state
+                  .ipc_router
+                  .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                  .map_err(|err| {
+                    error!("load_grad_table: to_replay_msg {}", err);
+                  });
+              return Ok(());
+            }
+
+            info!(
+              "load_grad_table: успешно обновили grad_table в {}",
+              meta_path
+            );
 
             return Ok(());
           }
