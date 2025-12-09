@@ -21,9 +21,22 @@ pub struct BaseVars {
   /// Плотность продукта
   pub product_dens: f64,
   /// Текущий уровень
+  pub product_level: f64,
+}
+/// Параметры отображения цистерны
+#[derive(Default, Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
+pub struct TankDisplay {
+  /// Минимальный уровень цистерны
+  pub min_tank_level: f64,
+  /// Максимальный уровень цистерны
+  pub max_tank_level: f64,
+  /// Минимальный уровень
+  pub min_level: Option<f64>,
+  /// Максимальный уровень
+  pub max_level: Option<f64>,
+  /// Текущий уровень
   pub level: f64,
 }
-
 /// Цистерна
 #[derive(Default, Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
 pub struct Tank {
@@ -47,6 +60,8 @@ pub struct Tank {
   pub ext_vars: Option<ExtVars>,
   /// Конфигурация
   pub config: Option<TankConfig>,
+  /// Параметры отображения
+  pub display_params: Option<TankDisplay>,
 }
 impl SharedData for Tank {
   fn id(&self) -> &Uuid {

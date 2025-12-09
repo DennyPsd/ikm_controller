@@ -219,7 +219,7 @@ impl CalculationResultExt for CalculationResult {
         .parse::<f64>()
         .unwrap(),
       // Текущий уровень (берём product_level из расчёта)
-      level: self.product_level,
+      product_level: self.product_level,
     }
   }
 

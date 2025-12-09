@@ -436,14 +436,14 @@ impl TankCalcActor {
             ev_state.exceed_started_ts = Some(entry_ts);
           }
 
-          let threshold_secs = if let Some(dur) = threshold {
-            dur.num_seconds()
+          let threshold_secs = (if let Some(dur) = threshold.clone() {
+            dur
           } else {
-            0
-          };
+            0.0
+          }) as i32;
 
           if let Some(start_ts) = ev_state.exceed_started_ts {
-            let secs = entry_ts.saturating_sub(start_ts);
+            let secs = entry_ts.saturating_sub(start_ts) as i32;
 
             if secs >= threshold_secs && !ev_state.event_active {
               let event = FacilityEvent {
