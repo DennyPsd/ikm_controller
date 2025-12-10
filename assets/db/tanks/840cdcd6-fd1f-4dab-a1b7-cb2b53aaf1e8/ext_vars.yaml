@@ -29,7 +29,7 @@ temperatures:
   - value: 15.0
     level: 6500
     name: T4
-  - value: 17.4
+  - value: 18.2
     level: 8000
     name: T5
   - value: 15.7

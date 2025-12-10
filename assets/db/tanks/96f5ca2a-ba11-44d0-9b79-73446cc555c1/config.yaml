@@ -68,31 +68,31 @@ calibration_block:
   level_point_sensors:
     - id: T0
       index: 0
-      value: 750.0
+      value: 15
     - id: T1
       index: 1
-      value: 2000.0
+      value: 15
     - id: T2
       index: 2
-      value: 3500.0
+      value: 50
     - id: T3
       index: 3
-      value: 5000.0
+      value: -20
     - id: T4
       index: 4
-      value: 6500.0
+      value: -20
     - id: T5
       index: 5
-      value: 8000.0
+      value: -20
     - id: T6
       index: 6
-      value: 9500.0
+      value: -20
     - id: T7
       index: 7
-      value: 11000.0
+      value: -20
     - id: T8
       index: 8
-      value: 12500.0
+      value: -20
     - id: T9
       index: 9
-      value: 15000.0
+      value: -20

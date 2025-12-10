@@ -11,8 +11,8 @@ reserve_capacity_up_max: 0.0
 reserve_product_up_min: 3500.0
 product_movement_consumption: 0.0
 product_movement_level_measurement_speed: 0.0
-volume_product_calc_below_water: 1.5615999999999999
-volume_raw_water: 1.5615999999999999
+volume_product_calc_below_water: 1.396
+volume_raw_water: 1.396
 temperatures:
   - value: 18.9
     level: 750

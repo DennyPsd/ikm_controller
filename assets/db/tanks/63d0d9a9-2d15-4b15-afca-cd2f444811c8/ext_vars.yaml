@@ -44,6 +44,6 @@ temperatures:
   - value: 15.4
     level: 15000
     name: T9
-volume_coarse: 995.2418
+volume_coarse: 994.8792
 volume_relative_error_limit: 0.18
 gross_mass_relative_error_limit: 0.18082593659284854

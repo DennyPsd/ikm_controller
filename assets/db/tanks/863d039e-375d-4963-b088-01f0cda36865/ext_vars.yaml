@@ -20,7 +20,7 @@ temperatures:
   - value: 20.0
     level: 2000
     name: T1
-  - value: 18.7
+  - value: 17.6
     level: 3500
     name: T2
   - value: 18.9
