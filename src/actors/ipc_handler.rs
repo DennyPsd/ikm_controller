@@ -15,6 +15,7 @@ use std::collections::HashMap;
 use std::fs::{self, File};
 use taxon_core::actors::ipc::errors::internal_error;
 use taxon_core::infrastructure::device::{FacilityEvent, FacilityEventRule};
+use taxon_core::infrastructure::facility::SharedData;
 use taxon_core::prelude::{IPCActionKind, IPCActorMsg, IPCMessageCrate};
 use tracing::{error, info};
 use uuid::Uuid;
@@ -120,29 +121,11 @@ impl Actor for IpcHandler {
               }
             };
 
-            let path = "assets/db/tanks.yaml";
-            let mut tanks: HashMap<_, _> = match File::open(path)
-              .map_err(|err| {
-                internal_error(action.name.clone(), None).with_message(format!("{:?}", err))
-              })
-              .and_then(|reader| {
-                serde_saphyr::from_reader::<File, Vec<Tank>>(reader)
-                  .map_err(|err| {
-                    internal_error(action.name.clone(), None).with_message(format!("{:?}", err))
-                  })
-                  .map(|v| v.into_iter().map(|v| (v.id, v)).collect())
-              }) {
-              Ok(data) => data,
-              Err(err) => {
-                if let Some(msg) = ipc_msg.to_replay_msg(Option::<()>::None, Some(err)) {
-                  info!("tank_list: шлём ошибку в ipc_router (read_to_string)");
-                  let _ = state.ipc_router.send_message(Some(msg));
-                } else {
-                  error!("tank_list: to_replay_msg вернул None при ошибке чтения файла");
-                }
-                return Ok(());
-              }
-            };
+            let mut tanks: HashMap<_, _> = Tank::load_list("assets/db/")
+              .await
+              .into_iter()
+              .map(|v| (v.id.clone(), v))
+              .collect();
 
             let ids: Vec<_> = if !args.ids.is_empty() {
               args.ids.to_vec()
@@ -315,27 +298,7 @@ impl Actor for IpcHandler {
               args.fields
             );
 
-            let path = "assets/db/tanks.yaml";
-            let tanks: Vec<Tank> = match File::open(path)
-              .map_err(|err| {
-                internal_error(action.name.clone(), None).with_message(format!("{err:?}"))
-              })
-              .and_then(|reader| {
-                serde_saphyr::from_reader::<File, Vec<Tank>>(reader).map_err(|err| {
-                  internal_error(action.name.clone(), None).with_message(format!("{err:?}"))
-                })
-              }) {
-              Ok(data) => data,
-              Err(err) => {
-                if let Some(msg) = ipc_msg.to_replay_msg(Option::<()>::None, Some(err)) {
-                  info!("products_list: шлём ошибку в ipc_router (read/parse)");
-                  let _ = state.ipc_router.send_message(Some(msg));
-                } else {
-                  error!("products_list: to_replay_msg вернул None при ошибке чтения файла");
-                }
-                return Ok(());
-              }
-            };
+            let mut tanks = Tank::load_list("assets/db/").await;
 
             let mut products_by_id: HashMap<Uuid, Product> = HashMap::new();
 
@@ -403,27 +366,7 @@ impl Actor for IpcHandler {
               args.fields
             );
 
-            let path = "assets/db/events.yaml";
-            let events: Vec<FacilityEvent> = match fs::read_to_string(path)
-              .map_err(|err| {
-                internal_error(action.name.clone(), None).with_message(format!("{err:?}"))
-              })
-              .and_then(|content| {
-                serde_saphyr::from_str(&content).map_err(|err| {
-                  internal_error(action.name.clone(), None).with_message(format!("{err:?}"))
-                })
-              }) {
-              Ok(list) => list,
-              Err(err) => {
-                if let Some(msg) = ipc_msg.to_replay_msg(Option::<()>::None, Some(err)) {
-                  info!("event_list: шлём ошибку в ipc_router (read/parse)");
-                  let _ = state.ipc_router.send_message(Some(msg));
-                } else {
-                  error!("event_list: to_replay_msg вернул None при ошибке чтения/парсинга");
-                }
-                return Ok(());
-              }
-            };
+            let events = FacilityEvent::load_list("assets/db/").await;
 
             let data: Vec<FacilityEvent> = if args.ids.is_empty() {
               events
@@ -473,27 +416,7 @@ impl Actor for IpcHandler {
               args.fields
             );
 
-            let path = "assets/db/eventrules.yaml";
-            let rules: Vec<FacilityEventRule> = match fs::read_to_string(path)
-              .map_err(|err| {
-                internal_error(action.name.clone(), None).with_message(format!("{err:?}"))
-              })
-              .and_then(|content| {
-                serde_saphyr::from_str(&content).map_err(|err| {
-                  internal_error(action.name.clone(), None).with_message(format!("{err:?}"))
-                })
-              }) {
-              Ok(list) => list,
-              Err(err) => {
-                if let Some(msg) = ipc_msg.to_replay_msg(Option::<()>::None, Some(err)) {
-                  info!("event_rule_list: шлём ошибку в ipc_router (read/parse)");
-                  let _ = state.ipc_router.send_message(Some(msg));
-                } else {
-                  error!("event_rule_list: to_replay_msg вернул None при ошибке чтения/парсинга");
-                }
-                return Ok(());
-              }
-            };
+            let rules = FacilityEventRule::load_list("assets/db/").await;
 
             let data: Vec<FacilityEventRule> = if args.ids.is_empty() {
               rules
@@ -564,27 +487,7 @@ impl Actor for IpcHandler {
               FacilityEventRule::HartStatus { id, .. } => *id,
             };
 
-            let path = "assets/db/eventrules.yaml";
-
-            let mut rules: Vec<FacilityEventRule> = match fs::read_to_string(path)
-              .map_err(|err| {
-                internal_error(action.name.clone(), None).with_message(format!("{err:?}"))
-              })
-              .and_then(|content| {
-                serde_saphyr::from_str(&content).map_err(|err| {
-                  internal_error(action.name.clone(), None).with_message(format!("{err:?}"))
-                })
-              }) {
-              Ok(list) => list,
-              Err(err) => {
-                // если файла нет или он битый — начнём с пустого списка
-                error!(
-                  "event_rule_set: не удалось прочитать/распарсить {}, начинаем с пустого списка: {err:?}",
-                  path
-                );
-                Vec::new()
-              }
-            };
+            let mut rules = FacilityEventRule::load_list("assets/db/").await;
 
             if let Some(pos) = rules.iter().position(|r| {
               let id = match r {
@@ -600,36 +503,7 @@ impl Actor for IpcHandler {
               rules.push(rule.clone());
             }
 
-            match serde_saphyr::to_string(&rules) {
-              Ok(yaml) => {
-                if let Err(err) = fs::write(path, yaml) {
-                  let err = internal_error(action.name.clone(), None)
-                    .with_message(format!("event_rule_set: write error: {err:?}"));
-
-                  error!("event_rule_set: ошибка записи eventrules.yaml: {err:?}");
-                  let _ = state
-                    .ipc_router
-                    .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
-                    .map_err(|err| {
-                      error!("event_rule_set: to_replay_msg {}", err);
-                    });
-                  return Ok(());
-                }
-              }
-              Err(err) => {
-                let err = internal_error(action.name.clone(), None)
-                  .with_message(format!("event_rule_set: serialize error: {err:?}"));
-
-                error!("event_rule_set: ошибка сериализации списка правил: {err:?}");
-                let _ = state
-                  .ipc_router
-                  .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
-                  .map_err(|err| {
-                    error!("event_rule_set: to_replay_msg {}", err);
-                  });
-                return Ok(());
-              }
-            }
+            FacilityEventRule::save_all(rules, "assets/db/").await;
 
             // В ответ отдаём само правило (Reply = FacilityEventRule)
             if let Some(msg) = ipc_msg.to_replay_msg(Some(json!(rule)), None) {
