@@ -835,17 +835,15 @@ pub fn get_tank_full(id: Uuid) -> Result<Tank, anyhow::Error> {
   )?;
 
   let path = "assets/db/tanks.yaml";
-  let tanks_reader = File::open(path)?;
-  let mut tanks: HashMap<_, _> = serde_saphyr::from_reader::<File, Vec<Tank>>(tanks_reader)
-    .map(|v| v.into_iter().map(|v| (v.id, v)).collect::<HashMap<_, _>>())
-    .map_err(anyhow::Error::new)?;
-
+  let mut tanks: HashMap<_, _> = Tank::load_list_sync("assets/db")
+    .into_iter()
+    .map(|v| (v.id.clone(), v))
+    .collect();
   let ids: Vec<_> = if !args.ids.is_empty() {
     args.ids.to_vec()
   } else {
     tanks.keys().cloned().collect()
   };
-
   for id in ids.iter() {
     let tank = tanks.get_mut(id).unwrap();
     match args.fields {
