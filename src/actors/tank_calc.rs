@@ -255,11 +255,8 @@ impl TankCalcActor {
         return Ok(());
       }
     };
-    // println!(
-    //   "CCCCAAAALLLLCCCC!!!!!  {:?}  RESSUUUUULLLLLLTTTTT {:?}",
-    //   calc, result
-    // );
-
+    // println!("CCCCAAAALLLLCCCC!!!!!  {:?} ", calc,);
+    // println!("RESSUUUUULLLLLLTTTTT {:?}", result);
     let now = Utc::now();
 
     // Маппинг через экстеншен
@@ -610,10 +607,10 @@ impl TankCalcActor {
           if !exceeded {
             if let Some(ev_state) = state.event_states.get_mut(&key) {
               if ev_state.exceed_started_ts.is_some() || ev_state.event_active {
-                info!(
-                  "TankCalc: значение {:?} для правила {} по танку {} вернулось в норму (value={:.3})",
-                  var_path, id, tank.id, value
-                );
+                // info!(
+                //   "TankCalc: значение {:?} для правила {} по танку {} вернулось в норму (value={:.3})",
+                //   var_path, id, tank.id, value
+                // );
               }
               ev_state.exceed_started_ts = None;
               ev_state.event_active = false;

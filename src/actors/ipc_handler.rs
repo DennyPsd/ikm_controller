@@ -69,12 +69,12 @@ impl Actor for IpcHandler {
   ) -> Result<(), ActorProcessingErr> {
     match msg {
       IpcHandlerMsg::Ipc(ipc_msg) => {
-        info!(
-          "Modbus IPC_Handler: получено IPC сообщение: peer={:?}, protocol={:?}",
-          ipc_msg.peer_from, ipc_msg.protocol
-        );
-        if let Ok(s) = to_string_pretty(&ipc_msg.msg) {
-          info!("Modbus IPC_Handler: raw msg =\n{}", s);
+        // info!(
+        //   "Modbus IPC_Handler: получено IPC сообщение: peer={:?}, protocol={:?}",
+        //   ipc_msg.peer_from, ipc_msg.protocol
+        // );
+        if let Ok(_s) = to_string_pretty(&ipc_msg.msg) {
+          // info!("Modbus IPC_Handler: raw msg =\n{}", s);
         }
 
         // сначала проверяем, kmh ли это — если да, просто форвардим в kmh-актор и выходим
@@ -84,7 +84,7 @@ impl Actor for IpcHandler {
             || (action.kind == IPCActionKind::SetData && action.name.as_deref() == Some("kmh_set"));
 
           if is_kmh {
-            info!("Modbus IPC_Handler: форвардим kmh_* в KmhIpcHandler");
+            // info!("Modbus IPC_Handler: форвардим kmh_* в KmhIpcHandler");
             let _ = state
               .kmh_handler
               .send_message(KmhIpcHandlerMsg::Ipc(ipc_msg));
@@ -94,10 +94,10 @@ impl Actor for IpcHandler {
 
         // дальше вся остальная логика как раньше (tank_list, products_list, …)
         if let Some(action) = ipc_msg.as_action() {
-          info!(
-            "Modbus IPC_Handler: action.name={:?}, kind={:?}, target.module_name={:?}, data_ns={:?}",
-            action.name, action.kind, action.target.module_name, action.target.data_ns,
-          );
+          // info!(
+          //   "Modbus IPC_Handler: action.name={:?}, kind={:?}, target.module_name={:?}, data_ns={:?}",
+          //   action.name, action.kind, action.target.module_name, action.target.data_ns,
+          // );
 
           // ===================== TANK_LIST =====================
           if action.kind == IPCActionKind::GetData
@@ -110,7 +110,7 @@ impl Actor for IpcHandler {
                 let err = internal_error(action.name.clone(), None)
                   .with_message(format!("tank_list: {}", err));
 
-                info!("tank_list: шлём ошибку в ipc_router (read_to_string)");
+                // info!("tank_list: шлём ошибку в ipc_router (read_to_string)");
                 let _ = state
                   .ipc_router
                   .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
@@ -207,7 +207,7 @@ impl Actor for IpcHandler {
               .collect::<Vec<_>>();
 
             if let Some(msg) = ipc_msg.to_replay_msg(Some(json!({ "data": data })), None) {
-              info!("tank_list: отправляем ответ в ipc_router");
+              // info!("tank_list: отправляем ответ в ipc_router");
               let _ = state.ipc_router.send_message(Some(msg));
             } else {
               error!("tank_list: to_replay_msg вернул None");
@@ -216,53 +216,86 @@ impl Actor for IpcHandler {
           }
 
           // ===================== TankConfigSet =====================
+          use serde_json::Value;
+          use serde_path_to_error::deserialize as serde_path_deserialize;
+          use tracing::{error, info};
+
           if action.kind == IPCActionKind::SetData
             && action.name.as_deref() == Some("tank_config_set")
-          // && action.args.is_some()
           {
-            let args = match serde_json::from_value::<TankConfig>(action.args.clone().unwrap()) {
-              Ok(args) => args,
-              Err(err) => {
-                let err = internal_error(action.name.clone(), None)
-                  .with_message(format!("tank_config_set: {}", err));
+            // 1. Сырой JSON аргументов
+            let raw_args = action.args.clone().unwrap_or(Value::Null);
+            error!("tank_config_set: raw args JSON:\n{}", raw_args);
 
-                error!("tank_config_set: {err:?}");
+            // Превратим Value в строку, чтобы скормить строковый десериализатору
+            let raw_str = raw_args.to_string();
+
+            // 2. Создаём serde_json::Deserializer из строки
+            let mut deserializer = serde_json::Deserializer::from_str(&raw_str);
+
+            // 3. Пытаемся десериализовать с трекингом пути
+            let args: TankConfig = match serde_path_deserialize::<_, TankConfig>(&mut deserializer)
+            {
+              Ok(cfg) => {
+                info!("tank_config_set: deserialization OK");
+                cfg
+              }
+              Err(e) => {
+                let path = e.path().to_string(); // например: ".basic_data.density_stored_liquid_according"
+                error!(
+                  "tank_config_set: deserialization ERROR at path '{}': {}",
+                  path, e
+                );
+
+                // Пытаемся вытащить значение по этому пути из raw_args
+                if let Some(sub) = find_value_by_json_pointer(&raw_args, &path) {
+                  error!("tank_config_set: value at path '{}': {}", path, sub);
+                }
+
+                let err = internal_error(action.name.clone(), None).with_message(format!(
+                  "tank_config_set: deserialization error at path '{}': {}",
+                  path, e
+                ));
+
                 let _ = state
                   .ipc_router
                   .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
                   .map_err(|err| {
                     error!("tank_config_set: to_replay_msg {}", err);
                   });
+
                 return Ok(());
               }
             };
+
             let config_vars_path = format!(
               "assets/db/tanks/{}/config.yaml",
               action.target.device_id.unwrap()
             );
 
-            // let config_content = fs::read_to_string(&config_vars_path)?;
-            // let old_config: TankConfig = serde_saphyr::from_str(&config_content)
-            //   .map_err(|err| format!("Cant parse config: {err:?}"))?;
+            error!(
+              "tank_config_set: writing config to {}: {:#?}",
+              config_vars_path, args
+            );
+
             let new_config = args;
+
             if let Err(err) = fs::write(
-              config_vars_path,
+              &config_vars_path,
               serde_saphyr::to_string(&new_config).unwrap(),
             ) {
               let err = internal_error(action.name.clone(), None)
-                .with_message(format!("event_rule_set: write error: {err:?}"));
+                .with_message(format!("tank_config_set: write error: {err:?}"));
 
-              error!("event_rule_set: ошибка записи eventrules.yaml: {err:?}");
+              error!("tank_config_set: ошибка записи {config_vars_path}: {err:?}");
               let _ = state
                 .ipc_router
                 .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
                 .map_err(|err| {
-                  error!("event_rule_set: to_replay_msg {}", err);
+                  error!("tank_config_set: to_replay_msg {}", err);
                 });
               return Ok(());
             }
-            // let _change =
-            //   DataChange::generate_changes(&old_config, &new_config, "admin".into(), Local::now());
 
             return Ok(());
           }
@@ -272,7 +305,7 @@ impl Actor for IpcHandler {
             && action.name.as_deref() == Some("products_list")
             && action.args.is_some()
           {
-            info!("Modbus IPC_Handler: обработка action 'products_list'");
+            // info!("Modbus IPC_Handler: обработка action 'products_list'");
 
             let args = match serde_json::from_value::<ProductListArgs>(action.args.clone().unwrap())
             {
@@ -281,7 +314,7 @@ impl Actor for IpcHandler {
                 let err = internal_error(action.name.clone(), None)
                   .with_message(format!("products_list: {}", err));
 
-                info!("products_list: шлём ошибку в ipc_router (bad args)");
+                // info!("products_list: шлём ошибку в ipc_router (bad args)");
                 let _ = state
                   .ipc_router
                   .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
@@ -292,11 +325,11 @@ impl Actor for IpcHandler {
               }
             };
 
-            info!(
-              "products_list: ids.len() = {}, fields = {:?}",
-              args.ids.len(),
-              args.fields
-            );
+            // info!(
+            //   "products_list: ids.len() = {}, fields = {:?}",
+            //   args.ids.len(),
+            //   args.fields
+            // );
 
             let tanks = Tank::load_list("assets/db/").await;
 
@@ -324,10 +357,10 @@ impl Actor for IpcHandler {
               .filter_map(|id| products_by_id.get(&id).cloned())
               .collect();
 
-            info!("products_list: найдено {} продуктов", data.len());
+            // info!("products_list: найдено {} продуктов", data.len());
 
             if let Some(msg) = ipc_msg.to_replay_msg(Some(json!({ "data": data })), None) {
-              info!("products_list: отправляем ответ в ipc_router");
+              // info!("products_list: отправляем ответ в ipc_router");
               let _ = state.ipc_router.send_message(Some(msg));
             } else {
               error!("products_list: to_replay_msg вернул None");
@@ -341,7 +374,7 @@ impl Actor for IpcHandler {
             && action.name.as_deref() == Some("event_list")
             && action.args.is_some()
           {
-            info!("event_list: обработка запроса");
+            // info!("event_list: обработка запроса");
 
             let args = match serde_json::from_value::<EventListArgs>(action.args.clone().unwrap()) {
               Ok(args) => args,
@@ -349,7 +382,7 @@ impl Actor for IpcHandler {
                 let err = internal_error(action.name.clone(), None)
                   .with_message(format!("event_list: {}", err));
 
-                info!("event_list: шлём ошибку в ipc_router (bad args)");
+                // info!("event_list: шлём ошибку в ipc_router (bad args)");
                 let _ = state
                   .ipc_router
                   .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
@@ -360,17 +393,17 @@ impl Actor for IpcHandler {
               }
             };
 
-            info!(
-              "event_list: ids.len() = {}, fields = {:?}",
-              args.ids.len(),
-              args.fields
-            );
+            // info!(
+            //   "event_list: ids.len() = {}, fields = {:?}",
+            //   args.ids.len(),
+            //   args.fields
+            // );
 
             let events = FacilityEvent::load_list("assets/db/").await;
             let rules: HashMap<_, _> = FacilityEventRule::load_list("assets/db/")
               .await
               .into_iter()
-              .map(|v| (v.id().clone(), v))
+              .map(|v| (*v.id(), v))
               .collect();
 
             let data: Vec<FacilityEvent> = if args.ids.is_empty() {
@@ -383,8 +416,8 @@ impl Actor for IpcHandler {
                 .map(|v| {
                   let mut v = v;
                   v.rule = DataLink::Data(
-                    (&rules)
-                      .into_iter()
+                    rules
+                      .iter()
                       .find(|r| r.1.id() == v.rule.id())
                       .unwrap()
                       .1
@@ -396,7 +429,7 @@ impl Actor for IpcHandler {
             };
 
             if let Some(msg) = ipc_msg.to_replay_msg(Some(json!({ "data": data })), None) {
-              info!("event_list: отправляем ответ в ipc_router");
+              // info!("event_list: отправляем ответ в ipc_router");
               let _ = state.ipc_router.send_message(Some(msg));
             } else {
               error!("event_list: to_replay_msg вернул None");
@@ -410,7 +443,7 @@ impl Actor for IpcHandler {
             && action.name.as_deref() == Some("event_rule_list")
             && action.args.is_some()
           {
-            info!("event_rule_list: обработка запроса");
+            // info!("event_rule_list: обработка запроса");
 
             let args =
               match serde_json::from_value::<EventRuleListArgs>(action.args.clone().unwrap()) {
@@ -419,7 +452,7 @@ impl Actor for IpcHandler {
                   let err = internal_error(action.name.clone(), None)
                     .with_message(format!("event_rule_list: {}", err));
 
-                  info!("event_rule_list: шлём ошибку в ipc_router (bad args)");
+                  // info!("event_rule_list: шлём ошибку в ipc_router (bad args)");
                   let _ = state
                     .ipc_router
                     .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
@@ -430,11 +463,11 @@ impl Actor for IpcHandler {
                 }
               };
 
-            info!(
-              "event_rule_list: ids.len() = {}, fields = {:?}",
-              args.ids.len(),
-              args.fields
-            );
+            // info!(
+            //   "event_rule_list: ids.len() = {}, fields = {:?}",
+            //   args.ids.len(),
+            //   args.fields
+            // );
 
             let rules = FacilityEventRule::load_list("assets/db/").await;
 
@@ -455,7 +488,7 @@ impl Actor for IpcHandler {
             };
 
             if let Some(msg) = ipc_msg.to_replay_msg(Some(json!({ "data": data })), None) {
-              info!("event_rule_list: отправляем ответ в ipc_router");
+              // info!("event_rule_list: отправляем ответ в ipc_router");
               let _ = state.ipc_router.send_message(Some(msg));
             } else {
               error!("event_rule_list: to_replay_msg вернул None");
@@ -468,13 +501,13 @@ impl Actor for IpcHandler {
           if action.kind == IPCActionKind::SetData
             && action.name.as_deref() == Some("event_rule_set")
           {
-            info!("event_rule_set: обработка запроса");
+            // info!("event_rule_set: обработка запроса");
 
             if action.args.is_none() {
               let err = internal_error(action.name.clone(), None)
                 .with_message("event_rule_set: empty args");
 
-              info!("event_rule_set: шлём ошибку в ipc_router (empty args)");
+              // info!("event_rule_set: шлём ошибку в ipc_router (empty args)");
               let _ = state
                 .ipc_router
                 .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
@@ -491,7 +524,7 @@ impl Actor for IpcHandler {
                 let err = internal_error(action.name.clone(), None)
                   .with_message(format!("event_rule_set: {}", err));
 
-                info!("event_rule_set: шлём ошибку в ipc_router (bad args)");
+                // info!("event_rule_set: шлём ошибку в ipc_router (bad args)");
                 let _ = state
                   .ipc_router
                   .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
@@ -516,10 +549,10 @@ impl Actor for IpcHandler {
               };
               *id == rule_id
             }) {
-              info!("event_rule_set: обновляем существующее правило {}", rule_id);
+              // info!("event_rule_set: обновляем существующее правило {}", rule_id);
               rules[pos] = rule.clone();
             } else {
-              info!("event_rule_set: добавляем новое правило {}", rule_id);
+              // info!("event_rule_set: добавляем новое правило {}", rule_id);
               rules.push(rule.clone());
             }
 
@@ -527,7 +560,7 @@ impl Actor for IpcHandler {
 
             // В ответ отдаём само правило (Reply = FacilityEventRule)
             if let Some(msg) = ipc_msg.to_replay_msg(Some(json!(rule)), None) {
-              info!("event_rule_set: отправляем ответ в ipc_router");
+              // info!("event_rule_set: отправляем ответ в ipc_router");
               let _ = state.ipc_router.send_message(Some(msg));
             } else {
               error!("event_rule_set: to_replay_msg вернул None");
@@ -540,13 +573,13 @@ impl Actor for IpcHandler {
           if action.kind == IPCActionKind::SetData
             && action.name.as_deref() == Some("load_grad_table")
           {
-            info!("load_grad_table: обработка запроса");
+            // info!("load_grad_table: обработка запроса");
 
             if action.args.is_none() {
               let err = internal_error(action.name.clone(), None)
                 .with_message("load_grad_table: empty args");
 
-              info!("load_grad_table: шлём ошибку в ipc_router (empty args)");
+              // info!("load_grad_table: шлём ошибку в ipc_router (empty args)");
               let _ = state
                 .ipc_router
                 .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
@@ -575,7 +608,7 @@ impl Actor for IpcHandler {
               };
 
             let device_id = args.device_id;
-            info!("load_grad_table: device_id = {device_id}");
+            // info!("load_grad_table: device_id = {device_id}");
 
             let decoded = match general_purpose::STANDARD.decode(args.table.trim()) {
               Ok(bytes) => bytes,
@@ -625,7 +658,7 @@ impl Actor for IpcHandler {
                   .find(|t| !t.trim().is_empty())
                   .unwrap_or("");
                 if first_token.parse::<f64>().is_err() {
-                  info!("load_grad_table: skip header line: {}", line);
+                  // info!("load_grad_table: skip header line: {}", line);
                   continue;
                 }
               }
@@ -732,20 +765,20 @@ impl Actor for IpcHandler {
               grad_table.push([h, v, dv]);
             }
 
-            info!(
-              "load_grad_table: распарсили {} строк градуировочной таблицы",
-              grad_table.len()
-            );
+            // info!(
+            //   "load_grad_table: распарсили {} строк градуировочной таблицы",
+            //   grad_table.len()
+            // );
 
             // --------- Сохраняем grad_table рядом с config.yaml ---------
             // Путь вида: assets/db/tanks/<device_id>/grad_table.json
             let tank_dir = format!("assets/db/tanks/{device_id}");
             let grad_path = format!("{tank_dir}/grad_table.json");
 
-            info!(
-              "load_grad_table: сохраняем grad_table в файл: {}",
-              grad_path
-            );
+            // info!(
+            //   "load_grad_table: сохраняем grad_table в файл: {}",
+            //   grad_path
+            // );
 
             // создаём директорию tanks/<device_id>, если её ещё нет
             if let Err(err) = fs::create_dir_all(&tank_dir) {
@@ -805,18 +838,18 @@ impl Actor for IpcHandler {
               return Ok(());
             }
 
-            info!(
-              "load_grad_table: успешно записали grad_table в {}",
-              grad_path
-            );
+            // info!(
+            //   "load_grad_table: успешно записали grad_table в {}",
+            //   grad_path
+            // );
 
             return Ok(());
           }
 
-          info!(
-            "Modbus IPC_Handler: непонятный action: name={:?}, kind={:?} — игнорируем",
-            action.name, action.kind
-          );
+          // info!(
+          //   "Modbus IPC_Handler: непонятный action: name={:?}, kind={:?} — игнорируем",
+          //   action.name, action.kind
+          // );
         }
       }
     }
@@ -834,10 +867,10 @@ pub fn get_tank_full(id: Uuid) -> Result<Tank, anyhow::Error> {
     .unwrap(),
   )?;
 
-  let path = "assets/db/tanks.yaml";
+  let _path = "assets/db/tanks.yaml";
   let mut tanks: HashMap<_, _> = Tank::load_list_sync("assets/db")
     .into_iter()
-    .map(|v| (v.id.clone(), v))
+    .map(|v| (v.id, v))
     .collect();
   let ids: Vec<_> = if !args.ids.is_empty() {
     args.ids.to_vec()
@@ -922,4 +955,55 @@ pub fn get_tank_full(id: Uuid) -> Result<Tank, anyhow::Error> {
   } else {
     Err(anyhow::Error::msg("not_fond"))
   }
+}
+fn find_value_by_json_pointer<'a>(
+  value: &'a serde_json::Value,
+  path: &str,
+) -> Option<&'a serde_json::Value> {
+  // serde_path_to_error даёт путь в виде ".basic_data.field[0].other"
+  // Превратим в JSON Pointer вида "/basic_data/field/0/other"
+  let mut pointer = String::new();
+
+  if let Some(without_dot) = path.strip_prefix('.') {
+    pointer.push('/');
+    // ".basic_data.density[0].x" -> "basic_data/density[0]/x"
+    // разбиваем по '.', а индексы вида [0] превращаем в /0
+    for (i, part) in without_dot.split('.').enumerate() {
+      if i > 0 {
+        pointer.push('/');
+      }
+
+      // часть может быть "density[0]" или просто "density"
+      // разберём скобки
+      let mut rest = part;
+      while let Some(bracket_pos) = rest.find('[') {
+        // имя поля до скобки
+        let (field, tail) = rest.split_at(bracket_pos);
+        if !field.is_empty() {
+          pointer.push_str(field);
+        }
+
+        // tail начинается с '['; ищем ']'
+        if let Some(end) = tail.find(']') {
+          let index_str = &tail[1..end]; // между '[' и ']'
+          pointer.push('/');
+          pointer.push_str(index_str);
+          rest = &tail[end + 1..];
+        } else {
+          // кривой формат — выходим
+          rest = "";
+        }
+      }
+
+      // если остаток без скобок и не пустой — это ещё одно имя
+      if !rest.is_empty() {
+        pointer.push_str(rest);
+      }
+    }
+  } else {
+    // на всякий случай, если вдруг путь без точки
+    pointer = path.to_string();
+  }
+
+  value.pointer(&pointer)
 }
