@@ -589,9 +589,30 @@ impl Actor for KmhIpcHandler {
           {
             info!("KmhIpcHandler: обработка action 'kmh_report_calc'");
 
+            let raw_args = action.args.clone().unwrap();
+
+            if let Ok(pretty) = serde_json::to_string_pretty(&raw_args) {
+              info!("kmh_report_calc: сырые args из IPC:\n{}", pretty);
+            } else {
+              info!("kmh_report_calc: сырые args (Debug): {:?}", raw_args);
+            }
+
             let mut kmh_instance =
-              match serde_json::from_value::<KMHReportInstance>(action.args.clone().unwrap()) {
-                Ok(v) => v,
+              match serde_json::from_value::<KMHReportInstance>(raw_args.clone()) {
+                Ok(v) => {
+                  info!(
+                    "kmh_report_calc: входной KMHReportInstance: id={:?}, title={:?}, status={:?}",
+                    v.id, v.title, v.status
+                  );
+
+                  // Логируем data до расчёта
+                  info!("kmh_report_calc: data ДО расчёта (Debug): {:?}", v.data);
+                  if let Ok(pretty) = serde_json::to_string_pretty(&v.data) {
+                    info!("kmh_report_calc: data ДО расчёта (JSON):\n{}", pretty);
+                  }
+
+                  v
+                }
                 Err(err) => {
                   let err = internal_error(action.name.clone(), None)
                     .with_message(format!("kmh_report_calc: {}", err));
@@ -606,52 +627,7 @@ impl Actor for KmhIpcHandler {
                   return Ok(());
                 }
               };
-            let _args =
-              match serde_json::from_value::<KMHReportInstance>(action.args.clone().unwrap()) {
-                Ok(args) => args,
-                Err(err) => {
-                  let err = internal_error(action.name.clone(), None)
-                    .with_message(format!("kmh_report_create: {}", err));
 
-                  info!("kmh_report_create: шлём ошибку в ipc_router (bad args)");
-                  let _ = state
-                    .ipc_router
-                    .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
-                    .map_err(|err| {
-                      error!("kmh_report_create: to_replay_msg {}", err);
-                    });
-                  return Ok(());
-                }
-              };
-            // let config_path = format!("assets/db/tanks/{}/config.yaml", args.tank.id());
-            // let config: Option<TankConfig> = match File::open(&config_path) {
-            //   Ok(f) => match serde_saphyr::from_reader::<File, TankConfig>(f) {
-            //     Ok(v) => Some(v),
-            //     Err(err) => {
-            //       error!(
-            //         "kmh_report_create: не удалось распарсить config {}: {err:?}",
-            //         config_path
-            //       );
-            //       None
-            //     }
-            //   },
-            //   Err(err) => {
-            //     info!(
-            //       "kmh_report_create: нет config для {} ({err:?})",
-            //       args.device_id
-            //     );
-            //     None
-            //   }
-            // };
-            // if let Some(config) = config {
-            //   kmh_instance.data.temperature_channels = config
-            //     .calibration_block
-            //     .level_point_sensors
-            //     .iter()
-            //     .map(|v| TemperatureSensor::new(v., v.tempe, 0.0))
-            // }
-
-            //Some(TemperatureSensor::new(*level, temp, 0.0))
             info!(
               "kmh_report_calc: расчёт КМХ для report_id={}",
               kmh_instance.id
@@ -662,6 +638,39 @@ impl Actor for KmhIpcHandler {
               report: kmh_instance.data.clone(),
             };
             let calculated_report = calc.get_results();
+
+            // --- ЛОГ РЕЗУЛЬТАТА РАСЧЁТА ---
+            info!(
+              "kmh_report_calc: результат расчёта (Debug) для report_id={}: {:?}",
+              kmh_instance.id, calculated_report
+            );
+
+            if let Ok(pretty) = serde_json::to_string_pretty(&calculated_report) {
+              info!(
+                "kmh_report_calc: результат расчёта (JSON) для report_id={}:\n{}",
+                kmh_instance.id, pretty
+              );
+            } else {
+              error!(
+                "kmh_report_calc: не удалось сериализовать calculated_report в JSON для логов"
+              );
+            }
+
+            // (опционально) самопроверка: сможем ли мы ЭТО потом прочитать как KMHReport?
+            if let Ok(pretty) = serde_json::to_string(&calculated_report) {
+              match serde_json::from_str::<KMHReport>(&pretty) {
+                Ok(_) => {
+                  info!("kmh_report_calc: самопроверка десериализации KMHReport прошла успешно");
+                }
+                Err(err) => {
+                  error!(
+                    "kmh_report_calc: САМОПРОВЕРКА провалилась: calculated_report уже сейчас не десериализуется в KMHReport: {err:?}"
+                  );
+                }
+              }
+            }
+
+            // обновляем инстанс
             kmh_instance.data = calculated_report;
 
             // 2. Сохраняем на диск в assets/db/kmh_reports/{id}.json
@@ -681,6 +690,10 @@ impl Actor for KmhIpcHandler {
             }
 
             let file_path = format!("{}/{}.json", dir_path, kmh_instance.id);
+            info!(
+              "kmh_report_calc: сохраняем пересчитанный отчёт в файл: {}",
+              file_path
+            );
 
             let write_result: Result<(), _> = File::create(&file_path).and_then(|f| {
               serde_json::to_writer_pretty(f, &kmh_instance).map_err(std::io::Error::other)
