@@ -116,7 +116,7 @@ pub struct MeasurementAccuracyIndicators {
   /** Допустимая абсолютная погрешность измерения плотности нефти */
   pub limit_permissible_absolute_measurement_oil_densities: Option<f32>,
   /** Калибровочная таблица чертежа */
-  pub drawing_calibration_table: 10
+  pub drawing_calibration_table: Option<f32>,
   /** ВПИ гидростатического устройства */
   pub hydrostatic_device_vpi: Option<f32>,
   /** ВПИ давления устройства */
