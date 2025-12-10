@@ -35,9 +35,6 @@ pub struct LevelCoefficientPoint {
 #[derive(Deserialize, Debug)]
 pub struct Meta {
   pub constants: Constants,
-  pub level_coefficient_points: Vec<LevelCoefficientPoint>,
-  /// grad_table: [level, volume, epsilon?]
-  pub grad_table: Vec<Vec<f64>>,
 }
 
 #[allow(dead_code)]
@@ -177,11 +174,14 @@ impl TankCalcActor {
     state: &mut TankCalcState,
   ) -> Result<(), Box<dyn std::error::Error>> {
     let meta_path = format!("assets/db/calc/{}/meta.json", tank_id);
+
     let time_series_path = format!("assets/db/calc/{}/time_series.json", tank_id);
     let config_vars_path = format!("assets/db/tanks/{}/config.yaml", tank_id);
 
     let base_vars_path = format!("assets/db/tanks/{}/base_vars.yaml", tank_id);
     let ext_vars_path = format!("assets/db/tanks/{}/ext_vars.yaml", tank_id);
+
+    let grad_table_path = format!("assets/db/tanks/{}/grad_table.json", tank_id);
 
     // Читаем meta.json
     let meta_content = fs::read_to_string(&meta_path)?;
@@ -193,6 +193,41 @@ impl TankCalcActor {
     let config: TankConfig = serde_saphyr::from_str(&config_content)
       .map_err(|err| format!("Cant parse config: {err:?}"))?;
 
+    let grad_rows = match fs::read_to_string(&grad_table_path) {
+      Ok(content) => match serde_json::from_str::<Vec<Vec<f64>>>(&content) {
+        Ok(rows) => {
+          if rows.is_empty() {
+            error!(
+              "TankCalc: grad_table.json для {} прочитан, но в нём 0 строк — пропускаем расчёт",
+              tank_id
+            );
+            return Ok(());
+          }
+          rows
+        }
+        Err(err) => {
+          error!(
+            "TankCalc: не удалось распарсить {} как Vec<Vec<f64>>: {err:?} — пропускаем расчёт для {}",
+            grad_table_path, tank_id
+          );
+          return Ok(());
+        }
+      },
+      Err(err) if err.kind() == ErrorKind::NotFound => {
+        error!(
+          "TankCalc: grad_table.json для {} не найден ({:?}) — без него расчёт невозможен, пропускаем",
+          tank_id, err
+        );
+        return Ok(());
+      }
+      Err(err) => {
+        error!(
+          "TankCalc: не удалось прочитать {}: {err:?} — пропускаем расчёт для {}",
+          grad_table_path, tank_id
+        );
+        return Ok(());
+      }
+    };
     // Читаем time_series.json
     let time_series_content = fs::read_to_string(&time_series_path)?;
     let time_series: Vec<TimeSeriesEntry> = serde_json::from_str(&time_series_content)
@@ -210,7 +245,7 @@ impl TankCalcActor {
 
     let prev_result = state.previous_results.get(tank_id).cloned();
 
-    let calc = self.build_calculation(&meta, &config, entry, prev_result);
+    let calc = self.build_calculation(&meta, &config, entry, prev_result, &grad_rows);
 
     // Запуск расчета ядра
     let result = match calc.calculate() {
@@ -220,6 +255,10 @@ impl TankCalcActor {
         return Ok(());
       }
     };
+    // println!(
+    //   "CCCCAAAALLLLCCCC!!!!!  {:?}  RESSUUUUULLLLLLTTTTT {:?}",
+    //   calc, result
+    // );
 
     let now = Utc::now();
 
@@ -263,6 +302,7 @@ impl TankCalcActor {
     config: &TankConfig,
     entry: &TimeSeriesEntry,
     prev_result: Option<CalculationResult>,
+    grad_rows: &[Vec<f64>],
   ) -> Calculation {
     // Constants уже десериализованы как есть
     let mut calc_constants: Constants = meta.constants;
@@ -289,23 +329,24 @@ impl TankCalcActor {
       Some("4") => CalculationMethod::Four,
       _ => CalculationMethod::One,
     };
-    calc_constants.h_critical_level = config
-      .mass_calculation_method
-      .switching_level
-      .unwrap_or(0.0);
-    calc_constants.hysteresis_product_level_for_method_type = config
-      .mass_calculation_method
-      .switching_level_hysteresis
-      .unwrap_or(0.0);
-    calc_constants.p1_p3_distance = config.mass_calculation_method.p3_p1.unwrap_or(0.0);
-    calc_constants.pressure_sensor_to_reference_point = config
-      .mass_calculation_method
-      .p1_reference_point
-      .unwrap_or(0.0);
-    calc_constants.reference_point = config
-      .mass_calculation_method
-      .reference_point
-      .unwrap_or(0.0);
+
+    // calc_constants.h_critical_level = config
+    //   .mass_calculation_method
+    //   .switching_level
+    //   .unwrap_or(0.0);
+    // calc_constants.hysteresis_product_level_for_method_type = config
+    //   .mass_calculation_method
+    //   .switching_level_hysteresis
+    //   .unwrap_or(0.0);
+    // calc_constants.p1_p3_distance = config.mass_calculation_method.p3_p1.unwrap_or(0.0);
+    // calc_constants.pressure_sensor_to_reference_point = config
+    //   .mass_calculation_method
+    //   .p1_reference_point
+    //   .unwrap_or(0.0);
+    // calc_constants.reference_point = config
+    //   .mass_calculation_method
+    //   .reference_point
+    //   .unwrap_or(0.0);
     // "pontoon_weight": 2877,
     // "tank_wall_alpha": 0.0000125,
 
@@ -338,8 +379,103 @@ impl TankCalcActor {
     // "mech_impurities_mass_pct": 2,
     // "chloride_salts_mass_pct": 3
 
-    let graduation_table: Vec<GradTableItem> = meta
-      .grad_table
+    // 4. Параметры метода расчёта — по максимуму из конфигурации
+    if let Some(sw) = config.mass_calculation_method.switching_level {
+      calc_constants.h_critical_level = sw;
+    }
+
+    if let Some(hyst) = config.mass_calculation_method.switching_level_hysteresis {
+      calc_constants.hysteresis_product_level_for_method_type = hyst;
+    }
+
+    if let Some(d) = config.mass_calculation_method.p3_p1 {
+      calc_constants.p1_p3_distance = d;
+    }
+
+    if let Some(p1_ref) = config.mass_calculation_method.p1_reference_point {
+      calc_constants.pressure_sensor_to_reference_point = p1_ref;
+    }
+
+    if let Some(rp) = config.mass_calculation_method.reference_point {
+      calc_constants.reference_point = rp;
+    }
+    // 5. Конструкция — из construction
+    if let Some(alpha) = config.construction.linear_expansion {
+      // коэффициент линейного расширения стенки резервуара
+      calc_constants.tank_wall_alpha = alpha as f64;
+    }
+
+    if let Some(pontoon) = config.construction.mass_floating_coating {
+      // масса понтона
+      calc_constants.pontoon_weight = Some(pontoon as f64);
+    }
+
+    // 6. Базовые данные: из config.basic_data
+    if let Some(h) = config.basic_data.basic_height {
+      // базовая высота резервуара
+      calc_constants.structure_base_height = h as f64;
+    }
+
+    if let Some(rho) = config.basic_data.density_stored_liquid_according {
+      // плотность продукта в резервуаре
+      calc_constants.tank_product_density = Some(rho as f64);
+    }
+
+    if let Some(h_max) = config.basic_data.maximum_allowable_product_level {
+      // максимальный допустимый уровень продукта
+      calc_constants.h_max_level = h_max as f64;
+    }
+
+    // 7. Показатели точности измерений: из config.measurement_accuracy_indicators
+    let mai = &config.measurement_accuracy_indicators;
+
+    if let Some(v) = mai.limit_permissible_absolute_error {
+      // допустимая абсолютная погрешность расстояния
+      calc_constants.distance_abs_error_limit = v as f64;
+    }
+
+    if let Some(v) = mai.hydrostatic_device_limit {
+      // предел гидростатического устройства — диапазон P1
+      calc_constants.p1_measuring_range_max = v as f64;
+    }
+
+    if let Some(v) = mai.pressure_device_limit {
+      // предел устройства давления — максимум P3
+      calc_constants.pressure3_max_limit = v as f64;
+    }
+
+    if let Some(v) = mai.limit_permissible_absolute_measurement_reservoir_level {
+      // погрешность измерения уровня резервуара
+      calc_constants.max_level_abs_error = v as f64;
+    }
+
+    if let Some(v) = mai.limit_permissible_absolute_measurement_level_raw_water {
+      // погрешность измерения уровня сырой воды
+      calc_constants.water_level_abs_error_limit = v as f64;
+    }
+
+    if let Some(v) = mai.limit_permissible_absolute_measurement_temp_products_and_vapours {
+      // погрешность измерения температуры продуктов и паров
+      calc_constants.temp_abs_error_limit = v as f64;
+    }
+
+    if let Some(v) = mai.limit_permissible_absolute_measurement_oil_densities {
+      // погрешность измерения плотности нефти
+      calc_constants.density_abs_error_limit = v as f64;
+    }
+
+    // 8. Блок калибровки — коэффициент уровня
+    if let Some(k) = config.calibration_block.level_coefficient {
+      calc_constants.h_calibration_coefficient = k;
+    }
+
+    // 9. Гистерезис точечных датчиков уровня
+    if let Some(hyst) = config.levels_of_point_sensors.hysteresis {
+      // логично положить в гистерезис по датчикам/температурным уровням
+      calc_constants.hysteresis_temperature_sensor_level = hyst;
+    }
+
+    let graduation_table: Vec<GradTableItem> = grad_rows
       .iter()
       .filter_map(|row| {
         if row.len() >= 2 {
@@ -354,9 +490,16 @@ impl TankCalcActor {
       })
       .collect();
 
-    let temp_levels: HashMap<_, f64> = config
+    let level_mm_by_id: HashMap<String, f64> = config
       .levels_of_point_sensors
       .points
+      .iter()
+      .map(|p| (p.id.to_uppercase(), p.value as f64))
+      .collect();
+
+    let kti_by_id: HashMap<String, f64> = config
+      .calibration_block
+      .level_point_sensors
       .iter()
       .map(|p| (p.id.to_uppercase(), p.value as f64))
       .collect();
@@ -377,10 +520,13 @@ impl TankCalcActor {
     let level_temps = level_temps_vec
       .into_iter()
       .filter_map(|(name, temp)| {
-        let level = temp_levels.get(name)?;
+        let key = name.to_uppercase();
+        let level = level_mm_by_id.get(&key)?;
+        let kti = kti_by_id.get(&key).cloned().unwrap_or(0.0);
+
         Some(TemperatureSensor {
           temperature: temp,
-          calibration_coefficient: 0.0,
+          calibration_coefficient: kti,
           t_level: *level,
         })
       })

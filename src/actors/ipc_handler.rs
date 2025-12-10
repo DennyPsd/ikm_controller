@@ -10,7 +10,6 @@ use crate::{
 use base64::Engine;
 use base64::engine::general_purpose;
 use ractor::{Actor, ActorProcessingErr, ActorRef};
-use serde_json::Value;
 use serde_json::{json, to_string_pretty};
 use std::collections::HashMap;
 use std::fs::{self, File};
@@ -844,63 +843,47 @@ impl Actor for IpcHandler {
               grad_table.len()
             );
 
-            let calc_dir = format!("assets/db/calc/{device_id}");
-            let meta_path = format!("{calc_dir}/meta.json");
+            // --------- Сохраняем grad_table рядом с config.yaml ---------
+            // Путь вида: assets/db/tanks/<device_id>/grad_table.json
+            let tank_dir = format!("assets/db/tanks/{device_id}");
+            let grad_path = format!("{tank_dir}/grad_table.json");
 
-            let meta_content = match fs::read_to_string(&meta_path) {
-              Ok(content) => content,
-              Err(err) => {
-                let err = internal_error(action.name.clone(), None)
-                  .with_message(format!("load_grad_table: can't read meta.json: {err:?}"));
+            info!(
+              "load_grad_table: сохраняем grad_table в файл: {}",
+              grad_path
+            );
 
-                error!(
-                  "load_grad_table: не удалось прочитать {}: {err:?}",
-                  meta_path
-                );
-                let _ = state
-                  .ipc_router
-                  .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
-                  .map_err(|err| {
-                    error!("load_grad_table: to_replay_msg {}", err);
-                  });
-                return Ok(());
-              }
-            };
+            // создаём директорию tanks/<device_id>, если её ещё нет
+            if let Err(err) = fs::create_dir_all(&tank_dir) {
+              let err = internal_error(action.name.clone(), None).with_message(format!(
+                "load_grad_table: create_dir_all {tank_dir}: {err:?}"
+              ));
 
-            let mut meta: Value = match serde_json::from_str(&meta_content) {
-              Ok(v) => v,
-              Err(err) => {
-                let err = internal_error(action.name.clone(), None)
-                  .with_message(format!("load_grad_table: can't parse meta.json: {}", err));
+              error!(
+                "load_grad_table: не удалось создать директорию {}: {err:?}",
+                tank_dir
+              );
+              let _ = state
+                .ipc_router
+                .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                .map_err(|err| {
+                  error!("load_grad_table: to_replay_msg {}", err);
+                });
+              return Ok(());
+            }
 
-                error!(
-                  "load_grad_table: не удалось распарсить {}: {err:?}",
-                  meta_path
-                );
-                let _ = state
-                  .ipc_router
-                  .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
-                  .map_err(|err| {
-                    error!("load_grad_table: to_replay_msg {}", err);
-                  });
-                return Ok(());
-              }
-            };
-
-            meta["grad_table"] =
-              serde_json::to_value(&grad_table).unwrap_or_else(|_| json!(grad_table));
-
-            let new_meta = match to_string_pretty(&meta) {
+            // сериализуем grad_table как JSON (массив [h, v, dv])
+            let grad_json = match serde_json::to_string_pretty(&grad_table) {
               Ok(s) => s,
               Err(err) => {
                 let err = internal_error(action.name.clone(), None).with_message(format!(
-                  "load_grad_table: serialize meta.json error: {}",
+                  "load_grad_table: serialize grad_table.json error: {}",
                   err
                 ));
 
                 error!(
-                  "load_grad_table: ошибка сериализации meta.json для {}: {err:?}",
-                  meta_path
+                  "load_grad_table: ошибка сериализации grad_table для {}: {err:?}",
+                  grad_path
                 );
                 let _ = state
                   .ipc_router
@@ -912,11 +895,13 @@ impl Actor for IpcHandler {
               }
             };
 
-            if let Err(err) = fs::write(&meta_path, new_meta) {
-              let err = internal_error(action.name.clone(), None)
-                .with_message(format!("load_grad_table: write meta.json error: {err:?}"));
+            // пишем файл grad_table.json
+            if let Err(err) = fs::write(&grad_path, grad_json) {
+              let err = internal_error(action.name.clone(), None).with_message(format!(
+                "load_grad_table: write grad_table.json error: {err:?}"
+              ));
 
-              error!("load_grad_table: ошибка записи {}: {err:?}", meta_path);
+              error!("load_grad_table: ошибка записи {}: {err:?}", grad_path);
               let _ = state
                 .ipc_router
                 .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
@@ -927,8 +912,8 @@ impl Actor for IpcHandler {
             }
 
             info!(
-              "load_grad_table: успешно обновили grad_table в {}",
-              meta_path
+              "load_grad_table: успешно записали grad_table в {}",
+              grad_path
             );
 
             return Ok(());
