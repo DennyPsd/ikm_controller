@@ -517,7 +517,7 @@ impl Actor for KmhIpcHandler {
             if let Some(m) = &meta {
               kmh_report.apply_constants(&m.constants);
             }
-
+            // tank_product_density
             // 3.2. Если есть config.yaml — переопределяем то, что явно задано в конфиге
             if let Some(cfg) = &config {
               // HБ — базовая высота резервуара

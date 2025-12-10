@@ -1,16 +1,11 @@
 use crate::actors::tank_calc::{Meta, TimeSeriesEntry};
 use crate::types::tank_configuration::TankConfig;
 use crate::types::tanks::{BaseVars, ExtVars, Temperature};
-use chrono::{DateTime, Local};
+
 use ikm_calc::calculation::core::{CalculationResult, Constants};
 use ikm_calc::calculation::kmh::KMHReport;
-use serde::{Deserialize, Serialize};
-use smol_str::SmolStr;
+
 use std::collections::HashMap;
-use taxon_core::infrastructure::device::{FacilityEvent, FacilityEventRule, FacilitySeverity};
-use taxon_core::infrastructure::facility::DataLink;
-use taxon_core::prelude::IPCTarget;
-use uuid::Uuid;
 
 /// Отчёт КМХ собирается из трёх источников:
 /// 1) Константы конфигурации (`Constants`) через `KMHReportExt::apply_constants`
@@ -100,7 +95,13 @@ impl KMHReportExt for KMHReport {
 
     // Плотность по ИС (может быть позже перезаписана данными измерений)
     if let Some(rho) = c.tank_product_density {
-      self.density_measured = rho;
+      // плотность по ИС → сюда
+      self.density_verified = rho;
+
+      // а measured заполним этим же значением, только если ещё не было реальных измерений
+      if self.density_measured == 0.0 {
+        self.density_measured = rho;
+      }
     }
   }
 

@@ -4,13 +4,12 @@ use ikm_calc::calculation::core::{
   Variables,
 };
 use ractor::{Actor, ActorProcessingErr, ActorRef};
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use smol_str::SmolStr;
+use std::collections::HashMap;
 use std::fs;
 use std::io::ErrorKind;
 use std::time::Duration;
-use std::{collections::HashMap, fs::File};
 use tracing::{error, info};
 use uuid::Uuid;
 
@@ -143,17 +142,17 @@ impl Actor for TankCalcActor {
         state.events = Some(events);
 
         for tank in tanks.iter_mut() {
-          let tank_id = (&tank.id).clone();
+          let tank_id = tank.id;
           tank.load_all().await;
           if let Err(e) = self.process_tank(tank, state, &event_rules).await {
             error!("Ошибка ID tank {}: {}", tank_id, e);
           }
         }
-        if state.events.is_some() && state.events.as_ref().unwrap().len() > 0 {
-          if let Err(e) = FacilityEvent::save_all(state.events.take().unwrap(), "assets/db/").await
-          {
-            error!("Ошибка обновления событий: {}", e);
-          }
+        if state.events.is_some()
+          && !state.events.as_ref().unwrap().is_empty()
+          && let Err(e) = FacilityEvent::save_all(state.events.take().unwrap(), "assets/db/").await
+        {
+          error!("Ошибка обновления событий: {}", e);
         }
 
         let _ = myself.send_after(Duration::from_secs(2), || TankCalcMsg::Tick);
@@ -186,7 +185,7 @@ impl TankCalcActor {
 
     // Читаем config.yaml
     let config_content = fs::read_to_string(&config_vars_path)?;
-    let config: TankConfig = serde_saphyr::from_str(&config_content)
+    let _config: TankConfig = serde_saphyr::from_str(&config_content)
       .map_err(|err| format!("Cant parse config: {err:?}"))?;
 
     let grad_rows = match fs::read_to_string(&grad_table_path) {
@@ -239,7 +238,7 @@ impl TankCalcActor {
     // читаем правила эвентов
 
     // Берем индекс из "ts" в time_series.json, с учетом того, что они могут повторяться
-    let current_index = state.current_indices.entry(tank.id.clone()).or_insert(0);
+    let current_index = state.current_indices.entry(tank.id).or_insert(0);
     let next_index = (*current_index + 1) % time_series.len();
     let entry = &time_series[next_index];
     *current_index = next_index;
@@ -247,7 +246,7 @@ impl TankCalcActor {
     let prev_result = state.previous_results.get(&tank.id).cloned();
 
     let calc = self.build_calculation(&meta, &config, entry, prev_result, &grad_rows);
-
+    // println!("calc : {:?}",calc);
     // Запуск расчета ядра
     let result = match calc.calculate() {
       Ok(res) => res,
@@ -288,7 +287,7 @@ impl TankCalcActor {
     fs::write(&ext_vars_path, ext_yaml)?;
 
     // Проверяем правила событий и при необходимости генерируем FacilityEvent
-    self.check_event_rules(&tank, event_rules, &result, entry.ts, state);
+    self.check_event_rules(tank, event_rules, &result, entry.ts, state);
 
     // Обновляем previous_result для этого танка
     state.previous_results.insert(tank.id, result);
@@ -606,7 +605,7 @@ impl TankCalcActor {
             exceeded = true;
           }
 
-          let key = (tank.id.clone(), *id);
+          let key = (tank.id, *id);
 
           if !exceeded {
             if let Some(ev_state) = state.event_states.get_mut(&key) {
@@ -647,7 +646,7 @@ impl TankCalcActor {
                 ends_at: None,
                 rule: rule.new_link_to(),
                 acknowledged: None,
-                value: value.clone(),
+                value,
               };
 
               info!(

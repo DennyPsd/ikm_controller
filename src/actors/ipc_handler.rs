@@ -124,7 +124,7 @@ impl Actor for IpcHandler {
             let mut tanks: HashMap<_, _> = Tank::load_list("assets/db/")
               .await
               .into_iter()
-              .map(|v| (v.id.clone(), v))
+              .map(|v| (v.id, v))
               .collect();
 
             let ids: Vec<_> = if !args.ids.is_empty() {
@@ -298,7 +298,7 @@ impl Actor for IpcHandler {
               args.fields
             );
 
-            let mut tanks = Tank::load_list("assets/db/").await;
+            let tanks = Tank::load_list("assets/db/").await;
 
             let mut products_by_id: HashMap<Uuid, Product> = HashMap::new();
 
@@ -503,7 +503,7 @@ impl Actor for IpcHandler {
               rules.push(rule.clone());
             }
 
-            FacilityEventRule::save_all(rules, "assets/db/").await;
+            let _ = FacilityEventRule::save_all(rules, "assets/db/").await;
 
             // В ответ отдаём само правило (Reply = FacilityEventRule)
             if let Some(msg) = ipc_msg.to_replay_msg(Some(json!(rule)), None) {
