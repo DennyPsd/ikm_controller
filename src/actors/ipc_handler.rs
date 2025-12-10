@@ -247,8 +247,8 @@ impl Actor for IpcHandler {
               .map_err(|err| format!("Cant parse config: {err:?}"))?;
             let new_config = args;
 
-            let _change =
-              DataChange::generate_changes(&old_config, &new_config, "admin".into(), Local::now());
+            // let _change =
+            //   DataChange::generate_changes(&old_config, &new_config, "admin".into(), Local::now());
             if let Err(err) = fs::write(
               config_vars_path,
               serde_saphyr::to_string(&new_config).unwrap(),
