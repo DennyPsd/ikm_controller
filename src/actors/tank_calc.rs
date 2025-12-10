@@ -4,21 +4,22 @@ use ikm_calc::calculation::core::{
   Variables,
 };
 use ractor::{Actor, ActorProcessingErr, ActorRef};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use smol_str::SmolStr;
-use std::collections::HashMap;
 use std::fs;
 use std::io::ErrorKind;
 use std::time::Duration;
+use std::{collections::HashMap, fs::File};
 use tracing::{error, info};
 use uuid::Uuid;
 
 use crate::types::{
   tank_configuration::TankConfig,
-  tanks::{BaseVars, ExtVars},
+  tanks::{BaseVars, ExtVars, Tank},
 };
 
-use crate::types::type_traits::{CalculationResultExt, FacilityEventYaml};
+use crate::types::type_traits::CalculationResultExt;
 use ikm_calc::calculation::types::GradTableItem;
 use taxon_core::infrastructure::device::{FacilityEvent, FacilityEventRule};
 use taxon_core::infrastructure::facility::SharedData;
@@ -82,6 +83,7 @@ pub struct TankCalcState {
   pub previous_results: HashMap<Uuid, CalculationResult>,
   /// Состояние по правилам событий: (tank_id, rule_id) -> EventState
   pub event_states: HashMap<(Uuid, Uuid), EventState>,
+  pub events: Option<Vec<FacilityEvent>>,
 }
 
 /// Внутреннее состояние нарушения правила для конкретного танка/правила
@@ -123,6 +125,7 @@ impl Actor for TankCalcActor {
       current_indices: HashMap::new(),
       previous_results: HashMap::new(),
       event_states: HashMap::new(),
+      events: None,
     })
   }
 
@@ -136,29 +139,23 @@ impl Actor for TankCalcActor {
     match msg {
       TankCalcMsg::Tick => {
         // Читаем tanks.yaml
-        let tanks_yaml = match fs::read_to_string("assets/db/tanks.yaml") {
-          Ok(content) => content,
-          Err(e) => {
-            error!("Ошибка чтения tanks.yaml: {}", e);
-            let _ = myself.send_after(Duration::from_secs(10), || TankCalcMsg::Tick);
-            return Ok(());
-          }
-        };
 
-        let tanks: Vec<crate::types::tanks::Tank> = match serde_saphyr::from_str(&tanks_yaml) {
-          Ok(t) => t,
-          Err(e) => {
-            error!("Ошибка разбора tanks.yaml: {}", e);
-            let _ = myself.send_after(Duration::from_secs(10), || TankCalcMsg::Tick);
-            return Ok(());
-          }
-        };
+        let mut tanks = Tank::load_list("assets/db/").await;
+        let event_rules = FacilityEventRule::load_list("assets/db/").await;
+        let events = FacilityEvent::load_list("assets/db/").await;
+        state.events = Some(events);
 
-        let tank_ids: Vec<Uuid> = tanks.into_iter().map(|t| t.id).collect();
-
-        for tank_id in tank_ids {
-          if let Err(e) = self.process_tank(&tank_id, state).await {
+        for tank in tanks.iter_mut() {
+          let tank_id = (&tank.id).clone();
+          tank.load_all().await;
+          if let Err(e) = self.process_tank(tank, state, &event_rules).await {
             error!("Ошибка ID tank {}: {}", tank_id, e);
+          }
+        }
+        if state.events.is_some() && state.events.as_ref().unwrap().len() > 0 {
+          if let Err(e) = FacilityEvent::save_all(state.events.take().unwrap(), "assets/db/").await
+          {
+            error!("Ошибка обновления событий: {}", e);
           }
         }
 
@@ -173,25 +170,20 @@ impl Actor for TankCalcActor {
 impl TankCalcActor {
   async fn process_tank(
     &self,
-    tank_id: &Uuid,
+    tank: &mut Tank,
     state: &mut TankCalcState,
+    event_rules: &Vec<FacilityEventRule>,
   ) -> Result<(), Box<dyn std::error::Error>> {
-    let meta_path = format!("assets/db/calc/{}/meta.json", tank_id);
-    let time_series_path = format!("assets/db/calc/{}/time_series.json", tank_id);
-    let config_vars_path = format!("assets/db/tanks/{}/config.yaml", tank_id);
-
-    let base_vars_path = format!("assets/db/tanks/{}/base_vars.yaml", tank_id);
-    let ext_vars_path = format!("assets/db/tanks/{}/ext_vars.yaml", tank_id);
+    let meta_path = format!("assets/db/calc/{}/meta.json", tank.id);
+    let time_series_path = format!("assets/db/calc/{}/time_series.json", tank.id);
+    let config_vars_path = format!("assets/db/tanks/{}/config.yaml", tank.id);
+    let base_vars_path = format!("assets/db/tanks/{}/base_vars.yaml", tank.id);
+    let ext_vars_path = format!("assets/db/tanks/{}/ext_vars.yaml", tank.id);
 
     // Читаем meta.json
     let meta_content = fs::read_to_string(&meta_path)?;
     let meta: Meta =
       serde_json::from_str(&meta_content).map_err(|err| format!("Cant parse meta: {err:?}"))?;
-
-    // Читаем config.yaml
-    let config_content = fs::read_to_string(&config_vars_path)?;
-    let config: TankConfig = serde_saphyr::from_str(&config_content)
-      .map_err(|err| format!("Cant parse config: {err:?}"))?;
 
     // Читаем time_series.json
     let time_series_content = fs::read_to_string(&time_series_path)?;
@@ -201,14 +193,19 @@ impl TankCalcActor {
     if time_series.is_empty() {
       return Ok(());
     }
+    // Читаем config.yaml
+    let config_content = fs::read_to_string(&config_vars_path)?;
+    let config: TankConfig = serde_saphyr::from_str(&config_content)
+      .map_err(|err| format!("Cant parse config: {err:?}"))?;
+    // читаем правила эвентов
 
     // Берем индекс из "ts" в time_series.json, с учетом того, что они могут повторяться
-    let current_index = state.current_indices.entry(*tank_id).or_insert(0);
+    let current_index = state.current_indices.entry(tank.id.clone()).or_insert(0);
     let next_index = (*current_index + 1) % time_series.len();
     let entry = &time_series[next_index];
     *current_index = next_index;
 
-    let prev_result = state.previous_results.get(tank_id).cloned();
+    let prev_result = state.previous_results.get(&tank.id).cloned();
 
     let calc = self.build_calculation(&meta, &config, entry, prev_result);
 
@@ -216,7 +213,7 @@ impl TankCalcActor {
     let result = match calc.calculate() {
       Ok(res) => res,
       Err(e) => {
-        error!("Ошибка расчета для {}: {:?}", tank_id, e);
+        error!("Ошибка расчета для {}: {:?}", tank.id, e);
         return Ok(());
       }
     };
@@ -248,10 +245,10 @@ impl TankCalcActor {
     fs::write(&ext_vars_path, ext_yaml)?;
 
     // Проверяем правила событий и при необходимости генерируем FacilityEvent
-    self.check_event_rules(tank_id, &result, entry.ts, state);
+    self.check_event_rules(&tank, event_rules, &result, entry.ts, state);
 
     // Обновляем previous_result для этого танка
-    state.previous_results.insert(*tank_id, result);
+    state.previous_results.insert(tank.id, result);
 
     Ok(())
   }
@@ -409,36 +406,17 @@ impl TankCalcActor {
   /// Проверка всех FacilityEventRule из eventrules.yaml и генерация FacilityEvent в events.yaml
   fn check_event_rules(
     &self,
-    tank_id: &Uuid,
+    tank: &Tank,
+    event_rules: &Vec<FacilityEventRule>,
     result: &CalculationResult,
     entry_ts: i64,
     state: &mut TankCalcState,
   ) {
-    let rules_path = "assets/db/event_rules.yaml";
-
-    let rules: Vec<FacilityEventRule> = match fs::read_to_string(rules_path) {
-      Ok(content) => match serde_saphyr::from_str(&content) {
-        Ok(list) => list,
-        Err(err) => {
-          error!(
-            "TankCalc: не удалось распарсить {} как список FacilityEventRule: {err:?}",
-            rules_path
-          );
-          Vec::new()
-        }
-      },
-      Err(err) if err.kind() == ErrorKind::NotFound => Vec::new(),
-      Err(err) => {
-        error!("TankCalc: не удалось прочитать {}: {err:?}", rules_path);
-        Vec::new()
-      }
-    };
-
-    if rules.is_empty() {
+    if event_rules.is_empty() {
       return;
     }
 
-    for rule in &rules {
+    for rule in event_rules {
       let Some(target) = rule.target() else {
         continue;
       };
@@ -459,10 +437,6 @@ impl TankCalcActor {
           threshold,
           ..
         } => {
-          if var_path.is_empty() {
-            continue;
-          }
-
           let value = match self.resolve_var_value(result, var_path) {
             Some(v) => v,
             None => {
@@ -482,14 +456,14 @@ impl TankCalcActor {
             exceeded = true;
           }
 
-          let key = (*tank_id, *id);
+          let key = (tank.id.clone(), *id);
 
           if !exceeded {
             if let Some(ev_state) = state.event_states.get_mut(&key) {
               if ev_state.exceed_started_ts.is_some() || ev_state.event_active {
                 info!(
                   "TankCalc: значение {:?} для правила {} по танку {} вернулось в норму (value={:.3})",
-                  var_path, id, tank_id, value
+                  var_path, id, tank.id, value
                 );
               }
               ev_state.exceed_started_ts = None;
@@ -517,20 +491,21 @@ impl TankCalcActor {
               let event = FacilityEvent {
                 id: Uuid::now_v7(),
                 target: rule.target().cloned(),
+                target_title: tank.title().cloned(),
                 severity: rule.severity(),
                 starts_at: Local::now(),
                 ends_at: None,
                 rule: rule.new_link_to(),
                 acknowledged: None,
-                value: value.into(),
+                value: value.clone(),
               };
 
               info!(
                 "TankCalc: генерируем событие по правилу {} для танка {} (var={:?}, value={:.3}, min={:?}, max={:?}, secs={})",
-                id, tank_id, var_path, value, min, max, secs
+                id, tank.id, var_path, value, min, max, secs
               );
 
-              self.append_event_to_yaml(&event);
+              state.events.as_mut().unwrap().push(event);
               ev_state.event_active = true;
             }
           }
@@ -560,50 +535,6 @@ impl TankCalcActor {
       "gross_mass_relative_error_limit" => Some(result.gross_mass_relative_error_limit),
       "velocity_product_level" => Some(result.velocity_product_level),
       _ => None,
-    }
-  }
-
-  /// Дописываем событие в `assets/db/events.yaml` в виде YAML-списка
-  fn append_event_to_yaml(&self, event: &FacilityEvent) {
-    let path = "assets/db/events.yaml";
-
-    let mut events: Vec<FacilityEventYaml> = match fs::read_to_string(path) {
-      Ok(content) => match serde_saphyr::from_str::<Vec<FacilityEventYaml>>(&content) {
-        Ok(list) => list,
-        Err(err_vec) => match serde_saphyr::from_str::<FacilityEventYaml>(&content) {
-          Ok(single) => vec![single],
-          Err(err_single) => {
-            error!(
-              "TankCalc: не удалось распарсить {} ни как Vec<FacilityEvent> ({}), \
-                 ни как FacilityEvent ({}). Текущий контент файла:\n{}",
-              path, err_vec, err_single, content
-            );
-            Vec::new()
-          }
-        },
-      },
-      Err(err) if err.kind() == ErrorKind::NotFound => Vec::new(),
-      Err(err) => {
-        error!("TankCalc: не удалось прочитать {}: {err:?}", path);
-        return;
-      }
-    };
-
-    // добавляем новое событие в начало
-    events.insert(0, FacilityEventYaml::from(event));
-
-    match serde_saphyr::to_string(&events) {
-      Ok(yaml) => {
-        if let Err(err) = fs::write(path, yaml) {
-          error!("TankCalc: не удалось записать {}: {err:?}", path);
-        }
-      }
-      Err(err) => {
-        error!(
-          "TankCalc: не удалось сериализовать список FacilityEvent в YAML: {err:?} (len={})",
-          events.len()
-        );
-      }
     }
   }
 }

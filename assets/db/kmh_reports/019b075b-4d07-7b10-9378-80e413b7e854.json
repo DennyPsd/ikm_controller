@@ -1,0 +1,56 @@
+{
+  "id": "019b075b-4d07-7b10-9378-80e413b7e854",
+  "title": "КМХ отчёт для цистерны 0f99cd5d-6f09-4e5a-a590-386fdddd15b2",
+  "description": null,
+  "created_by": "system",
+  "updated_by": null,
+  "created_at": "2025-12-10T11:23:02.663193100+03:00",
+  "updated_at": null,
+  "tank": {
+    "Link": {
+      "ns": "Tank",
+      "id": "0f99cd5d-6f09-4e5a-a590-386fdddd15b2",
+      "title": "Tank-4",
+      "created_by": null,
+      "updated_by": null,
+      "created_at": null,
+      "updated_at": null
+    }
+  },
+  "software_name": "ikm",
+  "software_version": "0.1.1",
+  "status": "FullfilRequired",
+  "data": {
+    "air_temperature_outside": 0.0,
+    "air_pressure_outside": 0.0,
+    "wind_speed": 0.0,
+    "gas_layer_height_measured_points": [],
+    "measured_height": 0.0,
+    "nominal_height": 12070.0,
+    "delta_height": 1.0,
+    "density_verified": 0.0,
+    "density_measured": 1013.5988324921692,
+    "density_measured_controlled": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "product_volume_measured": 1904.3811428061726,
+    "volume_coarse": 1904.526,
+    "air_temp_verify": 0.0,
+    "pontoon_mass": 2877.0,
+    "product_mass_measured": 1931.368,
+    "vapor_temp": 17.633333333333333,
+    "tape_class": "One",
+    "delta_v_max": 0.18,
+    "delta_m_max": 0.17727860323652747,
+    "ruler_alpha_coefficient": 0.0,
+    "wall_alpha_coefficient": 0.00001249999968422344,
+    "pressure_coefficient": 0.0,
+    "level_channels": null,
+    "temperature_channels": [],
+    "mass_channels": null,
+    "volume_channels": null,
+    "density_channels": null
+  }
+}

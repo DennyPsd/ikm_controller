@@ -23,6 +23,7 @@ pub struct BaseVars {
   /// Текущий уровень
   pub product_level: f64,
 }
+
 /// Параметры отображения цистерны
 #[derive(Default, Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
 pub struct TankDisplay {
@@ -61,6 +62,7 @@ pub struct Tank {
   /// Параметры отображения
   pub display_params: Option<TankDisplay>,
 }
+#[ractor::async_trait]
 impl SharedData for Tank {
   fn id(&self) -> &Uuid {
     &self.id
