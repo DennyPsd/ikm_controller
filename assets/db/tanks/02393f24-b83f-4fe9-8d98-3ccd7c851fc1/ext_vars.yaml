@@ -1,49 +1,49 @@
-product_volume: 1286.744878720117
-product_level: 7121.0
-water_level: 11.0
-product_temperature: 34.34
-vapour_temperature: -22.24
-product_density: 1094.0950616481139
-product_at_15_density: 1106.81422
-hydrostatic_pressure: 64440.0
-vapour_pressure: 2006.0
+product_volume: 1286.4848373701582
+product_level: 7120.0
+water_level: 12.0
+product_temperature: 34.32
+vapour_temperature: -23.08
+product_density: 1096.2471585978715
+product_at_15_density: 1108.89479
+hydrostatic_pressure: 64556.0
+vapour_pressure: 2002.0
 reserve_capacity_up_max: 0.0
 reserve_product_up_min: 3500.0
 product_movement_consumption: 0.0
 product_movement_level_measurement_speed: 0.0
-volume_product_calc_below_water: 1.4788
-volume_raw_water: 1.4788
+volume_product_calc_below_water: 1.5615999999999999
+volume_raw_water: 1.5615999999999999
 temperatures:
-  - value: 19.1
+  - value: 18.3
     level: 750
     name: T0
-  - value: 19.3
+  - value: 17.8
     level: 2000
     name: T1
-  - value: 17.2
+  - value: 19.2
     level: 3500
     name: T2
-  - value: 17.5
+  - value: 17.7
     level: 5000
     name: T3
   - value: 18.6
     level: 6500
     name: T4
-  - value: 17.4
+  - value: 18.1
     level: 8000
     name: T5
-  - value: 19.6
+  - value: 16.5
     level: 9500
     name: T6
-  - value: 17.3
+  - value: 19.3
     level: 11000
     name: T7
-  - value: 16.6
+  - value: 15.0
     level: 12500
     name: T8
-  - value: 17.9
+  - value: 15.7
     level: 15000
     name: T9
-volume_coarse: 1286.2633
+volume_coarse: 1286.082
 volume_relative_error_limit: 0.0
 gross_mass_relative_error_limit: 0.0
