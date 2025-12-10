@@ -4,9 +4,10 @@
   var_path: ["product_level"]
   description: ""
   help: ""
-  name: H по Массе
+  name: HH по Массе
   can_end: false
-  severity: CRITICAL
+  severity: EMERGENCY
+  threshold: 10
   target:
     data_ns: Tank
     type: Data
