@@ -372,7 +372,7 @@ impl Actor for IpcHandler {
             let rules: HashMap<_, _> = FacilityEventRule::load_list("assets/db/")
               .await
               .into_iter()
-              .map(|v| (v.id().clone(), v))
+              .map(|v| (*v.id(), v))
               .collect();
 
             let data: Vec<FacilityEvent> = if args.ids.is_empty() {
@@ -385,8 +385,8 @@ impl Actor for IpcHandler {
                 .map(|v| {
                   let mut v = v;
                   v.rule = DataLink::Data(
-                    (&rules)
-                      .into_iter()
+                    rules
+                      .iter()
                       .find(|r| r.1.id() == v.rule.id())
                       .unwrap()
                       .1
@@ -836,10 +836,10 @@ pub fn get_tank_full(id: Uuid) -> Result<Tank, anyhow::Error> {
     .unwrap(),
   )?;
 
-  let path = "assets/db/tanks.yaml";
+  let _path = "assets/db/tanks.yaml";
   let mut tanks: HashMap<_, _> = Tank::load_list_sync("assets/db")
     .into_iter()
-    .map(|v| (v.id.clone(), v))
+    .map(|v| (v.id, v))
     .collect();
   let ids: Vec<_> = if !args.ids.is_empty() {
     args.ids.to_vec()
