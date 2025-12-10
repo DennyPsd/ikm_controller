@@ -715,71 +715,140 @@ impl Actor for KmhIpcHandler {
             && action.name.as_deref() == Some("kmh_report_set")
             && action.args.is_some()
           {
-            info!("KmhIpcHandler: обработка action 'kmh_report_set'");
-
-            let kmh_instance =
-              match serde_json::from_value::<KMHReportInstance>(action.args.clone().unwrap()) {
-                Ok(v) => v,
-                Err(err) => {
-                  let err = internal_error(action.name.clone(), None)
-                    .with_message(format!("kmh_report_set: {}", err));
-
-                  info!("kmh_report_set: шлём ошибку в ipc_router (bad args)");
-                  let _ = state
-                    .ipc_router
-                    .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
-                    .map_err(|err| {
-                      error!("kmh_report_set: to_replay_msg {}", err);
-                    });
-                  return Ok(());
-                }
-              };
-
             info!(
-              "kmh_report_set: сохранение КМХ без пересчёта для report_id={}",
-              kmh_instance.id
+              "KMH_REPORT_SET: старт обработки action='kmh_report_set', target.device_id={:?}",
+              action.target.device_id
             );
 
+            // ---------- Парсим args ----------
+            let raw_args = action.args.clone().unwrap();
+            if let Ok(args_pretty) = serde_json::to_string_pretty(&raw_args) {
+              info!("KMH_REPORT_SET: сырые args из IPC:\n{}", args_pretty);
+            } else {
+              info!(
+                "KMH_REPORT_SET: не удалось красиво вывести args, логирую как Debug: {raw_args:?}"
+              );
+            }
+
+            let kmh_instance = match serde_json::from_value::<KMHReportInstance>(raw_args.clone()) {
+              Ok(v) => {
+                info!(
+                  "KMH_REPORT_SET: args успешно распарсены в KMHReportInstance: id={:?}, title={:?}",
+                  v.id, v.title
+                );
+                v
+              }
+              Err(err) => {
+                error!("KMH_REPORT_SET: ошибка парсинга KMHReportInstance из args: {err:?}");
+
+                let err = internal_error(action.name.clone(), None)
+                  .with_message(format!("kmh_report_set: cannot parse args: {err}"));
+
+                info!("KMH_REPORT_SET: отправляем ошибку в ipc_router (bad args)");
+                if let Err(send_err) = state
+                  .ipc_router
+                  .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                {
+                  error!(
+                    "KMH_REPORT_SET: ошибка отправки ответа в ipc_router при bad args: {send_err:?}"
+                  );
+                }
+                return Ok(());
+              }
+            };
+
+            info!(
+              "KMH_REPORT_SET: будем сохранять КМХ-отчёт БЕЗ пересчёта: report_id={:?}, title={:?}",
+              kmh_instance.id, kmh_instance.title
+            );
+
+            // ---------- Создаём директорию для отчётов ----------
             let dir_path = "assets/db/kmh_reports";
+            info!("KMH_REPORT_SET: проверяем/создаём директорию для отчётов: {dir_path}");
+
             if let Err(err) = fs::create_dir_all(dir_path) {
+              error!("KMH_REPORT_SET: ошибка create_dir_all('{dir_path}'): {err:?}");
               let err = internal_error(action.name.clone(), None).with_message(format!(
                 "kmh_report_set: create_dir_all {dir_path}: {err:?}"
               ));
 
               if let Some(msg) = ipc_msg.to_replay_msg(Option::<()>::None, Some(err)) {
-                info!("kmh_report_set: шлём ошибку в ipc_router (create_dir_all)");
-                let _ = state.ipc_router.send_message(Some(msg));
+                info!("KMH_REPORT_SET: шлём ошибку в ipc_router (create_dir_all)");
+                if let Err(send_err) = state.ipc_router.send_message(Some(msg)) {
+                  error!(
+                    "KMH_REPORT_SET: ошибка отправки ответа в ipc_router (create_dir_all): {send_err:?}"
+                  );
+                }
               } else {
-                error!("kmh_report_set: to_replay_msg вернул None (create_dir_all)");
+                error!(
+                  "KMH_REPORT_SET: to_replay_msg вернул None при ошибке create_dir_all('{dir_path}')"
+                );
               }
               return Ok(());
             }
 
+            info!("KMH_REPORT_SET: директория для отчётов готова: {dir_path}");
+
+            // ---------- Формируем путь до файла и пишем JSON ----------
             let file_path = format!("{}/{}.json", dir_path, kmh_instance.id);
+            info!("KMH_REPORT_SET: сохраняем отчёт в файл: {}", file_path);
 
             let write_result: Result<(), _> = File::create(&file_path).and_then(|f| {
               serde_json::to_writer_pretty(f, &kmh_instance).map_err(std::io::Error::other)
             });
 
             if let Err(err) = write_result {
+              error!(
+                "KMH_REPORT_SET: ошибка записи файла отчёта {:?}: {err:?}",
+                file_path
+              );
+
               let err = internal_error(action.name.clone(), None)
                 .with_message(format!("kmh_report_set: write {:?}: {err:?}", file_path));
 
               if let Some(msg) = ipc_msg.to_replay_msg(Option::<()>::None, Some(err)) {
-                info!("kmh_report_set: шлём ошибку в ipc_router (write)");
-                let _ = state.ipc_router.send_message(Some(msg));
+                info!("KMH_REPORT_SET: шлём ошибку в ipc_router (write error)");
+                if let Err(send_err) = state.ipc_router.send_message(Some(msg)) {
+                  error!(
+                    "KMH_REPORT_SET: ошибка отправки ответа в ipc_router (write error): {send_err:?}"
+                  );
+                }
               } else {
-                error!("kmh_report_set: to_replay_msg вернул None при ошибке записи файла");
+                error!(
+                  "KMH_REPORT_SET: to_replay_msg вернул None при ошибке записи файла {:?}",
+                  file_path
+                );
               }
               return Ok(());
             }
 
+            info!(
+              "KMH_REPORT_SET: отчёт успешно сохранён: report_id={:?}, file={}",
+              kmh_instance.id, file_path
+            );
+
+            // ---------- Отправляем успешный ответ ----------
             if let Some(msg) = ipc_msg.to_replay_msg(Some(json!(kmh_instance)), None) {
-              info!("kmh_report_set: отправляем ответ в ipc_router");
-              let _ = state.ipc_router.send_message(Some(msg));
+              info!(
+                "KMH_REPORT_SET: отправляем успешный ответ в ipc_router по report_id={:?}",
+                kmh_instance.id
+              );
+              if let Err(send_err) = state.ipc_router.send_message(Some(msg)) {
+                error!(
+                  "KMH_REPORT_SET: ошибка отправки успешного ответа в ipc_router: {send_err:?}"
+                );
+              }
             } else {
-              error!("kmh_report_set: to_replay_msg вернул None");
+              error!(
+                "KMH_REPORT_SET: to_replay_msg вернул None при формировании успешного ответа (report_id={:?})",
+                kmh_instance.id
+              );
             }
+
+            info!(
+              "KMH_REPORT_SET: обработка kmh_report_set завершена для report_id={:?}",
+              kmh_instance.id
+            );
 
             return Ok(());
           }
