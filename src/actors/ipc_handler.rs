@@ -9,7 +9,6 @@ use crate::{
 };
 use base64::Engine;
 use base64::engine::general_purpose;
-use chrono::Local;
 use ractor::{Actor, ActorProcessingErr, ActorRef};
 use serde_json::Value;
 use serde_json::{json, to_string_pretty};
@@ -17,7 +16,6 @@ use std::collections::HashMap;
 use std::fs::{self, File};
 use taxon_core::actors::ipc::errors::internal_error;
 use taxon_core::infrastructure::device::{FacilityEvent, FacilityEventRule};
-use taxon_core::infrastructure::facility::DataChange;
 use taxon_core::prelude::{IPCActionKind, IPCActorMsg, IPCMessageCrate};
 use tracing::{error, info};
 use uuid::Uuid;
@@ -958,14 +956,10 @@ pub fn get_tank_full(id: Uuid) -> Result<Tank, anyhow::Error> {
   )?;
 
   let path = "assets/db/tanks.yaml";
-  let mut tanks_reader = File::open(path)?;
+  let tanks_reader = File::open(path)?;
   let mut tanks: HashMap<_, _> = serde_saphyr::from_reader::<File, Vec<Tank>>(tanks_reader)
-    .map(|v| {
-      v.into_iter()
-        .map(|v| (v.id.clone(), v))
-        .collect::<HashMap<_, _>>()
-    })
-    .map_err(|err| anyhow::Error::new(err))?;
+    .map(|v| v.into_iter().map(|v| (v.id, v)).collect::<HashMap<_, _>>())
+    .map_err(anyhow::Error::new)?;
 
   let ids: Vec<_> = if !args.ids.is_empty() {
     args.ids.to_vec()
@@ -1046,7 +1040,7 @@ pub fn get_tank_full(id: Uuid) -> Result<Tank, anyhow::Error> {
     .filter_map(|(id, v)| if ids.contains(&id) { Some(v) } else { None })
     .collect::<Vec<_>>();
 
-  if data.len() > 0 {
+  if !data.is_empty() {
     Ok(data[0].clone())
   } else {
     Err(anyhow::Error::msg("not_fond"))

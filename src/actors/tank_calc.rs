@@ -18,7 +18,7 @@ use crate::types::{
   tanks::{BaseVars, ExtVars},
 };
 
-use crate::types::type_traits::CalculationResultExt;
+use crate::types::type_traits::{CalculationResultExt, FacilityEventYaml};
 use ikm_calc::calculation::types::GradTableItem;
 use taxon_core::infrastructure::device::{FacilityEvent, FacilityEventRule};
 use taxon_core::infrastructure::facility::SharedData;
@@ -346,7 +346,7 @@ impl TankCalcActor {
           Some(GradTableItem {
             level: row[0],
             volume: row[1],
-            // epsilon: if row.len() >= 3 { row[2].clone() } else { 0.0 },
+            // epsilon: if row.len() >= 3 { row[2] } else { 0.0 },
           })
         } else {
           None
@@ -522,7 +522,7 @@ impl TankCalcActor {
                 ends_at: None,
                 rule: rule.new_link_to(),
                 acknowledged: None,
-                value: value.clone().into(),
+                value: value.into(),
               };
 
               info!(
@@ -567,16 +567,20 @@ impl TankCalcActor {
   fn append_event_to_yaml(&self, event: &FacilityEvent) {
     let path = "assets/db/events.yaml";
 
-    let mut events: Vec<FacilityEvent> = match fs::read_to_string(path) {
-      Ok(content) => match serde_saphyr::from_str(&content) {
+    let mut events: Vec<FacilityEventYaml> = match fs::read_to_string(path) {
+      Ok(content) => match serde_saphyr::from_str::<Vec<FacilityEventYaml>>(&content) {
         Ok(list) => list,
-        Err(err) => {
-          error!(
-            "TankCalc: не удалось распарсить {} как список FacilityEvent: {err:?}, перезаписываем с нуля",
-            path
-          );
-          Vec::new()
-        }
+        Err(err_vec) => match serde_saphyr::from_str::<FacilityEventYaml>(&content) {
+          Ok(single) => vec![single],
+          Err(err_single) => {
+            error!(
+              "TankCalc: не удалось распарсить {} ни как Vec<FacilityEvent> ({}), \
+                 ни как FacilityEvent ({}). Текущий контент файла:\n{}",
+              path, err_vec, err_single, content
+            );
+            Vec::new()
+          }
+        },
       },
       Err(err) if err.kind() == ErrorKind::NotFound => Vec::new(),
       Err(err) => {
@@ -585,7 +589,8 @@ impl TankCalcActor {
       }
     };
 
-    events.insert(0, event.clone());
+    // добавляем новое событие в начало
+    events.insert(0, FacilityEventYaml::from(event));
 
     match serde_saphyr::to_string(&events) {
       Ok(yaml) => {
@@ -594,7 +599,10 @@ impl TankCalcActor {
         }
       }
       Err(err) => {
-        error!("TankCalc: не удалось сериализовать список FacilityEvent в YAML: {err:?}");
+        error!(
+          "TankCalc: не удалось сериализовать список FacilityEvent в YAML: {err:?} (len={})",
+          events.len()
+        );
       }
     }
   }

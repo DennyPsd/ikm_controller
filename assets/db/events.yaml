@@ -1,4 +1,4 @@
-- id: 019b033b-05d1-7ac3-8d32-49914de5a85a
+- id: 019b06c6-25bf-7fe3-afad-be378d687f59
   target:
     type: Data
     module_id: null
@@ -21,7 +21,7 @@
     action_kind: null
     action_name: null
   severity: CRITICAL
-  starts_at: 2025-12-09T16:09:18.417953200+03:00
+  starts_at: 2025-12-10T08:40:07.743008+03:00
   ends_at: null
   rule:
     Link:
@@ -32,6 +32,509 @@
       updated_by: null
       created_at: null
       updated_at: null
-  value:
-    "$serde_json::private::Number": "0"
+  value: 8628.0
+  acknowledged: null
+- id: 019b06c6-25bc-73b2-bd9f-0b133938896e
+  target:
+    type: Data
+    module_id: null
+    module_name: null
+    user_login: null
+    group_id: null
+    group_path: null
+    group_type: null
+    device_id: null
+    device_name: null
+    device_type: null
+    data_ns: Tank
+    data_id: null
+    data_path: null
+    vars_paths: null
+    protocol: null
+    event_name: null
+    event_kind: null
+    process_name: null
+    action_kind: null
+    action_name: null
+  severity: CRITICAL
+  starts_at: 2025-12-10T08:40:07.740548+03:00
+  ends_at: null
+  rule:
+    Link:
+      ns: taxon_core::infrastructure::device::FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+      title: null
+      created_by: null
+      updated_by: null
+      created_at: null
+      updated_at: null
+  value: 7815.0
+  acknowledged: null
+- id: 019b06c6-25ba-7750-832f-e70ac5f1961a
+  target:
+    type: Data
+    module_id: null
+    module_name: null
+    user_login: null
+    group_id: null
+    group_path: null
+    group_type: null
+    device_id: null
+    device_name: null
+    device_type: null
+    data_ns: Tank
+    data_id: null
+    data_path: null
+    vars_paths: null
+    protocol: null
+    event_name: null
+    event_kind: null
+    process_name: null
+    action_kind: null
+    action_name: null
+  severity: CRITICAL
+  starts_at: 2025-12-10T08:40:07.738125+03:00
+  ends_at: null
+  rule:
+    Link:
+      ns: taxon_core::infrastructure::device::FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+      title: null
+      created_by: null
+      updated_by: null
+      created_at: null
+      updated_at: null
+  value: 6129.0
+  acknowledged: null
+- id: 019b06c6-25b7-7ce3-87c6-e04559b6019a
+  target:
+    type: Data
+    module_id: null
+    module_name: null
+    user_login: null
+    group_id: null
+    group_path: null
+    group_type: null
+    device_id: null
+    device_name: null
+    device_type: null
+    data_ns: Tank
+    data_id: null
+    data_path: null
+    vars_paths: null
+    protocol: null
+    event_name: null
+    event_kind: null
+    process_name: null
+    action_kind: null
+    action_name: null
+  severity: CRITICAL
+  starts_at: 2025-12-10T08:40:07.735666+03:00
+  ends_at: null
+  rule:
+    Link:
+      ns: taxon_core::infrastructure::device::FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+      title: null
+      created_by: null
+      updated_by: null
+      created_at: null
+      updated_at: null
+  value: 7122.0
+  acknowledged: null
+- id: 019b06c6-25b5-7e63-8d40-7b135a1f1448
+  target:
+    type: Data
+    module_id: null
+    module_name: null
+    user_login: null
+    group_id: null
+    group_path: null
+    group_type: null
+    device_id: null
+    device_name: null
+    device_type: null
+    data_ns: Tank
+    data_id: null
+    data_path: null
+    vars_paths: null
+    protocol: null
+    event_name: null
+    event_kind: null
+    process_name: null
+    action_kind: null
+    action_name: null
+  severity: CRITICAL
+  starts_at: 2025-12-10T08:40:07.733114+03:00
+  ends_at: null
+  rule:
+    Link:
+      ns: taxon_core::infrastructure::device::FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+      title: null
+      created_by: null
+      updated_by: null
+      created_at: null
+      updated_at: null
+  value: 8628.0
+  acknowledged: null
+- id: 019b06c6-25b2-7e83-b83b-d56f190666d6
+  target:
+    type: Data
+    module_id: null
+    module_name: null
+    user_login: null
+    group_id: null
+    group_path: null
+    group_type: null
+    device_id: null
+    device_name: null
+    device_type: null
+    data_ns: Tank
+    data_id: null
+    data_path: null
+    vars_paths: null
+    protocol: null
+    event_name: null
+    event_kind: null
+    process_name: null
+    action_kind: null
+    action_name: null
+  severity: CRITICAL
+  starts_at: 2025-12-10T08:40:07.730632+03:00
+  ends_at: null
+  rule:
+    Link:
+      ns: taxon_core::infrastructure::device::FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+      title: null
+      created_by: null
+      updated_by: null
+      created_at: null
+      updated_at: null
+  value: 5514.0
+  acknowledged: null
+- id: 019b06c6-25b0-78c0-a680-db87d037523a
+  target:
+    type: Data
+    module_id: null
+    module_name: null
+    user_login: null
+    group_id: null
+    group_path: null
+    group_type: null
+    device_id: null
+    device_name: null
+    device_type: null
+    data_ns: Tank
+    data_id: null
+    data_path: null
+    vars_paths: null
+    protocol: null
+    event_name: null
+    event_kind: null
+    process_name: null
+    action_kind: null
+    action_name: null
+  severity: CRITICAL
+  starts_at: 2025-12-10T08:40:07.728172+03:00
+  ends_at: null
+  rule:
+    Link:
+      ns: taxon_core::infrastructure::device::FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+      title: null
+      created_by: null
+      updated_by: null
+      created_at: null
+      updated_at: null
+  value: 10528.0
+  acknowledged: null
+- id: 019b06c6-25ad-7382-8492-b531356010d5
+  target:
+    type: Data
+    module_id: null
+    module_name: null
+    user_login: null
+    group_id: null
+    group_path: null
+    group_type: null
+    device_id: null
+    device_name: null
+    device_type: null
+    data_ns: Tank
+    data_id: null
+    data_path: null
+    vars_paths: null
+    protocol: null
+    event_name: null
+    event_kind: null
+    process_name: null
+    action_kind: null
+    action_name: null
+  severity: CRITICAL
+  starts_at: 2025-12-10T08:40:07.725622+03:00
+  ends_at: null
+  rule:
+    Link:
+      ns: taxon_core::infrastructure::device::FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+      title: null
+      created_by: null
+      updated_by: null
+      created_at: null
+      updated_at: null
+  value: 4516.0
+  acknowledged: null
+- id: 019b06c6-25aa-7f91-881d-449e8dba2b92
+  target:
+    type: Data
+    module_id: null
+    module_name: null
+    user_login: null
+    group_id: null
+    group_path: null
+    group_type: null
+    device_id: null
+    device_name: null
+    device_type: null
+    data_ns: Tank
+    data_id: null
+    data_path: null
+    vars_paths: null
+    protocol: null
+    event_name: null
+    event_kind: null
+    process_name: null
+    action_kind: null
+    action_name: null
+  severity: CRITICAL
+  starts_at: 2025-12-10T08:40:07.722417+03:00
+  ends_at: null
+  rule:
+    Link:
+      ns: taxon_core::infrastructure::device::FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+      title: null
+      created_by: null
+      updated_by: null
+      created_at: null
+      updated_at: null
+  value: 7122.0
+  acknowledged: null
+- id: 019b06c6-25a8-75a0-9b98-5120d2e1f11b
+  target:
+    type: Data
+    module_id: null
+    module_name: null
+    user_login: null
+    group_id: null
+    group_path: null
+    group_type: null
+    device_id: null
+    device_name: null
+    device_type: null
+    data_ns: Tank
+    data_id: null
+    data_path: null
+    vars_paths: null
+    protocol: null
+    event_name: null
+    event_kind: null
+    process_name: null
+    action_kind: null
+    action_name: null
+  severity: CRITICAL
+  starts_at: 2025-12-10T08:40:07.720055+03:00
+  ends_at: null
+  rule:
+    Link:
+      ns: taxon_core::infrastructure::device::FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+      title: null
+      created_by: null
+      updated_by: null
+      created_at: null
+      updated_at: null
+  value: 3509.0
+  acknowledged: null
+- id: 019b06c6-25a5-7ea1-a079-cac036f5a577
+  target:
+    type: Data
+    module_id: null
+    module_name: null
+    user_login: null
+    group_id: null
+    group_path: null
+    group_type: null
+    device_id: null
+    device_name: null
+    device_type: null
+    data_ns: Tank
+    data_id: null
+    data_path: null
+    vars_paths: null
+    protocol: null
+    event_name: null
+    event_kind: null
+    process_name: null
+    action_kind: null
+    action_name: null
+  severity: CRITICAL
+  starts_at: 2025-12-10T08:40:07.717518+03:00
+  ends_at: null
+  rule:
+    Link:
+      ns: taxon_core::infrastructure::device::FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+      title: null
+      created_by: null
+      updated_by: null
+      created_at: null
+      updated_at: null
+  value: 1204.0
+  acknowledged: null
+- id: 019b06c6-259f-7183-b96d-a5eb5f957bbf
+  target:
+    type: Data
+    module_id: null
+    module_name: null
+    user_login: null
+    group_id: null
+    group_path: null
+    group_type: null
+    device_id: null
+    device_name: null
+    device_type: null
+    data_ns: Tank
+    data_id: null
+    data_path: null
+    vars_paths: null
+    protocol: null
+    event_name: null
+    event_kind: null
+    process_name: null
+    action_kind: null
+    action_name: null
+  severity: CRITICAL
+  starts_at: 2025-12-10T08:40:07.711105+03:00
+  ends_at: null
+  rule:
+    Link:
+      ns: taxon_core::infrastructure::device::FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+      title: null
+      created_by: null
+      updated_by: null
+      created_at: null
+      updated_at: null
+  value: 10528.0
+  acknowledged: null
+- id: 019b06c6-259c-7f90-9e41-c902d891d3c4
+  target:
+    type: Data
+    module_id: null
+    module_name: null
+    user_login: null
+    group_id: null
+    group_path: null
+    group_type: null
+    device_id: null
+    device_name: null
+    device_type: null
+    data_ns: Tank
+    data_id: null
+    data_path: null
+    vars_paths: null
+    protocol: null
+    event_name: null
+    event_kind: null
+    process_name: null
+    action_kind: null
+    action_name: null
+  severity: CRITICAL
+  starts_at: 2025-12-10T08:40:07.708508+03:00
+  ends_at: null
+  rule:
+    Link:
+      ns: taxon_core::infrastructure::device::FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+      title: null
+      created_by: null
+      updated_by: null
+      created_at: null
+      updated_at: null
+  value: 6129.0
+  acknowledged: null
+- id: 019b06c6-259a-7053-b826-e2bcd53ce99d
+  target:
+    type: Data
+    module_id: null
+    module_name: null
+    user_login: null
+    group_id: null
+    group_path: null
+    group_type: null
+    device_id: null
+    device_name: null
+    device_type: null
+    data_ns: Tank
+    data_id: null
+    data_path: null
+    vars_paths: null
+    protocol: null
+    event_name: null
+    event_kind: null
+    process_name: null
+    action_kind: null
+    action_name: null
+  severity: CRITICAL
+  starts_at: 2025-12-10T08:40:07.706302+03:00
+  ends_at: null
+  rule:
+    Link:
+      ns: taxon_core::infrastructure::device::FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+      title: null
+      created_by: null
+      updated_by: null
+      created_at: null
+      updated_at: null
+  value: 4516.0
+  acknowledged: null
+- id: 019b06c6-2596-7a10-97a4-5d10def3d6b2
+  target:
+    type: Data
+    module_id: null
+    module_name: null
+    user_login: null
+    group_id: null
+    group_path: null
+    group_type: null
+    device_id: null
+    device_name: null
+    device_type: null
+    data_ns: Tank
+    data_id: null
+    data_path: null
+    vars_paths: null
+    protocol: null
+    event_name: null
+    event_kind: null
+    process_name: null
+    action_kind: null
+    action_name: null
+  severity: CRITICAL
+  starts_at: 2025-12-10T08:40:07.702006+03:00
+  ends_at: null
+  rule:
+    Link:
+      ns: taxon_core::infrastructure::device::FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+      title: null
+      created_by: null
+      updated_by: null
+      created_at: null
+      updated_at: null
+  value: 9128.0
   acknowledged: null

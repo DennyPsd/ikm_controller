@@ -6,7 +6,7 @@ use crate::types::tanks::{BaseVars, ExtVars, Tank};
 use crate::types::type_traits::KMHReportExt;
 use crate::{KMHReportCreateArgs, KMHReportListArgs, KMHReportListFields, KMHReportListReply};
 use chrono::Local;
-use ikm_calc::calculation::kmh::{KMHCalculator, KMHReport, TapeClass, TemperatureSensor};
+use ikm_calc::calculation::kmh::{KMHCalculator, KMHReport, TapeClass};
 use ractor::{Actor, ActorProcessingErr, ActorRef};
 use serde_json::json;
 use smol_str::SmolStr;
@@ -236,9 +236,7 @@ impl Actor for KmhIpcHandler {
                   .into_iter()
                   .map(|mut r| {
                     let tl = r.tank.into_link_sync();
-                    r.tank = get_tank_full(tl.id().clone())
-                      .map(|v| DataLink::Data(v))
-                      .unwrap_or(tl);
+                    r.tank = get_tank_full(*tl.id()).map(DataLink::Data).unwrap_or(tl);
                     r
                   })
                   .collect::<Vec<_>>()
@@ -608,7 +606,7 @@ impl Actor for KmhIpcHandler {
                   return Ok(());
                 }
               };
-            let args =
+            let _args =
               match serde_json::from_value::<KMHReportInstance>(action.args.clone().unwrap()) {
                 Ok(args) => args,
                 Err(err) => {

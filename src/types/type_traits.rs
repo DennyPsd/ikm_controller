@@ -1,11 +1,16 @@
-use std::collections::HashMap;
-
-use ikm_calc::calculation::core::{CalculationResult, Constants};
-use ikm_calc::calculation::kmh::KMHReport;
-
 use crate::actors::tank_calc::{Meta, TimeSeriesEntry};
 use crate::types::tank_configuration::TankConfig;
 use crate::types::tanks::{BaseVars, ExtVars, Temperature};
+use chrono::{DateTime, Local};
+use ikm_calc::calculation::core::{CalculationResult, Constants};
+use ikm_calc::calculation::kmh::KMHReport;
+use serde::{Deserialize, Serialize};
+use smol_str::SmolStr;
+use std::collections::HashMap;
+use taxon_core::infrastructure::device::{FacilityEvent, FacilityEventRule, FacilitySeverity};
+use taxon_core::infrastructure::facility::DataLink;
+use taxon_core::prelude::IPCTarget;
+use uuid::Uuid;
 
 /// Отчёт КМХ собирается из трёх источников:
 /// 1) Константы конфигурации (`Constants`) через `KMHReportExt::apply_constants`
@@ -281,6 +286,53 @@ impl CalculationResultExt for CalculationResult {
       volume_coarse: Some(self.capacity_at_current_level),
       volume_relative_error_limit: Some(self.volume_relative_error_limit),
       gross_mass_relative_error_limit: Some(self.gross_mass_relative_error_limit),
+    }
+  }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[allow(non_snake_case)]
+pub struct FacilityEventYaml {
+  pub id: Uuid,
+  pub target: Option<IPCTarget>,
+  pub severity: FacilitySeverity,
+  pub starts_at: DateTime<Local>,
+  pub ends_at: Option<DateTime<Local>>,
+  pub rule: DataLink<FacilityEventRule>,
+  pub value: Option<f64>,
+  pub acknowledged: Option<SmolStr>,
+}
+
+impl From<&FacilityEvent> for FacilityEventYaml {
+  fn from(e: &FacilityEvent) -> Self {
+    FacilityEventYaml {
+      id: e.id,
+      target: e.target.clone(),
+      severity: e.severity.clone(),
+      starts_at: e.starts_at,
+      ends_at: e.ends_at,
+      rule: e.rule.clone(),
+      value: e.value.as_f64(),
+      acknowledged: e.acknowledged.clone(),
+    }
+  }
+}
+
+impl From<FacilityEventYaml> for FacilityEvent {
+  fn from(y: FacilityEventYaml) -> Self {
+    FacilityEvent {
+      id: y.id,
+      target: y.target,
+      severity: y.severity,
+      starts_at: y.starts_at,
+      ends_at: y.ends_at,
+      rule: y.rule,
+      // если value нет — пишем Null
+      value: y
+        .value
+        .map(serde_json::Value::from)
+        .unwrap_or(serde_json::Value::Null),
+      acknowledged: y.acknowledged,
     }
   }
 }

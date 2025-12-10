@@ -3,7 +3,7 @@ use smol_str::SmolStr;
 use std::time::Duration;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio_serial::SerialStream;
-use tracing::{debug, error, info};
+use tracing::{error, info};
 
 use crate::actors::modbus::config::{ModbusPortConfig, ModbusRegisterConfig, ModbusTimings};
 use crate::actors::modbus::modbus_fabric::ModbusFabricMsg;
@@ -56,7 +56,7 @@ impl ModbusWorker {
   }
 }
 
-fn fmt_hex(bytes: &[u8]) -> String {
+fn _fmt_hex(bytes: &[u8]) -> String {
   let mut s = String::new();
   for (i, b) in bytes.iter().enumerate() {
     if i > 0 {
@@ -77,11 +77,11 @@ pub async fn send_and_read_frame(
   _per_byte_timeout: Duration,
 ) -> Result<Vec<u8>, String> {
   // TX
-  debug!(
-    "Modbus TX frame ({} bytes): {}",
-    frame.len(),
-    fmt_hex(frame)
-  );
+  // debug!(
+  //   "Modbus TX frame ({} bytes): {}",
+  //   frame.len(),
+  //   fmt_hex(frame)
+  // );
 
   port
     .write_all(frame)
@@ -100,11 +100,11 @@ pub async fn send_and_read_frame(
   }
 
   let frame_rx = buf[..n].to_vec();
-  debug!(
-    "Modbus RX frame ({} bytes): {}",
-    frame_rx.len(),
-    fmt_hex(&frame_rx)
-  );
+  // debug!(
+  //   "Modbus RX frame ({} bytes): {}",
+  //   frame_rx.len(),
+  //   fmt_hex(&frame_rx)
+  // );
 
   Ok(frame_rx)
 }
@@ -182,18 +182,18 @@ impl Actor for ModbusWorker {
         let reg = &poll.reg;
         let fc = reg_type_to_fc(reg.reg_type);
 
-        info!(
-          port = %state.port_name,
-          poll_index = state.current_index,
-          polls_total = state.polls.len(),
-          slave = poll.slave_id,
-          start_reg = reg.start_reg,
-          regs_count = reg.regs_count,
-          reg_type = ?reg.reg_type,
-          value_type = ?reg.value_type,
-          fc,
-          "ModbusWorker: начинаем опрос регистра",
-        );
+        // info!(
+        //   port = %state.port_name,
+        //   poll_index = state.current_index,
+        //   polls_total = state.polls.len(),
+        //   slave = poll.slave_id,
+        //   start_reg = reg.start_reg,
+        //   regs_count = reg.regs_count,
+        //   reg_type = ?reg.reg_type,
+        //   value_type = ?reg.value_type,
+        //   fc,
+        //   "ModbusWorker: начинаем опрос регистра",
+        // );
 
         // scale / offset из конфига
         let scale = reg.scale.unwrap_or(1.0);
@@ -246,14 +246,14 @@ impl Actor for ModbusWorker {
             .await;
 
             match res {
-              Err(err) => {
-                error!(
-                  port = %state.port_name,
-                  slave = poll.slave_id,
-                  addr = reg.start_reg,
-                  "ModbusWorker Poll error: {}",
-                  err,
-                );
+              Err(_err) => {
+                // error!(
+                //   port = %state.port_name,
+                //   slave = poll.slave_id,
+                //   addr = reg.start_reg,
+                //   "ModbusWorker Poll error: {}",
+                //   err,
+                // );
               }
               Ok(frame_rx) => {
                 // теперь декодим через parse_fc0X_*_typed
@@ -346,30 +346,28 @@ impl Actor for ModbusWorker {
         let is_last_in_cycle = state.current_index + 1 == state.polls.len();
 
         if is_last_in_cycle {
-          use std::fmt::Write as FmtWrite;
+          let mut _report = String::new();
 
-          let mut report = String::new();
-
-          let _ = writeln!(
-            &mut report,
-            "ModbusWorker: завершён цикл опроса, {} точек",
-            state.pending.len()
-          );
-          let _ = writeln!(&mut report, "+-------+---------+----------------------+");
-          let _ = writeln!(&mut report, "| slave |  addr   | value                |");
-          let _ = writeln!(&mut report, "+-------+---------+----------------------+");
+          // let _ = writeln!(
+          //   &mut report,
+          //   "ModbusWorker: завершён цикл опроса, {} точек",
+          //   state.pending.len()
+          // );
+          // let _ = writeln!(&mut report, "+-------+---------+----------------------+");
+          // let _ = writeln!(&mut report, "| slave |  addr   | value                |");
+          // let _ = writeln!(&mut report, "+-------+---------+----------------------+");
 
           for (slave, addr, val_opt) in state.pending.drain(..) {
             match val_opt {
-              Some(v) => {
-                let _ = writeln!(&mut report, "| {:5} | {:7} | {:>20.6} |", slave, addr, v);
+              Some(_v) => {
+                // let _ = writeln!(&mut report, "| {:5} | {:7} | {:>20.6} |", slave, addr, v);
               }
               None => {
-                let _ = writeln!(
-                  &mut report,
-                  "| {:5} | {:7} | {:>20} |",
-                  slave, addr, "<нет данных>",
-                );
+                // let _ = writeln!(
+                //   &mut report,
+                //   "| {:5} | {:7} | {:>20} |",
+                //   slave, addr, "<нет данных>",
+                // );
               }
             }
 
@@ -382,9 +380,9 @@ impl Actor for ModbusWorker {
             });
           }
 
-          let _ = writeln!(&mut report, "+-------+---------+----------------------+");
+          // let _ = writeln!(&mut report, "+-------+---------+----------------------+");
 
-          info!(port = %state.port_name, "{}", report);
+          // info!(port = %state.port_name, "{}", report);
         }
 
         state.current_index = (state.current_index + 1) % state.polls.len();
@@ -395,7 +393,7 @@ impl Actor for ModbusWorker {
       }
 
       ModbusWorkerMsg::Stop => {
-        info!(port = %state.port_name, "ModbusWorker: Stop");
+        // info!(port = %state.port_name, "ModbusWorker: Stop");
         let _ = myself.stop(None);
       }
     }
