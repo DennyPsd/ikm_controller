@@ -9,5 +9,6 @@
     "Smol",
     "thiserror",
     "xtask"
-  ]
+  ],
+  "rust-analyzer.files.exclude": ["assets", "temp", "target"]
 }

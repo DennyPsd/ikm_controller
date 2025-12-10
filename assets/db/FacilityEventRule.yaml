@@ -6,8 +6,7 @@
   help: ""
   name: H по Массе
   can_end: false
-  severity:
-    CUSTOM: H
+  severity: CRITICAL
   target:
     data_ns: Tank
     type: Data

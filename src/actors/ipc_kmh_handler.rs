@@ -337,29 +337,7 @@ impl Actor for KmhIpcHandler {
             // );
 
             // 1. Читаем tanks.yaml и ищем нужный танк
-            let tanks_path = "assets/db/tanks.yaml";
-            let tanks: Vec<Tank> = match File::open(tanks_path)
-              .map_err(|err| {
-                internal_error(action.name.clone(), None).with_message(format!("{err:?}"))
-              })
-              .and_then(|reader| {
-                serde_saphyr::from_reader::<File, Vec<Tank>>(reader).map_err(|err| {
-                  internal_error(action.name.clone(), None).with_message(format!("{err:?}"))
-                })
-              }) {
-              Ok(data) => data,
-              Err(err) => {
-                if let Some(msg) = ipc_msg.to_replay_msg(Option::<()>::None, Some(err)) {
-                  // info!("kmh_report_create: шлём ошибку в ipc_router (read/parse tanks.yaml)");
-                  let _ = state.ipc_router.send_message(Some(msg));
-                } else {
-                  error!(
-                    "kmh_report_create: to_replay_msg вернул None при ошибке чтения tanks.yaml"
-                  );
-                }
-                return Ok(());
-              }
-            };
+            let tanks: Vec<Tank> = Tank::load_list("assets/db").await;
 
             let tank = match tanks.into_iter().find(|t| t.id == args.device_id) {
               Some(t) => t,

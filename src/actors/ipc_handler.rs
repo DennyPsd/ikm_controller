@@ -15,7 +15,7 @@ use std::collections::HashMap;
 use std::fs::{self, File};
 use taxon_core::actors::ipc::errors::internal_error;
 use taxon_core::infrastructure::device::{FacilityEvent, FacilityEventRule};
-use taxon_core::infrastructure::facility::SharedData;
+use taxon_core::infrastructure::facility::{DataLink, SharedData};
 use taxon_core::prelude::{IPCActionKind, IPCActorMsg, IPCMessageCrate};
 use tracing::{error, info};
 use uuid::Uuid;
@@ -367,12 +367,32 @@ impl Actor for IpcHandler {
             );
 
             let events = FacilityEvent::load_list("assets/db/").await;
+            let rules: HashMap<_, _> = FacilityEventRule::load_list("assets/db/")
+              .await
+              .into_iter()
+              .map(|v| (v.id().clone(), v))
+              .collect();
 
             let data: Vec<FacilityEvent> = if args.ids.is_empty() {
               events
             } else {
               let ids = args.ids;
-              events.into_iter().filter(|e| ids.contains(&e.id)).collect()
+              events
+                .into_iter()
+                .filter(|e| ids.contains(&e.id))
+                .map(|v| {
+                  let mut v = v;
+                  v.rule = DataLink::Data(
+                    (&rules)
+                      .into_iter()
+                      .find(|r| r.1.id() == v.rule.id())
+                      .unwrap()
+                      .1
+                      .clone(),
+                  );
+                  v
+                })
+                .collect()
             };
 
             if let Some(msg) = ipc_msg.to_replay_msg(Some(json!({ "data": data })), None) {
