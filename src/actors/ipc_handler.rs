@@ -9,13 +9,14 @@ use crate::{
 };
 use base64::Engine;
 use base64::engine::general_purpose;
+use chrono::Local;
 use ractor::{Actor, ActorProcessingErr, ActorRef};
 use serde_json::{json, to_string_pretty};
 use std::collections::HashMap;
 use std::fs::{self, File};
 use taxon_core::actors::ipc::errors::internal_error;
 use taxon_core::infrastructure::device::{FacilityEvent, FacilityEventRule};
-use taxon_core::infrastructure::facility::{DataLink, SharedData};
+use taxon_core::infrastructure::facility::{DataChange, DataLink, SharedData};
 use taxon_core::prelude::{IPCActionKind, IPCActorMsg, IPCMessageCrate};
 use tracing::{error, info};
 use uuid::Uuid;
@@ -241,10 +242,13 @@ impl Actor for IpcHandler {
               action.target.device_id.unwrap()
             );
 
-            // let config_content = fs::read_to_string(&config_vars_path)?;
-            // let old_config: TankConfig = serde_saphyr::from_str(&config_content)
-            //   .map_err(|err| format!("Cant parse config: {err:?}"))?;
+            let config_content = fs::read_to_string(&config_vars_path)?;
+            let old_config: TankConfig = serde_saphyr::from_str(&config_content)
+              .map_err(|err| format!("Cant parse config: {err:?}"))?;
             let new_config = args;
+
+            let _change =
+              DataChange::generate_changes(&old_config, &new_config, "admin".into(), Local::now());
             if let Err(err) = fs::write(
               config_vars_path,
               serde_saphyr::to_string(&new_config).unwrap(),
@@ -261,8 +265,6 @@ impl Actor for IpcHandler {
                 });
               return Ok(());
             }
-            // let _change =
-            //   DataChange::generate_changes(&old_config, &new_config, "admin".into(), Local::now());
 
             return Ok(());
           }
