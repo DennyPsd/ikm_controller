@@ -70,18 +70,18 @@ impl IPCMessageDef for UserLogout {
 #[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq, Eq, Hash)]
 pub struct DataChangeList;
 
-// #[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq, Eq, Hash)]
-// pub enum TankListFields {
-//   Minimal,
-//   All,
-//   Exact(Vec<SmolStr>),
-// }
+#[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq, Eq, Hash)]
+pub enum DataChangeFields {
+  Minimal,
+  All,
+  Exact(Vec<SmolStr>),
+}
 
-// #[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq, Eq, Hash)]
-// pub struct TankListArgs {
-//   pub ids: Vec<Uuid>,
-//   pub fields: TankListFields,
-// }
+#[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq, Eq, Hash)]
+pub struct DataChangeArgs {
+  pub ids: Vec<Uuid>,
+  pub fields: DataChangeFields,
+}
 
 #[derive(Default, Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
 pub struct DataChangeListReply {
