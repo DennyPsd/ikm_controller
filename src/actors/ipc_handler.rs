@@ -4,8 +4,8 @@ use crate::types::products::Product;
 use crate::types::tank_configuration::TankConfig;
 use crate::types::tanks::{BaseVars, ExtVars, Tank};
 use crate::{
-  EventListArgs, EventRuleListArgs, LoadGradTableArgs, ProductListArgs, TankListArgs,
-  TankListFields,
+  DataChangeArgs, DataChangeList, EventListArgs, EventRuleListArgs, LoadGradTableArgs,
+  ProductListArgs, TankListArgs, TankListFields,
 };
 use base64::Engine;
 use base64::engine::general_purpose;
@@ -442,38 +442,35 @@ impl Actor for IpcHandler {
             && action.name.as_deref() == Some("data_change_list")
             && action.args.is_some()
           {
-            info!("event_rule_list: обработка запроса");
+            info!("data_change_list: обработка запроса");
 
-            let args =
-              match serde_json::from_value::<EventRuleListArgs>(action.args.clone().unwrap()) {
-                Ok(args) => args,
-                Err(err) => {
-                  let err = internal_error(action.name.clone(), None)
-                    .with_message(format!("event_rule_list: {}", err));
+            let args = match serde_json::from_value::<DataChangeArgs>(action.args.clone().unwrap())
+            {
+              Ok(args) => args,
+              Err(err) => {
+                let err = internal_error(action.name.clone(), None)
+                  .with_message(format!("data_change_list: {}", err));
 
-                  info!("event_rule_list: шлём ошибку в ipc_router (bad args)");
-                  let _ = state
-                    .ipc_router
-                    .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
-                    .map_err(|err| {
-                      error!("event_rule_list: to_replay_msg {}", err);
-                    });
-                  return Ok(());
-                }
-              };
+                info!("data_change_list: шлём ошибку в ipc_router (bad args)");
+                let _ = state
+                  .ipc_router
+                  .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                  .map_err(|err| {
+                    error!("data_change_list: to_replay_msg {}", err);
+                  });
+                return Ok(());
+              }
+            };
 
-            let changes = DataChangeList::load_list("assets/db/").await;
+            let changes = DataChange::load_list("assets/db/").await;
 
-            let data = if args.ids.is_empty() {
+            let data = if args.ids.as_ref().is_none() || args.ids.as_ref().unwrap().is_empty() {
               changes
             } else {
-              let ids = args.ids;
+              let ids = args.ids.unwrap();
               changes
                 .into_iter()
-                .filter(|change| {
-                  
-                  ids.contains(change.id)
-                })
+                .filter(|change| ids.contains(&change.id))
                 .collect()
             };
 
@@ -557,7 +554,6 @@ impl Actor for IpcHandler {
             return Ok(());
           }
 
-          
           // ===================== EVENT_RULE_SET =====================
           if action.kind == IPCActionKind::SetData
             && action.name.as_deref() == Some("event_rule_set")
@@ -620,7 +616,7 @@ impl Actor for IpcHandler {
             let _ = FacilityEventRule::save_all(rules, "assets/db/").await;
 
             // В ответ отдаём само правило (Reply = FacilityEventRule)
-            if let Some(msg) = ipc_msg.to_replay_msg(Some(json!(rule)), None) {f
+            if let Some(msg) = ipc_msg.to_replay_msg(Some(json!(rule)), None) {
               info!("event_rule_set: отправляем ответ в ipc_router");
               let _ = state.ipc_router.send_message(Some(msg));
             } else {

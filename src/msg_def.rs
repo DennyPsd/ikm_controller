@@ -79,8 +79,8 @@ pub enum DataChangeFields {
 
 #[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq, Eq, Hash)]
 pub struct DataChangeArgs {
-  pub ids: Vec<Uuid>,
-  pub fields: DataChangeFields,
+  pub ids: Option<Vec<Uuid>>,
+  pub fields: Option<DataChangeFields>,
 }
 
 #[derive(Default, Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
@@ -90,7 +90,7 @@ pub struct DataChangeListReply {
 }
 
 impl IPCMessageDef for DataChangeList {
-  type Args = ();
+  type Args = DataChangeArgs;
   type Reply = DataChangeListReply;
   type ErrorArgs = ();
 

@@ -1,0 +1,70 @@
+- id: 019b0ce9-91d7-7160-a67f-0e1cd38ec610
+  trx_id: 019b0ce9-91d6-7b43-8cde-b26e3e4724d8
+  data_id: 840cdcd6-fd1f-4dab-a1b7-cb2b53aaf1e8
+  data_ns: Tank
+  changed_at: 2025-12-11T13:16:32.470751500+03:00
+  changed_by: admin
+  ns_title: " - Конфигурация цистерны"
+  field_title: "null"
+  field_old_value: "\"Tank-2\""
+  field_new_value: "null"
+- id: 019b0ce9-91d7-7160-a67f-0e2ba8e991df
+  trx_id: 019b0ce9-91d6-7b43-8cde-b26e3e4724d8
+  data_id: 840cdcd6-fd1f-4dab-a1b7-cb2b53aaf1e8
+  data_ns: Tank
+  changed_at: 2025-12-11T13:16:32.470751500+03:00
+  changed_by: admin
+  ns_title: " - Конфигурация цистерны"
+  field_title: "null"
+  field_old_value: "\"vertical\""
+  field_new_value: "\"\""
+- id: 019b0ce9-91d7-7160-a67f-0e33c8d37a0c
+  trx_id: 019b0ce9-91d6-7b43-8cde-b26e3e4724d8
+  data_id: 840cdcd6-fd1f-4dab-a1b7-cb2b53aaf1e8
+  data_ns: Tank
+  changed_at: 2025-12-11T13:16:32.470751500+03:00
+  changed_by: admin
+  ns_title: " - Конфигурация цистерны"
+  field_title: "null"
+  field_old_value: "738.0"
+  field_new_value: "7389.0"
+- id: 019b0ce9-91d7-7160-a67f-0e4952e314dc
+  trx_id: 019b0ce9-91d6-7b43-8cde-b26e3e4724d8
+  data_id: 840cdcd6-fd1f-4dab-a1b7-cb2b53aaf1e8
+  data_ns: Tank
+  changed_at: 2025-12-11T13:16:32.470751500+03:00
+  changed_by: admin
+  ns_title: " - Конфигурация цистерны"
+  field_title: "null"
+  field_old_value: "\"OilProduct-2\""
+  field_new_value: "\"00000000-0000-0000-0000-000000000002\""
+- id: 019b0ce9-91d7-7160-a67f-0e502a684e09
+  trx_id: 019b0ce9-91d6-7b43-8cde-b26e3e4724d8
+  data_id: 840cdcd6-fd1f-4dab-a1b7-cb2b53aaf1e8
+  data_ns: Tank
+  changed_at: 2025-12-11T13:16:32.470751500+03:00
+  changed_by: admin
+  ns_title: " - Конфигурация цистерны"
+  field_title: "null"
+  field_old_value: "null"
+  field_new_value: "45.0"
+- id: 019b0ce9-91d7-7160-a67f-0e61dbe6fcad
+  trx_id: 019b0ce9-91d6-7b43-8cde-b26e3e4724d8
+  data_id: 840cdcd6-fd1f-4dab-a1b7-cb2b53aaf1e8
+  data_ns: Tank
+  changed_at: 2025-12-11T13:16:32.470751500+03:00
+  changed_by: admin
+  ns_title: " - Конфигурация цистерны"
+  field_title: "null"
+  field_old_value: "null"
+  field_new_value: "45.0"
+- id: 019b0ce9-91d7-7160-a67f-0e7eed8fedc7
+  trx_id: 019b0ce9-91d6-7b43-8cde-b26e3e4724d8
+  data_id: 840cdcd6-fd1f-4dab-a1b7-cb2b53aaf1e8
+  data_ns: Tank
+  changed_at: 2025-12-11T13:16:32.470751500+03:00
+  changed_by: admin
+  ns_title: " - Конфигурация цистерны"
+  field_title: "null"
+  field_old_value: "-2.0"
+  field_new_value: "2.0"
