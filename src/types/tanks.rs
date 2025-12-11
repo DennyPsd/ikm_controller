@@ -3,7 +3,7 @@ use crate::types::tank_configuration::TankConfig;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use smol_str::SmolStr;
-use taxon_core::infrastructure::facility::SharedData;
+use taxon_core::infrastructure::data::SharedData;
 use uuid::Uuid;
 
 /// Тип статуса цистерны
