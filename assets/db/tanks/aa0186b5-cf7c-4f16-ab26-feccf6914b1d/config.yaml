@@ -1,8 +1,8 @@
 basic_data:
   name: Tank-9
   reservoir_park: Парк 1
-  group: Группа 1
-  tank_type: ""
+  group: Группа 3
+  tank_type: vertical
   nominal_capacity: 12070.0
   density_stored_liquid_according: 738.0
   basic_height: 12070.0
