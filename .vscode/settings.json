@@ -10,5 +10,11 @@
     "thiserror",
     "xtask"
   ],
-  "rust-analyzer.files.exclude": ["assets", "temp", "target"]
+  "rust-analyzer.files.exclude": ["assets", "temp", "target"],
+
+  "rust-analyzer.procMacro.attributes.enable": false,
+  "rust-analyzer.procMacro.enable": true,
+  "editor.insertSpaces": true,
+  "editor.tabSize": 2,
+  "editor.detectIndentation": false
 }

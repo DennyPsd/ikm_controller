@@ -20,8 +20,8 @@ use crate::types::{
 
 use crate::types::type_traits::CalculationResultExt;
 use ikm_calc::calculation::types::GradTableItem;
+use taxon_core::infrastructure::data::SharedData;
 use taxon_core::infrastructure::device::{FacilityEvent, FacilityEventRule};
-use taxon_core::infrastructure::facility::SharedData;
 
 #[allow(dead_code)]
 #[derive(Deserialize, Debug)]
@@ -136,9 +136,9 @@ impl Actor for TankCalcActor {
       TankCalcMsg::Tick => {
         // Читаем tanks.yaml
 
-        let mut tanks = Tank::load_list("assets/db/").await;
-        let event_rules = FacilityEventRule::load_list("assets/db/").await;
-        let events = FacilityEvent::load_list("assets/db/").await;
+        let mut tanks = Tank::load_list().await;
+        let event_rules = FacilityEventRule::load_list().await;
+        let events = FacilityEvent::load_list().await;
         state.events = Some(events);
 
         for tank in tanks.iter_mut() {
@@ -150,7 +150,7 @@ impl Actor for TankCalcActor {
         }
         if state.events.is_some()
           && !state.events.as_ref().unwrap().is_empty()
-          && let Err(e) = FacilityEvent::save_all(state.events.take().unwrap(), "assets/db/").await
+          && let Err(e) = FacilityEvent::save_all(state.events.take().unwrap()).await
         {
           error!("Ошибка обновления событий: {}", e);
         }

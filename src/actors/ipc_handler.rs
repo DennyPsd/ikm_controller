@@ -16,9 +16,8 @@ use serde_json::{json, to_string_pretty};
 use std::collections::HashMap;
 use std::fs::{self, File};
 use taxon_core::actors::ipc::errors::internal_error;
+use taxon_core::infrastructure::data::{DataChange, DataLink, SharedData};
 use taxon_core::infrastructure::device::{FacilityEvent, FacilityEventRule};
-use taxon_core::infrastructure::facility::DataChange;
-use taxon_core::infrastructure::facility::{DataLink, SharedData};
 use taxon_core::prelude::{IPCActionKind, IPCActorMsg, IPCMessageCrate};
 use tracing::{error, info};
 use uuid::Uuid;
@@ -124,7 +123,7 @@ impl Actor for IpcHandler {
               }
             };
 
-            let mut tanks: HashMap<_, _> = Tank::load_list("assets/db/")
+            let mut tanks: HashMap<_, _> = Tank::load_list()
               .await
               .into_iter()
               .map(|v| (v.id, v))
@@ -265,7 +264,7 @@ impl Actor for IpcHandler {
             );
             info!("Change: {_changes:#?}");
             if !_changes.is_empty() {
-              let _ = DataChange::insert_many(_changes, "assets/db").await;
+              let _ = DataChange::insert_many(_changes).await;
             }
             if let Err(err) = fs::write(
               config_vars_path,
@@ -317,7 +316,7 @@ impl Actor for IpcHandler {
               args.ids.len(),
               args.fields
             );
-            let products = Product::load_list("assets/db/").await;
+            let products = Product::load_list().await;
 
             if let Some(msg) = ipc_msg.to_replay_msg(Some(json!({ "data": products })), None) {
               info!("products_list: отправляем ответ в ipc_router");
@@ -376,10 +375,10 @@ impl Actor for IpcHandler {
             info!("product_create: присвоен новый id = {}", new_id);
 
             // грузим список, добавляем и сохраняем
-            let mut products = Product::load_list("assets/db/").await;
+            let mut products = Product::load_list().await;
             products.push(product.clone());
 
-            if let Err(err) = Product::save_all(products, "assets/db/").await {
+            if let Err(err) = Product::save_all(products).await {
               let err = internal_error(action.name.clone(), None)
                 .with_message(format!("product_create: save_all error: {err:?}"));
 
@@ -459,7 +458,7 @@ impl Actor for IpcHandler {
             }
 
             // грузим список, ищем продукт по id
-            let mut products = Product::load_list("assets/db/").await;
+            let mut products = Product::load_list().await;
 
             if let Some(pos) = products.iter().position(|p| p.id() == &id) {
               info!("product_set: обновляем существующий продукт {}", id);
@@ -478,7 +477,7 @@ impl Actor for IpcHandler {
               return Ok(());
             }
 
-            if let Err(err) = Product::save_all(products, "assets/db/").await {
+            if let Err(err) = Product::save_all(products).await {
               let err = internal_error(action.name.clone(), None)
                 .with_message(format!("product_set: save_all error: {err:?}"));
 
@@ -533,8 +532,8 @@ impl Actor for IpcHandler {
               args.fields
             );
 
-            let events = FacilityEvent::load_list("assets/db/").await;
-            let rules: HashMap<_, _> = FacilityEventRule::load_list("assets/db/")
+            let events = FacilityEvent::load_list().await;
+            let rules: HashMap<_, _> = FacilityEventRule::load_list()
               .await
               .into_iter()
               .map(|v| (*v.id(), v))
@@ -611,7 +610,7 @@ impl Actor for IpcHandler {
               }
             };
 
-            let changes = DataChange::load_list("assets/db/").await;
+            let changes = DataChange::load_list().await;
 
             let data = if args.ids.as_ref().is_none() || args.ids.as_ref().unwrap().is_empty() {
               changes
@@ -675,7 +674,7 @@ impl Actor for IpcHandler {
               FacilityEventRule::HartStatus { id, .. } => *id,
             };
 
-            let mut rules = FacilityEventRule::load_list("assets/db/").await;
+            let mut rules = FacilityEventRule::load_list().await;
 
             if let Some(pos) = rules.iter().position(|r| {
               let id = match r {
@@ -691,7 +690,7 @@ impl Actor for IpcHandler {
               rules.push(rule.clone());
             }
 
-            let _ = FacilityEventRule::save_all(rules, "assets/db/").await;
+            let _ = FacilityEventRule::save_all(rules).await;
 
             // В ответ отдаём само правило (Reply = FacilityEventRule)
             if let Some(msg) = ipc_msg.to_replay_msg(Some(json!(rule)), None) {
@@ -1002,7 +1001,7 @@ pub fn get_tank_full(id: Uuid) -> Result<Tank, anyhow::Error> {
   )?;
 
   let _path = "assets/db/tanks.yaml";
-  let mut tanks: HashMap<_, _> = Tank::load_list_sync("assets/db")
+  let mut tanks: HashMap<_, _> = Tank::load_list_sync()
     .into_iter()
     .map(|v| (v.id, v))
     .collect();

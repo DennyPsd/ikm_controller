@@ -1,7 +1,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use smol_str::SmolStr;
-use taxon_core::infrastructure::facility::DataChange;
+use taxon_core::infrastructure::data::DataChange;
 use taxon_core::prelude::{
   ActionTargetKind, IPCActionKind, IPCMessageDef, IPCMessageDir, IPCTarget,
 };

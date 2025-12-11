@@ -4,7 +4,7 @@ use ikm_calc::calculation::kmh::KMHReport;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use smol_str::SmolStr;
-use taxon_core::infrastructure::facility::{DataLink, SharedData};
+use taxon_core::infrastructure::data::{DataLink, SharedData};
 use uuid::Uuid;
 
 #[derive(Default, Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
