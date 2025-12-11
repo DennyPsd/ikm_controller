@@ -44,7 +44,7 @@ pub struct Tank {
   /// Группа
   pub group: SmolStr,
   /// Продукт
-  pub product: Option<Product>,
+  pub product: DataLink<Product>,
   /// Наименование
   pub name: SmolStr,
   /// Статус

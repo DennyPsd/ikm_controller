@@ -1,5 +1,6 @@
 mod actors;
 mod msg_def;
+mod msges;
 mod types;
 
 use crate::actors::ipc_handler::{IpcHandler, IpcHandlerMsg, IpcHandlerState};

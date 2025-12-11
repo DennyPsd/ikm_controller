@@ -1,12 +1,13 @@
 use crate::actors::ipc_kmh_handler::KmhIpcHandlerMsg;
 use crate::actors::modbus::modbus_fabric::ModbusFabricMsg;
+use crate::msges::data_change_list::DataChangeArgs;
+use crate::msges::event_list::EventListArgs;
+use crate::msges::load_grad_table::LoadGradTableArgs;
+use crate::msges::product_list::ProductListArgs;
+use crate::msges::tank_list::{TankListArgs, TankListFields};
 use crate::types::products::Product;
 use crate::types::tank_configuration::TankConfig;
 use crate::types::tanks::{BaseVars, ExtVars, Tank};
-use crate::{
-  DataChangeArgs, DataChangeList, EventListArgs, EventRuleListArgs, LoadGradTableArgs,
-  ProductListArgs, TankListArgs, TankListFields,
-};
 use base64::Engine;
 use base64::engine::general_purpose;
 use chrono::Local;
@@ -137,7 +138,7 @@ impl Actor for IpcHandler {
             for id in ids.iter() {
               let tank = tanks.get_mut(id).unwrap();
               match args.fields {
-                crate::TankListFields::Minimal => {
+                TankListFields::Minimal => {
                   let path = format!("assets/db/tanks/{id}/base_vars.yaml");
                   tank.base_vars = File::open(&path[..])
                     .map_err(|err| {
@@ -292,7 +293,6 @@ impl Actor for IpcHandler {
           {
             info!("Modbus IPC_Handler: обработка action 'product_list'");
 
-            // -------- разбор args --------
             let args = match serde_json::from_value::<ProductListArgs>(action.args.clone().unwrap())
             {
               Ok(args) => args,
@@ -316,102 +316,187 @@ impl Actor for IpcHandler {
               args.ids.len(),
               args.fields
             );
+            let products = Product::load_list("assets/db/").await;
 
-            // -------- загрузка танков из assets/db/Tank.yaml --------
-            let tanks = Tank::load_list().await;
-            info!(
-              "products_list: загружено {} танков из assets/db/Tank.yaml",
-              tanks.len()
-            );
-
-            // Можно оставить подробный дамп, если надо прям всё видеть
-            // info!("products_list: tanks = {:#?}", tanks);
-
-            // Немного более дружелюбный лог по каждому танку
-            for tank in &tanks {
-              info!(
-                "products_list: tank id={} name={} has_product={}",
-                tank.id,
-                tank.name,
-                tank.product.is_some()
-              );
-            }
-
-            // -------- собираем продукты без дубликатов по id --------
-            let mut products_by_id: HashMap<Uuid, Product> = HashMap::new();
-
-            for tank in tanks.into_iter() {
-              if let Some(prod) = tank.product {
-                let prod_id = match &prod {
-                  Product::Oil { id, .. } => *id,
-                  Product::OilProduct { id, .. } => *id,
-                };
-
-                info!(
-                  "products_list: найден продукт в танке: tank_id={} product_id={}",
-                  tank.id, prod_id
-                );
-
-                // кладём только первый продукт с таким id
-                let is_new = !products_by_id.contains_key(&prod_id);
-                products_by_id.entry(prod_id).or_insert(prod);
-
-                if is_new {
-                  info!("products_list: продукт {} добавлен в словарь", prod_id);
-                } else {
-                  info!(
-                    "products_list: продукт {} уже был в словаре, пропускаем дубликат",
-                    prod_id
-                  );
-                }
-              } else {
-                info!("products_list: у танка {} продукт отсутствует", tank.id);
-              }
-            }
-
-            info!(
-              "products_list: итоговое количество уникальных продуктов по id = {}",
-              products_by_id.len()
-            );
-
-            // -------- фильтрация по args.ids (если они есть) --------
-            let ids: Vec<Uuid> = if !args.ids.is_empty() {
-              info!(
-                "products_list: фильтруем по списку ids из запроса ({} шт.)",
-                args.ids.len()
-              );
-              args.ids.clone()
-            } else {
-              info!("products_list: ids не переданы, возвращаем все продукты");
-              products_by_id.keys().cloned().collect()
-            };
-
-            info!(
-              "products_list: после подготовки список ids для ответа содержит {} элементов",
-              ids.len()
-            );
-
-            // -------- формируем вектор продуктов для ответа --------
-            let data: Vec<Product> = ids
-              .into_iter()
-              .filter_map(|id| {
-                let exists = products_by_id.contains_key(&id);
-                info!(
-                  "products_list: проверяем продукт id={} — в словаре: {}",
-                  id, exists
-                );
-                products_by_id.get(&id).cloned()
-              })
-              .collect();
-
-            info!("products_list: найдено {} продуктов для ответа", data.len());
-
-            // -------- отправка ответа --------
-            if let Some(msg) = ipc_msg.to_replay_msg(Some(json!({ "data": data })), None) {
+            if let Some(msg) = ipc_msg.to_replay_msg(Some(json!({ "data": products })), None) {
               info!("products_list: отправляем ответ в ipc_router");
               let _ = state.ipc_router.send_message(Some(msg));
             } else {
               error!("products_list: to_replay_msg вернул None");
+            }
+
+            return Ok(());
+          }
+
+          // ===================== PRODUCT_CREATE =====================
+          if action.kind == IPCActionKind::SetData
+            && action.name.as_deref() == Some("product_create")
+          {
+            info!("product_create: обработка запроса");
+
+            if action.args.is_none() {
+              let err = internal_error(action.name.clone(), None)
+                .with_message("product_create: empty args");
+
+              info!("product_create: шлём ошибку в ipc_router (empty args)");
+              let _ = state
+                .ipc_router
+                .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                .map_err(|err| {
+                  error!("product_create: to_replay_msg {}", err);
+                });
+              return Ok(());
+            }
+
+            // парсим Product
+            let mut product: Product = match serde_json::from_value(action.args.clone().unwrap()) {
+              Ok(p) => p,
+              Err(err) => {
+                let err = internal_error(action.name.clone(), None)
+                  .with_message(format!("product_create: {}", err));
+
+                info!("product_create: шлём ошибку в ipc_router (bad args)");
+                let _ = state
+                  .ipc_router
+                  .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                  .map_err(|err| {
+                    error!("product_create: to_replay_msg {}", err);
+                  });
+                return Ok(());
+              }
+            };
+
+            // генерим новый id, старый игнорируем
+            let new_id = Uuid::now_v7();
+            match &mut product {
+              Product::Oil { id, .. } => *id = new_id,
+              Product::OilProduct { id, .. } => *id = new_id,
+            }
+            info!("product_create: присвоен новый id = {}", new_id);
+
+            // грузим список, добавляем и сохраняем
+            let mut products = Product::load_list("assets/db/").await;
+            products.push(product.clone());
+
+            if let Err(err) = Product::save_all(products, "assets/db/").await {
+              let err = internal_error(action.name.clone(), None)
+                .with_message(format!("product_create: save_all error: {err:?}"));
+
+              error!("product_create: ошибка записи Product.yaml: {err:?}");
+              let _ = state
+                .ipc_router
+                .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                .map_err(|err| {
+                  error!("product_create: to_replay_msg {}", err);
+                });
+              return Ok(());
+            }
+
+            // отдаём созданный продукт
+            if let Some(msg) = ipc_msg.to_replay_msg(Some(json!(product)), None) {
+              info!("product_create: отправляем ответ в ipc_router");
+              let _ = state.ipc_router.send_message(Some(msg));
+            } else {
+              error!("product_create: to_replay_msg вернул None");
+            }
+
+            return Ok(());
+          }
+
+          // ===================== PRODUCT_SET =====================
+          if action.kind == IPCActionKind::SetData && action.name.as_deref() == Some("product_set")
+          {
+            info!("product_set: обработка запроса");
+
+            if action.args.is_none() {
+              let err =
+                internal_error(action.name.clone(), None).with_message("product_set: empty args");
+
+              info!("product_set: шлём ошибку в ipc_router (empty args)");
+              let _ = state
+                .ipc_router
+                .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                .map_err(|err| {
+                  error!("product_set: to_replay_msg {}", err);
+                });
+              return Ok(());
+            }
+
+            // парсим Product
+            let product: Product = match serde_json::from_value(action.args.clone().unwrap()) {
+              Ok(p) => p,
+              Err(err) => {
+                let err = internal_error(action.name.clone(), None)
+                  .with_message(format!("product_set: {}", err));
+
+                info!("product_set: шлём ошибку в ipc_router (bad args)");
+                let _ = state
+                  .ipc_router
+                  .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                  .map_err(|err| {
+                    error!("product_set: to_replay_msg {}", err);
+                  });
+                return Ok(());
+              }
+            };
+
+            let id = *product.id();
+            info!("product_set: входящий product.id = {}", id);
+
+            if id.is_nil() {
+              let err = internal_error(action.name.clone(), None)
+                .with_message("product_set: id is nil, используйте product_create для создания");
+
+              info!("product_set: шлём ошибку — пустой id");
+              let _ = state
+                .ipc_router
+                .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                .map_err(|err| {
+                  error!("product_set: to_replay_msg {}", err);
+                });
+              return Ok(());
+            }
+
+            // грузим список, ищем продукт по id
+            let mut products = Product::load_list("assets/db/").await;
+
+            if let Some(pos) = products.iter().position(|p| p.id() == &id) {
+              info!("product_set: обновляем существующий продукт {}", id);
+              products[pos] = product.clone();
+            } else {
+              let err = internal_error(action.name.clone(), None)
+                .with_message(format!("product_set: product with id {id} not found"));
+
+              error!("product_set: продукт с id {id} не найден");
+              let _ = state
+                .ipc_router
+                .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                .map_err(|err| {
+                  error!("product_set: to_replay_msg {}", err);
+                });
+              return Ok(());
+            }
+
+            if let Err(err) = Product::save_all(products, "assets/db/").await {
+              let err = internal_error(action.name.clone(), None)
+                .with_message(format!("product_set: save_all error: {err:?}"));
+
+              error!("product_set: ошибка записи Product.yaml: {err:?}");
+              let _ = state
+                .ipc_router
+                .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                .map_err(|err| {
+                  error!("product_set: to_replay_msg {}", err);
+                });
+              return Ok(());
+            }
+
+            // отдаём обновлённый продукт
+            if let Some(msg) = ipc_msg.to_replay_msg(Some(json!(product)), None) {
+              info!("product_set: отправляем ответ в ipc_router");
+              let _ = state.ipc_router.send_message(Some(msg));
+            } else {
+              error!("product_set: to_replay_msg вернул None");
             }
 
             return Ok(());
@@ -533,7 +618,7 @@ impl Actor for IpcHandler {
               let ids = args.ids.unwrap();
               changes
                 .into_iter()
-                .filter(|change| ids.contains(&change.id))
+                .filter(|change| ids.contains(change.id()))
                 .collect()
             };
 
@@ -546,77 +631,6 @@ impl Actor for IpcHandler {
 
             return Ok(());
           }
-          if action.kind == IPCActionKind::SetData
-            && action.name.as_deref() == Some("event_rule_set")
-          {
-            info!("event_rule_set: обработка запроса");
-
-            if action.args.is_none() {
-              let err = internal_error(action.name.clone(), None)
-                .with_message("event_rule_set: empty args");
-
-              info!("event_rule_set: шлём ошибку в ipc_router (empty args)");
-              let _ = state
-                .ipc_router
-                .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
-                .map_err(|err| {
-                  error!("event_rule_set: to_replay_msg {}", err);
-                });
-              return Ok(());
-            }
-
-            let rule: FacilityEventRule = match serde_json::from_value(action.args.clone().unwrap())
-            {
-              Ok(r) => r,
-              Err(err) => {
-                let err = internal_error(action.name.clone(), None)
-                  .with_message(format!("event_rule_set: {}", err));
-
-                info!("event_rule_set: шлём ошибку в ipc_router (bad args)");
-                let _ = state
-                  .ipc_router
-                  .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
-                  .map_err(|err| {
-                    error!("event_rule_set: to_replay_msg {}", err);
-                  });
-                return Ok(());
-              }
-            };
-
-            let rule_id = match &rule {
-              FacilityEventRule::LimitsExceeded { id, .. } => *id,
-              FacilityEventRule::HartStatus { id, .. } => *id,
-            };
-
-            let mut rules = FacilityEventRule::load_list().await;
-
-            if let Some(pos) = rules.iter().position(|r| {
-              let id = match r {
-                FacilityEventRule::LimitsExceeded { id, .. } => id,
-                FacilityEventRule::HartStatus { id, .. } => id,
-              };
-              *id == rule_id
-            }) {
-              info!("event_rule_set: обновляем существующее правило {}", rule_id);
-              rules[pos] = rule.clone();
-            } else {
-              info!("event_rule_set: добавляем новое правило {}", rule_id);
-              rules.push(rule.clone());
-            }
-
-            let _ = FacilityEventRule::save_all(rules).await;
-
-            // В ответ отдаём само правило (Reply = FacilityEventRule)
-            if let Some(msg) = ipc_msg.to_replay_msg(Some(json!(rule)), None) {
-              info!("event_rule_set: отправляем ответ в ipc_router");
-              let _ = state.ipc_router.send_message(Some(msg));
-            } else {
-              error!("event_rule_set: to_replay_msg вернул None");
-            }
-
-            return Ok(());
-          }
-
           // ===================== EVENT_RULE_SET =====================
           if action.kind == IPCActionKind::SetData
             && action.name.as_deref() == Some("event_rule_set")
@@ -688,7 +702,6 @@ impl Actor for IpcHandler {
 
             return Ok(());
           }
-
           // ===================== LOAD_GRAD_TABLE =====================
           if action.kind == IPCActionKind::SetData
             && action.name.as_deref() == Some("load_grad_table")
@@ -1000,7 +1013,7 @@ pub fn get_tank_full(id: Uuid) -> Result<Tank, anyhow::Error> {
   for id in ids.iter() {
     let tank = tanks.get_mut(id).unwrap();
     match args.fields {
-      crate::TankListFields::Minimal => {
+      TankListFields::Minimal => {
         let path = format!("assets/db/tanks/{id}/base_vars.yaml");
         tank.base_vars = File::open(&path[..])
           .map_err(|err| {

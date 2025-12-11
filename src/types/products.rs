@@ -1,6 +1,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use smol_str::SmolStr;
+use taxon_core::infrastructure::facility::SharedData;
 use uuid::Uuid;
 
 #[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
@@ -28,6 +29,22 @@ impl Default for Product {
       product_weight_net: None,
       product_weight_gross: None,
       volume_at_15: None,
+    }
+  }
+}
+
+impl SharedData for Product {
+  fn id(&self) -> &Uuid {
+    match self {
+      Product::Oil { id, .. } => id,
+      Product::OilProduct { id, .. } => id,
+    }
+  }
+
+  fn title(&self) -> Option<&SmolStr> {
+    match self {
+      Product::Oil { name, .. } => Some(name),
+      Product::OilProduct { name, .. } => Some(name),
     }
   }
 }
