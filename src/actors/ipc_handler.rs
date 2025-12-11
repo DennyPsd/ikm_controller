@@ -316,7 +316,7 @@ impl Actor for IpcHandler {
               args.ids.len(),
               args.fields
             );
-            let products = Product::load_list("assets/db/").await;
+            let products = Product::load_list().await;
 
             if let Some(msg) = ipc_msg.to_replay_msg(Some(json!({ "data": products })), None) {
               info!("products_list: отправляем ответ в ipc_router");
@@ -375,10 +375,10 @@ impl Actor for IpcHandler {
             info!("product_create: присвоен новый id = {}", new_id);
 
             // грузим список, добавляем и сохраняем
-            let mut products = Product::load_list("assets/db/").await;
+            let mut products = Product::load_list().await;
             products.push(product.clone());
 
-            if let Err(err) = Product::save_all(products, "assets/db/").await {
+            if let Err(err) = Product::save_all(products).await {
               let err = internal_error(action.name.clone(), None)
                 .with_message(format!("product_create: save_all error: {err:?}"));
 
@@ -458,7 +458,7 @@ impl Actor for IpcHandler {
             }
 
             // грузим список, ищем продукт по id
-            let mut products = Product::load_list("assets/db/").await;
+            let mut products = Product::load_list().await;
 
             if let Some(pos) = products.iter().position(|p| p.id() == &id) {
               info!("product_set: обновляем существующий продукт {}", id);
@@ -477,7 +477,7 @@ impl Actor for IpcHandler {
               return Ok(());
             }
 
-            if let Err(err) = Product::save_all(products, "assets/db/").await {
+            if let Err(err) = Product::save_all(products).await {
               let err = internal_error(action.name.clone(), None)
                 .with_message(format!("product_set: save_all error: {err:?}"));
 
