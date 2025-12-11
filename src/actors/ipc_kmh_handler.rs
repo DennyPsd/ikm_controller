@@ -11,10 +11,12 @@ use ractor::{Actor, ActorProcessingErr, ActorRef};
 use serde_json::json;
 use smol_str::SmolStr;
 use std::fs::{self, File};
+use std::path::Path;
 use taxon_core::actors::ipc::errors::internal_error;
 use taxon_core::infrastructure::facility::{DataLink, SharedData};
 use taxon_core::prelude::{IPCActionKind, IPCActorMsg, IPCMessageCrate};
 use tracing::{error, info};
+use umya_spreadsheet::{reader, writer};
 use uuid::Uuid;
 
 pub struct KmhIpcHandlerState {
@@ -312,7 +314,7 @@ impl Actor for KmhIpcHandler {
           {
             // info!("KmhIpcHandler: обработка action 'kmh_report_create'");
 
-            // 0. Парсим аргументы: { device_id: Uuid }
+            //  Парсим аргументы: { device_id: Uuid }
             let args =
               match serde_json::from_value::<KMHReportCreateArgs>(action.args.clone().unwrap()) {
                 Ok(args) => args,
@@ -336,7 +338,7 @@ impl Actor for KmhIpcHandler {
             //   args.device_id
             // );
 
-            // 1. Читаем tanks.yaml и ищем нужный танк
+            // Читаем tanks.yaml и ищем нужный танк
             let tanks: Vec<Tank> = Tank::load_list("assets/db").await;
 
             let tank = match tanks.into_iter().find(|t| t.id == args.device_id) {
@@ -357,7 +359,7 @@ impl Actor for KmhIpcHandler {
               }
             };
 
-            // 2. Подтягиваем конфиг + base_vars + ext_vars + meta для этого танка
+            // Подтягиваем конфиг + base_vars + ext_vars + meta для этого танка
             let config_path = format!("assets/db/tanks/{}/config.yaml", args.device_id);
             let base_vars_path = format!("assets/db/tanks/{}/base_vars.yaml", args.device_id);
             let ext_vars_path = format!("assets/db/tanks/{}/ext_vars.yaml", args.device_id);
@@ -449,7 +451,7 @@ impl Actor for KmhIpcHandler {
                 .and_then(|v| v.replace(',', ".").parse::<f64>().ok())
             };
 
-            // 3. Базовая «болванка» KMHReport
+            // Базовая «болванка» KMHReport
             let mut kmh_report = KMHReport {
               // Окружение
               air_temperature_outside: 0.0,
@@ -491,12 +493,12 @@ impl Actor for KmhIpcHandler {
               density_channels: None,
             };
 
-            // 3.1. Если есть meta.json — обогащаем через Constants → KMHReport
+            // Если есть meta.json — обогащаем через Constants → KMHReport
             if let Some(m) = &meta {
               kmh_report.apply_constants(&m.constants);
             }
             // tank_product_density
-            // 3.2. Если есть config.yaml — переопределяем то, что явно задано в конфиге
+            // Если есть config.yaml — переопределяем то, что явно задано в конфиге
             if let Some(cfg) = &config {
               // HБ — базовая высота резервуара
               if let Some(h) = &cfg.basic_data.basic_height {
@@ -528,15 +530,15 @@ impl Actor for KmhIpcHandler {
               // Остальные поля KMHReport из конфига пока не трогаем — оператор + расчёт.
             }
 
-            // 3.3. Если есть base_vars + ext_vars — обогащаем измерениями
+            //  Если есть base_vars + ext_vars — обогащаем измерениями
             if let (Some(base), Some(ext)) = (&base_vars, &ext_vars) {
               kmh_report.apply_base_ext(base, ext);
             }
 
-            // 4. DataLink<Tank> через SharedData::new_link_to()
+            // DataLink<Tank> через SharedData::new_link_to()
             let tank_link = tank.new_link_to();
 
-            // 5. Собираем KMHReportInstance
+            // Собираем KMHReportInstance
             let now = Local::now();
             let report_id = Uuid::now_v7();
 
@@ -555,7 +557,7 @@ impl Actor for KmhIpcHandler {
               data: kmh_report,
             };
 
-            // 6. Создаём директорию и пишем файл assets/db/kmh_reports/{id}.json
+            // Создаём директорию и пишем файл assets/db/kmh_reports/{id}.json
             let dir_path = "assets/db/kmh_reports";
             if let Err(err) = fs::create_dir_all(dir_path) {
               let err = internal_error(action.name.clone(), None).with_message(format!(
@@ -590,7 +592,7 @@ impl Actor for KmhIpcHandler {
               return Ok(());
             }
 
-            // 7. Отправляем обратно уже заполненный KMHReportInstance
+            // Отправляем обратно уже заполненный KMHReportInstance
             if let Some(msg) = ipc_msg.to_replay_msg(Some(json!(kmh_instance)), None) {
               // info!(
               //   "kmh_report_create: отправляем созданный отчёт id={} в ipc_router",
@@ -702,7 +704,7 @@ impl Actor for KmhIpcHandler {
             kmh_instance.status = new_status;
             kmh_instance.data = calculated_report;
 
-            // 2. Сохраняем на диск в assets/db/kmh_reports/{id}.json
+            // Сохраняем на диск в assets/db/kmh_reports/{id}.json
             let dir_path = "assets/db/kmh_reports";
             if let Err(err) = fs::create_dir_all(dir_path) {
               let err = internal_error(action.name.clone(), None).with_message(format!(
@@ -741,7 +743,13 @@ impl Actor for KmhIpcHandler {
               return Ok(());
             }
 
-            // 3. Отправляем обратно уже пересчитанный и сохранённый инстанс
+            if let Err(err) = export_kmh_report_to_xlsx(&kmh_instance) {
+              error!(
+                "kmh_report_calc: failed to export XLSX for report_id={}: {err:?}",
+                kmh_instance.id
+              );
+            }
+            // Отправляем обратно уже пересчитанный и сохранённый инстанс
             if let Some(msg) = ipc_msg.to_replay_msg(Some(json!(kmh_instance)), None) {
               info!("kmh_report_calc: отправляем ответ в ipc_router");
               let _ = state.ipc_router.send_message(Some(msg));
@@ -905,4 +913,214 @@ impl Actor for KmhIpcHandler {
 
     Ok(())
   }
+}
+
+fn export_kmh_report_to_xlsx(
+  instance: &KMHReportInstance,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+  // Хелпер: номер колонки (1-based) -> буква(ы) Excel
+  fn col_letter(mut idx: u32) -> String {
+    let mut s = String::new();
+    while idx > 0 {
+      let rem = ((idx - 1) % 26) as u8;
+      s.insert(0, (b'A' + rem) as char);
+      idx = (idx - 1) / 26;
+    }
+    s
+  }
+
+  let template_path = Path::new("assets/report_tempplates/kmh_report.xlsx");
+  if !template_path.exists() {
+    return Err(format!("kmh_report template not found at {:?}", template_path).into());
+  }
+
+  // Читаем шаблон
+  let mut book = reader::xlsx::read(template_path)?;
+  let sheet = book
+    .get_sheet_mut(&0)
+    .ok_or("kmh_report.xlsx has no sheets")?;
+
+  let report = &instance.data;
+
+  // ====== ШАПКА / МЕТА ======
+
+  let created = instance.created_at.with_timezone(&Local);
+
+  // Дата протокола (J2)
+  sheet
+    .get_cell_mut("J2")
+    .set_value(created.format("%d.%m.%Y").to_string());
+
+  // Время протокола (L2)
+  sheet
+    .get_cell_mut("L2")
+    .set_value(created.format("%H:%M").to_string());
+
+  // Номер резервуара (C3) – используем title, либо что-то по умолчанию
+  let tank_id = instance
+    .title
+    .clone()
+    .unwrap_or_else(|| format!("КМХ отчёт {}", instance.id).into());
+
+  sheet.get_cell_mut("C3").set_value(tank_id);
+
+  // C4 должно быть "ikm"
+  sheet.get_cell_mut("C4").set_value("ikm");
+
+  // ====== БЛОК «МЕТЕО» (F8–F10) ======
+  sheet
+    .get_cell_mut("F8")
+    .set_value(report.air_temperature_outside.to_string()); // tвнеш
+  sheet
+    .get_cell_mut("F9")
+    .set_value(report.air_pressure_outside.to_string()); // давление
+  sheet
+    .get_cell_mut("F10")
+    .set_value(report.wind_speed.to_string()); // скорость ветра
+
+  // ====== ОСНОВНЫЕ КОНСТАНТЫ / КОНФИГ ======
+
+  // Класс рулетки (K14) – 1/2/3
+  let tape_class_val: i32 = match report.tape_class {
+    TapeClass::One => 1,
+    TapeClass::Two => 2,
+    TapeClass::Three => 3,
+  };
+  sheet
+    .get_cell_mut("K14")
+    .set_value(tape_class_val.to_string());
+
+  // αS (коэф. лин. расширения рулетки) – K15
+  sheet
+    .get_cell_mut("K15")
+    .set_value(report.ruler_alpha_coefficient.to_string());
+
+  // αСТ (коэф. лин. расширения стенки) – K16
+  sheet
+    .get_cell_mut("K16")
+    .set_value(report.wall_alpha_coefficient.to_string());
+
+  // HБ – базовая высота резервуара – K17
+  sheet
+    .get_cell_mut("K17")
+    .set_value(report.nominal_height.to_string());
+
+  // tв – температура воздуха при поверке резервуара – K18
+  sheet
+    .get_cell_mut("K18")
+    .set_value(report.air_temp_verify.to_string());
+
+  // tA – температура паров – C29
+  sheet
+    .get_cell_mut("C29")
+    .set_value(report.vapor_temp.to_string());
+
+  // Показания уровня ИС H – B29
+  sheet
+    .get_cell_mut("B29")
+    .set_value(report.measured_height.to_string());
+
+  // ====== ГАЗОВОЕ ПРОСТРАНСТВО (строка 23) ======
+  // В шаблоне 4 пары: (B23,C23), (D23,E23), (F23,G23), (H23,I23)
+  for (idx, (high, low)) in report.gas_layer_height_measured_points.iter().enumerate() {
+    if idx >= 4 {
+      break;
+    }
+    let row: u32 = 23;
+    let col_high = 2 + (idx as u32) * 2;
+    let col_low = col_high + 1;
+
+    let addr_high = format!("{}{}", col_letter(col_high), row);
+    let addr_low = format!("{}{}", col_letter(col_low), row);
+
+    sheet.get_cell_mut(&*addr_high).set_value(high.to_string());
+    sheet.get_cell_mut(&*addr_low).set_value(low.to_string());
+  }
+
+  // ====== ТЕМПЕРАТУРНЫЕ КАНАЛЫ (Таблица 1, строки 34–42) ======
+  // B(row) – уровень, C(row) – tис, E(row) – t0
+  for (idx, sensor) in report.temperature_channels.iter().enumerate() {
+    if idx >= 10 {
+      break;
+    }
+    let row: u32 = 34 + idx as u32;
+
+    let addr_level = format!("B{}", row);
+    let addr_t_meas = format!("C{}", row);
+    let addr_t_ctrl = format!("E{}", row);
+
+    // A(row) – уровень
+    sheet
+      .get_cell_mut(&*addr_level)
+      .set_value(sensor.level.to_string());
+
+    // C(row) – tис
+    sheet
+      .get_cell_mut(&*addr_t_meas)
+      .set_value(sensor.temperature.to_string());
+
+    sheet
+      .get_cell_mut(&*addr_t_ctrl)
+      .set_value(sensor.temperature_controlled.to_string());
+  }
+
+  // ====== КАНАЛ ПЛОТНОСТИ ======
+  // ρ(ис) – C48
+  sheet
+    .get_cell_mut("C48")
+    .set_value(report.density_measured.to_string());
+
+  // ρ(в), ρ(с), ρ(н) – E48, E49, E50
+  sheet
+    .get_cell_mut("E48")
+    .set_value(report.density_measured_controlled.0.to_string());
+  sheet
+    .get_cell_mut("E49")
+    .set_value(report.density_measured_controlled.1.to_string());
+  sheet
+    .get_cell_mut("E50")
+    .set_value(report.density_measured_controlled.2.to_string());
+
+  // ρ0 (по поверке / ручным) – K54
+  sheet
+    .get_cell_mut("K54")
+    .set_value(report.density_verified.to_string());
+
+  // Масса понтона – K53
+  sheet
+    .get_cell_mut("K53")
+    .set_value(report.pontoon_mass.to_string());
+
+  // ====== КАНАЛ ОБЪЁМА (строка 57) ======
+  // V(ис) – B57
+  sheet
+    .get_cell_mut("B57")
+    .set_value(report.product_volume_measured.to_string());
+
+  // Vгр – E57 (объём по градуировочной таблице)
+  sheet
+    .get_cell_mut("E57")
+    .set_value(report.volume_coarse.to_string());
+
+  // δV (допустимое отклонение по объёму) – I57
+  sheet
+    .get_cell_mut("I57")
+    .set_value(report.delta_v_max.to_string());
+
+  // ====== КАНАЛ МАССЫ (строка 62) ======
+  // m(ис) – B62
+  sheet
+    .get_cell_mut("B62")
+    .set_value(report.product_mass_measured.to_string());
+
+  // δm (максимальная) – G62
+  sheet
+    .get_cell_mut("G62")
+    .set_value(report.delta_m_max.to_string());
+
+  // ====== Сохранение ======
+  let out_path = format!("assets/report_tempplates/{}.xlsx", instance.id);
+  writer::xlsx::write(&book, &out_path)?;
+
+  Ok(())
 }

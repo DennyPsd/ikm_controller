@@ -9,14 +9,13 @@ use crate::{
 };
 use base64::Engine;
 use base64::engine::general_purpose;
-use chrono::Local;
 use ractor::{Actor, ActorProcessingErr, ActorRef};
 use serde_json::{json, to_string_pretty};
 use std::collections::HashMap;
 use std::fs::{self, File};
 use taxon_core::actors::ipc::errors::internal_error;
 use taxon_core::infrastructure::device::{FacilityEvent, FacilityEventRule};
-use taxon_core::infrastructure::facility::{DataChange, DataLink, SharedData};
+use taxon_core::infrastructure::facility::{DataLink, SharedData};
 use taxon_core::prelude::{IPCActionKind, IPCActorMsg, IPCMessageCrate};
 use tracing::{error, info};
 use uuid::Uuid;
@@ -243,7 +242,7 @@ impl Actor for IpcHandler {
             );
 
             let config_content = fs::read_to_string(&config_vars_path)?;
-            let old_config: TankConfig = serde_saphyr::from_str(&config_content)
+            let _old_config: TankConfig = serde_saphyr::from_str(&config_content)
               .map_err(|err| format!("Cant parse config: {err:?}"))?;
             let new_config = args;
 
@@ -287,11 +286,12 @@ impl Actor for IpcHandler {
 
           // ===================== PRODUCTS_LIST =====================
           if action.kind == IPCActionKind::GetData
-            && action.name.as_deref() == Some("products_list")
+            && action.name.as_deref() == Some("product_list")
             && action.args.is_some()
           {
-            info!("Modbus IPC_Handler: обработка action 'products_list'");
+            info!("Modbus IPC_Handler: обработка action 'product_list'");
 
+            // -------- разбор args --------
             let args = match serde_json::from_value::<ProductListArgs>(action.args.clone().unwrap())
             {
               Ok(args) => args,
@@ -311,13 +311,32 @@ impl Actor for IpcHandler {
             };
 
             info!(
-              "products_list: ids.len() = {}, fields = {:?}",
+              "products_list: входные аргументы: ids.len() = {}, fields = {:?}",
               args.ids.len(),
               args.fields
             );
 
+            // -------- загрузка танков из assets/db/Tank.yaml --------
             let tanks = Tank::load_list("assets/db/").await;
+            info!(
+              "products_list: загружено {} танков из assets/db/Tank.yaml",
+              tanks.len()
+            );
 
+            // Можно оставить подробный дамп, если надо прям всё видеть
+            // info!("products_list: tanks = {:#?}", tanks);
+
+            // Немного более дружелюбный лог по каждому танку
+            for tank in &tanks {
+              info!(
+                "products_list: tank id={} name={} has_product={}",
+                tank.id,
+                tank.name,
+                tank.product.is_some()
+              );
+            }
+
+            // -------- собираем продукты без дубликатов по id --------
             let mut products_by_id: HashMap<Uuid, Product> = HashMap::new();
 
             for tank in tanks.into_iter() {
@@ -327,23 +346,66 @@ impl Actor for IpcHandler {
                   Product::OilProduct { id, .. } => *id,
                 };
 
+                info!(
+                  "products_list: найден продукт в танке: tank_id={} product_id={}",
+                  tank.id, prod_id
+                );
+
+                // кладём только первый продукт с таким id
+                let is_new = !products_by_id.contains_key(&prod_id);
                 products_by_id.entry(prod_id).or_insert(prod);
+
+                if is_new {
+                  info!("products_list: продукт {} добавлен в словарь", prod_id);
+                } else {
+                  info!(
+                    "products_list: продукт {} уже был в словаре, пропускаем дубликат",
+                    prod_id
+                  );
+                }
+              } else {
+                info!("products_list: у танка {} продукт отсутствует", tank.id);
               }
             }
 
+            info!(
+              "products_list: итоговое количество уникальных продуктов по id = {}",
+              products_by_id.len()
+            );
+
+            // -------- фильтрация по args.ids (если они есть) --------
             let ids: Vec<Uuid> = if !args.ids.is_empty() {
+              info!(
+                "products_list: фильтруем по списку ids из запроса ({} шт.)",
+                args.ids.len()
+              );
               args.ids.clone()
             } else {
+              info!("products_list: ids не переданы, возвращаем все продукты");
               products_by_id.keys().cloned().collect()
             };
 
+            info!(
+              "products_list: после подготовки список ids для ответа содержит {} элементов",
+              ids.len()
+            );
+
+            // -------- формируем вектор продуктов для ответа --------
             let data: Vec<Product> = ids
               .into_iter()
-              .filter_map(|id| products_by_id.get(&id).cloned())
+              .filter_map(|id| {
+                let exists = products_by_id.contains_key(&id);
+                info!(
+                  "products_list: проверяем продукт id={} — в словаре: {}",
+                  id, exists
+                );
+                products_by_id.get(&id).cloned()
+              })
               .collect();
 
-            info!("products_list: найдено {} продуктов", data.len());
+            info!("products_list: найдено {} продуктов для ответа", data.len());
 
+            // -------- отправка ответа --------
             if let Some(msg) = ipc_msg.to_replay_msg(Some(json!({ "data": data })), None) {
               info!("products_list: отправляем ответ в ipc_router");
               let _ = state.ipc_router.send_message(Some(msg));

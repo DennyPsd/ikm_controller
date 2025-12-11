@@ -65,6 +65,7 @@ chrono = { version = "^0.4", default-features = false, features = [
   "core-error",
   "pure-rust-locales",
 ] }
+umya-spreadsheet = "2.3.3"
 url = { version = "^2.5", features = ["serde"] }
 uuid = { version = "^1.17", features = ["v4", "v5", "v7", "serde"] }
 bytes = "1"
