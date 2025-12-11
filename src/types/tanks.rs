@@ -3,7 +3,7 @@ use crate::types::tank_configuration::TankConfig;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use smol_str::SmolStr;
-use taxon_core::infrastructure::facility::SharedData;
+use taxon_core::infrastructure::facility::{DataLink, SharedData};
 use uuid::Uuid;
 
 /// Тип статуса цистерны
@@ -44,7 +44,7 @@ pub struct Tank {
   /// Группа
   pub group: SmolStr,
   /// Продукт
-  pub product: Option<Product>,
+  pub product: DataLink<Product>,
   /// Наименование
   pub name: SmolStr,
   /// Статус

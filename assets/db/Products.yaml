@@ -1,0 +1,14 @@
+- id: "00000000-0000-0000-0000-000000000001"
+  ns: Product
+  type: Oil
+  name: "Oil-1"
+  product_weight_net: null
+  product_weight_gross: null
+  volume_at_15: null
+
+- id: "00000000-0000-0000-0000-000000000002"
+  ns: Product
+  type: OilProduct
+  name: "OilProduct-2"
+  product_weight: null
+  volume_product_at_15: null
