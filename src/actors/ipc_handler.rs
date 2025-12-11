@@ -9,12 +9,14 @@ use crate::{
 };
 use base64::Engine;
 use base64::engine::general_purpose;
+use chrono::Local;
 use ractor::{Actor, ActorProcessingErr, ActorRef};
 use serde_json::{json, to_string_pretty};
 use std::collections::HashMap;
 use std::fs::{self, File};
 use taxon_core::actors::ipc::errors::internal_error;
 use taxon_core::infrastructure::device::{FacilityEvent, FacilityEventRule};
+use taxon_core::infrastructure::facility::DataChange;
 use taxon_core::infrastructure::facility::{DataLink, SharedData};
 use taxon_core::prelude::{IPCActionKind, IPCActorMsg, IPCMessageCrate};
 use tracing::{error, info};
@@ -242,7 +244,7 @@ impl Actor for IpcHandler {
             );
 
             let config_content = fs::read_to_string(&config_vars_path)?;
-            let _old_config: TankConfig = serde_saphyr::from_str(&config_content)
+            let old_config: TankConfig = serde_saphyr::from_str(&config_content)
               .map_err(|err| format!("Cant parse config: {err:?}"))?;
             let new_config = args;
 
@@ -261,7 +263,7 @@ impl Actor for IpcHandler {
               "Tank".into(),
             );
             info!("Change: {_changes:#?}");
-            if _changes.len() > 0 {
+            if !_changes.is_empty() {
               let _ = DataChange::insert_many(_changes, "assets/db").await;
             }
             if let Err(err) = fs::write(

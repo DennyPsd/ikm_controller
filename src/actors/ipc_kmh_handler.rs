@@ -1119,8 +1119,148 @@ fn export_kmh_report_to_xlsx(
     .set_value(report.delta_m_max.to_string());
 
   // ====== Сохранение ======
-  let out_path = format!("assets/report_tempplates/{}.xlsx", instance.id);
+  let out_path = format!("assets/downloads/{}.xlsx", instance.id);
   writer::xlsx::write(&book, &out_path)?;
 
   Ok(())
 }
+// use std::{fs, io, path::Path};
+// use chrono::Local;
+// use serde_json::json;
+// use xlsx_handlebars::render_template;
+//
+// fn export_kmh_report_to_xlsx(
+//   instance: &KMHReportInstance,
+// ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+//   let template_path = Path::new("assets/report_tempplates/kmh_report.xlsx");
+//
+//   if !template_path.exists() {
+//     return Err(Box::new(io::Error::new(
+//       io::ErrorKind::NotFound,
+//       format!("kmh_report template not found at {:?}", template_path),
+//     )));
+//   }
+//
+//   // читаем xlsx-шаблон как байты
+//   let template_bytes = fs::read(template_path)?;
+//
+//   let report = &instance.data;
+//   let created = instance.created_at.with_timezone(&Local);
+//
+//   // заголовок — как и раньше: либо title, либо "КМХ отчёт <id>"
+//   let tank_id: String = instance
+//       .title
+//       .clone()
+//       .unwrap_or_else(|| format!("КМХ отчёт {}", instance.id).into())
+//       .to_string();
+//
+//   // класс рулетки -> 1/2/3
+//   let tape_class_val: i32 = match report.tape_class {
+//     TapeClass::One => 1,
+//     TapeClass::Two => 2,
+//     TapeClass::Three => 3,
+//   };
+//
+//   // газовое пространство — массив точек
+//   let gas_points: Vec<_> = report
+//       .gas_layer_height_measured_points
+//       .iter()
+//       .enumerate()
+//       .map(|(idx, (high, low))| {
+//         json!({
+//         "index": idx + 1,
+//         "high": high,
+//         "low": low,
+//       })
+//       })
+//       .collect();
+//
+//   // температурные каналы
+//   let temperature_channels: Vec<_> = report
+//       .temperature_channels
+//       .iter()
+//       .enumerate()
+//       .map(|(idx, sensor)| {
+//         json!({
+//         "index": idx + 1,
+//         "level": sensor.level,
+//         "temperature": sensor.temperature,
+//         "temperature_controlled": sensor.temperature_controlled,
+//       })
+//       })
+//       .collect();
+//
+//   // плотность (тройка)
+//   let (rho_v, rho_s, rho_n) = report.density_measured_controlled;
+//
+//   // формируем JSON для handlebars
+//   let data = json!({
+//     // шапка
+//     "created_date": created.format("%d.%m.%Y").to_string(),
+//     "created_time": created.format("%H:%M").to_string(),
+//     "tank_id": tank_id,
+//     "source": "ikm",
+//
+//     // блок «Метео»
+//     "meteo": {
+//       "air_temperature_outside": report.air_temperature_outside,
+//       "air_pressure_outside":   report.air_pressure_outside,
+//       "wind_speed":             report.wind_speed,
+//     },
+//
+//     // основные константы
+//     "tape_class":              tape_class_val,
+//     "ruler_alpha_coefficient": report.ruler_alpha_coefficient,
+//     "wall_alpha_coefficient":  report.wall_alpha_coefficient,
+//     "nominal_height":          report.nominal_height,
+//     "air_temp_verify":         report.air_temp_verify,
+//
+//     // tA, H и т.п.
+//     "vapor_temp":      report.vapor_temp,
+//     "measured_height": report.measured_height,
+//
+//     // газовое пространство
+//     "gas_points": gas_points,
+//
+//     // температурные каналы (таблица 1)
+//     "temperature_channels": temperature_channels,
+//
+//     // плотность
+//     "density_measured": report.density_measured,
+//     "density_measured_controlled": {
+//       "rho_v": rho_v,
+//       "rho_s": rho_s,
+//       "rho_n": rho_n,
+//     },
+//     "density_verified": report.density_verified,
+//
+//     // понтон
+//     "pontoon_mass": report.pontoon_mass,
+//
+//     // объём
+//     "product_volume_measured": report.product_volume_measured,
+//     "volume_coarse":           report.volume_coarse,
+//     "delta_v_max":             report.delta_v_max,
+//
+//     // масса
+//     "product_mass_measured": report.product_mass_measured,
+//     "delta_m_max":           report.delta_m_max,
+//   });
+//
+//   // рендерим шаблон через xlsx-handlebars
+//   let rendered_bytes = match render_template(template_bytes, &data) {
+//     Ok(bytes) => bytes,
+//     Err(e) => {
+//       return Err(Box::new(io::Error::new(
+//         io::ErrorKind::Other,
+//         format!("xlsx-handlebars render failed: {e}"),
+//       )));
+//     }
+//   };
+//
+//   // сохраняем готовый отчёт
+//   let out_path = format!("assets/report_tempplates/{}.xlsx", instance.id);
+//   fs::write(&out_path, rendered_bytes)?;
+//
+//   Ok(())
+// }
