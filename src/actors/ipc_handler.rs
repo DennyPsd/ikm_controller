@@ -3,6 +3,7 @@ use crate::actors::modbus::modbus_fabric::ModbusFabricMsg;
 use crate::msges::data_change_list::DataChangeArgs;
 use crate::msges::event_list::EventListArgs;
 use crate::msges::load_grad_table::LoadGradTableArgs;
+use crate::msges::product_create::ProductCreateArgs;
 use crate::msges::product_list::ProductListArgs;
 use crate::msges::tank_list::{TankListArgs, TankListFields};
 use crate::types::products::Product;
@@ -348,33 +349,52 @@ impl Actor for IpcHandler {
               return Ok(());
             }
 
-            // парсим Product
-            let mut product: Product = match serde_json::from_value(action.args.clone().unwrap()) {
-              Ok(p) => p,
-              Err(err) => {
-                let err = internal_error(action.name.clone(), None)
-                  .with_message(format!("product_create: {}", err));
+            let create_args: ProductCreateArgs =
+              match serde_json::from_value(action.args.clone().unwrap()) {
+                Ok(p) => p,
+                Err(err) => {
+                  let err = internal_error(action.name.clone(), None)
+                    .with_message(format!("product_create: {}", err));
 
-                info!("product_create: шлём ошибку в ipc_router (bad args)");
-                let _ = state
-                  .ipc_router
-                  .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
-                  .map_err(|err| {
-                    error!("product_create: to_replay_msg {}", err);
-                  });
-                return Ok(());
-              }
+                  info!("product_create: шлём ошибку в ipc_router (bad args)");
+                  let _ = state
+                    .ipc_router
+                    .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                    .map_err(|err| {
+                      error!("product_create: to_replay_msg {}", err);
+                    });
+                  return Ok(());
+                }
+              };
+
+            let new_id = Uuid::now_v7();
+            let product: Product = match create_args {
+              ProductCreateArgs::Oil {
+                title,
+                product_weight_net,
+                product_weight_gross,
+                volume_at_15,
+              } => Product::Oil {
+                id: new_id,
+                title,
+                product_weight_net,
+                product_weight_gross,
+                volume_at_15,
+              },
+              ProductCreateArgs::OilProduct {
+                title,
+                product_weight,
+                volume_at_15,
+              } => Product::OilProduct {
+                id: new_id,
+                title,
+                product_weight,
+                volume_at_15,
+              },
             };
 
-            // генерим новый id, старый игнорируем
-            let new_id = Uuid::now_v7();
-            match &mut product {
-              Product::Oil { id, .. } => *id = new_id,
-              Product::OilProduct { id, .. } => *id = new_id,
-            }
             info!("product_create: присвоен новый id = {}", new_id);
 
-            // грузим список, добавляем и сохраняем
             let mut products = Product::load_list().await;
             products.push(product.clone());
 
@@ -382,7 +402,7 @@ impl Actor for IpcHandler {
               let err = internal_error(action.name.clone(), None)
                 .with_message(format!("product_create: save_all error: {err:?}"));
 
-              error!("product_create: ошибка записи Product.yaml: {err:?}");
+              error!("product_create: ошибка записи Products.yaml: {err:?}");
               let _ = state
                 .ipc_router
                 .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
@@ -392,7 +412,6 @@ impl Actor for IpcHandler {
               return Ok(());
             }
 
-            // отдаём созданный продукт
             if let Some(msg) = ipc_msg.to_replay_msg(Some(json!(product)), None) {
               info!("product_create: отправляем ответ в ipc_router");
               let _ = state.ipc_router.send_message(Some(msg));
