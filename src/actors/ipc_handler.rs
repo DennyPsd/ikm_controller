@@ -113,7 +113,7 @@ impl Actor for IpcHandler {
                 let err = internal_error(action.name.clone(), None)
                   .with_message(format!("tank_list: {}", err));
 
-                info!("tank_list: шлём ошибку в ipc_router (read_to_string)");
+                info!("tank_list: шлём ошибку в ipc_router (bad args)");
                 let _ = state
                   .ipc_router
                   .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
@@ -124,10 +124,18 @@ impl Actor for IpcHandler {
               }
             };
 
+            // грузим все танки
             let mut tanks: HashMap<_, _> = Tank::load_list()
               .await
               .into_iter()
               .map(|v| (v.id, v))
+              .collect();
+
+            // грузим все продукты один раз и кладём в map по id
+            let products_by_id: HashMap<Uuid, Product> = Product::load_list()
+              .await
+              .into_iter()
+              .map(|p| (p.id().clone(), p))
               .collect();
 
             let ids: Vec<_> = if !args.ids.is_empty() {
@@ -138,6 +146,7 @@ impl Actor for IpcHandler {
 
             for id in ids.iter() {
               let tank = tanks.get_mut(id).unwrap();
+
               match args.fields {
                 TankListFields::Minimal => {
                   let path = format!("assets/db/tanks/{id}/base_vars.yaml");
@@ -154,7 +163,10 @@ impl Actor for IpcHandler {
                         })
                         .ok()
                     });
+
+                  // В Minimal product остаётся как Link (не раскрываем)
                 }
+                // All и прочие варианты — грузим всё + раскрываем product
                 _ => {
                   let path = format!("assets/db/tanks/{id}/base_vars.yaml");
                   tank.base_vars = File::open(&path[..])
@@ -200,6 +212,13 @@ impl Actor for IpcHandler {
                         })
                         .ok()
                     });
+
+                  // 🔗 раскрываем product: Link -> Data(Product)
+                  if let DataLink::Link { id: prod_id, .. } = &tank.product {
+                    if let Some(prod) = products_by_id.get(prod_id) {
+                      tank.product = DataLink::Data(prod.clone());
+                    }
+                  }
                 }
               }
             }
@@ -215,6 +234,7 @@ impl Actor for IpcHandler {
             } else {
               error!("tank_list: to_replay_msg вернул None");
             }
+
             return Ok(());
           }
 
@@ -368,28 +388,17 @@ impl Actor for IpcHandler {
               };
 
             let new_id = Uuid::now_v7();
+
             let product: Product = match create_args {
-              ProductCreateArgs::Oil {
-                title,
-                product_weight_net,
-                product_weight_gross,
-                volume_at_15,
-              } => Product::Oil {
+              ProductCreateArgs::Oil { title, vapor } => Product::Oil {
                 id: new_id,
                 title,
-                product_weight_net,
-                product_weight_gross,
-                volume_at_15,
+                vapor,
               },
-              ProductCreateArgs::OilProduct {
-                title,
-                product_weight,
-                volume_at_15,
-              } => Product::OilProduct {
+              ProductCreateArgs::OilProduct { title, vapor } => Product::OilProduct {
                 id: new_id,
                 title,
-                product_weight,
-                volume_at_15,
+                vapor,
               },
             };
 

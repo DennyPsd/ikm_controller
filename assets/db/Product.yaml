@@ -2,13 +2,15 @@
   ns: Product
   type: Oil
   title: "Oil-1"
-  product_weight_net: null
-  product_weight_gross: null
-  volume_at_15: null
+  vapor:
+    method: manual
+    vapor_density: null
 
 - id: "00000000-0000-0000-0000-000000000002"
   ns: Product
   type: OilProduct
   title: "OilProduct-2"
-  product_weight: null
-  volume_product_at_15: null
+  vapor:
+    method: calculated
+    initial_boiling_point: null
+

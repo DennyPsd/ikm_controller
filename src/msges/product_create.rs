@@ -1,4 +1,4 @@
-use crate::types::products::Product;
+use crate::types::products::{Product, VaporDensity};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use smol_str::SmolStr;
@@ -14,16 +14,16 @@ pub struct ProductCreate;
 pub enum ProductCreateArgs {
   Oil {
     title: SmolStr,
-    product_weight_net: Option<f64>,
-    product_weight_gross: Option<f64>,
-    volume_at_15: Option<f64>,
+    #[serde(flatten)]
+    vapor: VaporDensity,
   },
   OilProduct {
     title: SmolStr,
-    product_weight: Option<f64>,
-    volume_at_15: Option<f64>,
+    #[serde(flatten)]
+    vapor: VaporDensity,
   },
 }
+
 impl IPCMessageDef for ProductCreate {
   type Args = ProductCreateArgs;
   type Reply = Product;

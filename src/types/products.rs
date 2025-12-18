@@ -5,30 +5,44 @@ use taxon_core::infrastructure::data::SharedData;
 use uuid::Uuid;
 
 #[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
+#[serde(tag = "vapor_density_method")]
+pub enum VaporDensity {
+  /// Ручной ввод плотности паров, кг/м3
+  #[serde(rename = "manual")]
+  Manual { vapor_density: Option<f64> },
+
+  /// Расчёт по температуре начала кипения, °C
+  #[serde(rename = "calculated")]
+  Calculated { initial_boiling_point: Option<f64> },
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
 #[serde(tag = "type")]
 pub enum Product {
   Oil {
     id: Uuid,
     title: SmolStr,
-    product_weight_net: Option<f64>,
-    product_weight_gross: Option<f64>,
-    volume_at_15: Option<f64>,
+
+    #[serde(flatten)]
+    vapor: VaporDensity,
   },
   OilProduct {
     id: Uuid,
     title: SmolStr,
-    product_weight: Option<f64>,
-    volume_at_15: Option<f64>,
+
+    #[serde(flatten)]
+    vapor: VaporDensity,
   },
 }
+
 impl Default for Product {
   fn default() -> Self {
     Self::Oil {
       id: Uuid::now_v7(),
       title: SmolStr::new("default oil"),
-      product_weight_net: None,
-      product_weight_gross: None,
-      volume_at_15: None,
+      vapor: VaporDensity::Manual {
+        vapor_density: None,
+      },
     }
   }
 }
