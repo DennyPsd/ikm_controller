@@ -8,6 +8,7 @@
     "serde",
     "Smol",
     "thiserror",
+    "xargo",
     "xtask"
   ],
   "rust-analyzer.files.exclude": ["assets", "temp", "target"],
