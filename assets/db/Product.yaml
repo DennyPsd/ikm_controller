@@ -2,6 +2,9 @@
   ns: Product
   type: Oil
   title: "Oil-1"
+  product_weight: null
+  volume_product_at_15: null
+
   vapor:
     method: manual
     vapor_density: null
@@ -10,6 +13,8 @@
   ns: Product
   type: OilProduct
   title: "OilProduct-2"
+  product_weight: null
+  volume_product_at_15: null
   vapor:
     method: calculated
     initial_boiling_point: null
