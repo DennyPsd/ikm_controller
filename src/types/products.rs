@@ -22,6 +22,8 @@ pub enum Product {
   Oil {
     id: Uuid,
     title: SmolStr,
+    product_weight: Option<f64>,
+    volume_at_15: Option<f64>,
 
     #[serde(flatten)]
     vapor: VaporDensity,
@@ -29,6 +31,8 @@ pub enum Product {
   OilProduct {
     id: Uuid,
     title: SmolStr,
+    product_weight: Option<f64>,
+    volume_at_15: Option<f64>,
 
     #[serde(flatten)]
     vapor: VaporDensity,
@@ -40,6 +44,8 @@ impl Default for Product {
     Self::Oil {
       id: Uuid::now_v7(),
       title: SmolStr::new("default oil"),
+      product_weight: None,
+      volume_at_15: None,
       vapor: VaporDensity::Manual {
         vapor_density: None,
       },

@@ -14,11 +14,17 @@ pub struct ProductCreate;
 pub enum ProductCreateArgs {
   Oil {
     title: SmolStr,
+    product_weight: Option<f64>,
+    volume_at_15: Option<f64>,
+
     #[serde(flatten)]
     vapor: VaporDensity,
   },
   OilProduct {
     title: SmolStr,
+    product_weight: Option<f64>,
+    volume_at_15: Option<f64>,
+
     #[serde(flatten)]
     vapor: VaporDensity,
   },

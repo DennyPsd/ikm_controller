@@ -390,15 +390,29 @@ impl Actor for IpcHandler {
             let new_id = Uuid::now_v7();
 
             let product: Product = match create_args {
-              ProductCreateArgs::Oil { title, vapor } => Product::Oil {
+              ProductCreateArgs::Oil {
+                title,
+                vapor,
+                product_weight,
+                volume_at_15,
+              } => Product::Oil {
                 id: new_id,
                 title,
                 vapor,
+                product_weight,
+                volume_at_15,
               },
-              ProductCreateArgs::OilProduct { title, vapor } => Product::OilProduct {
+              ProductCreateArgs::OilProduct {
+                title,
+                vapor,
+                product_weight,
+                volume_at_15,
+              } => Product::OilProduct {
                 id: new_id,
                 title,
                 vapor,
+                product_weight,
+                volume_at_15,
               },
             };
 
