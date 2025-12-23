@@ -25,7 +25,7 @@ pub struct TankConfig {
 #[skip_serializing_none]
 pub struct TankBasicData {
   /** Наименование */
-  pub name: Option<String>,
+  pub title: Option<String>,
   /** Парк резервуаров */
   pub reservoir_park: Option<String>,
   /** Группа */

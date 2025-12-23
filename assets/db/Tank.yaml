@@ -5,7 +5,7 @@
       ns: Product
       id: "00000000-0000-0000-0000-000000000001" # Oil-1
       title: "Oil-1"
-  name: "Tank-1"
+#  name: "Tank-1"
   status: "work"
   grc: "1 1"
   trc: "1 1"
@@ -22,7 +22,7 @@
       ns: Product
       id: "00000000-0000-0000-0000-000000000001" # Oil-1
       title: "Oil-1"
-  name: "Tank-2"
+#  name: "Tank-2"
   status: "work"
   grc: "1 1"
   trc: "1 2"
@@ -39,7 +39,7 @@
       ns: Product
       id: "00000000-0000-0000-0000-000000000002" # OilProduct-2
       title: "OilProduct-2"
-  name: "Tank-3"
+#  name: "Tank-3"
   status: "work"
   grc: "1 1"
   trc: "1 3"
@@ -56,7 +56,7 @@
       ns: Product
       id: "00000000-0000-0000-0000-000000000001" # Oil-1
       title: "Oil-1"
-  name: "Tank-4"
+#  name: "Tank-4"
   status: "work"
   grc: "1 1"
   trc: "2 1"
@@ -73,7 +73,7 @@
       ns: Product
       id: "00000000-0000-0000-0000-000000000002" # OilProduct-2
       title: "OilProduct-2"
-  name: "Tank-5"
+#  name: "Tank-5"
   status: "work"
   grc: "1 1"
   trc: "2 2"
@@ -90,7 +90,7 @@
       ns: Product
       id: "00000000-0000-0000-0000-000000000001" # Oil-1
       title: "Oil-1"
-  name: "Tank-6"
+#  name: "Tank-6"
   status: "work"
   grc: "1 1"
   trc: "2 3"
@@ -107,7 +107,7 @@
       ns: Product
       id: "00000000-0000-0000-0000-000000000001" # Oil-1
       title: "Oil-1"
-  name: "Tank-7"
+#  name: "Tank-7"
   status: "work"
   grc: "1 2"
   trc: "1 1"
@@ -124,7 +124,7 @@
       ns: Product
       id: "00000000-0000-0000-0000-000000000002" # OilProduct-2
       title: "OilProduct-2"
-  name: "Tank-8"
+#  name: "Tank-8"
   status: "work"
   grc: "1 2"
   trc: "2 1"
@@ -141,7 +141,7 @@
       ns: Product
       id: "00000000-0000-0000-0000-000000000001" # Oil-1
       title: "Oil-1"
-  name: "Tank-9"
+#  name: "Tank-9"
   status: "work"
   grc: "1 3"
   trc: "1 1"
@@ -158,7 +158,7 @@
       ns: Product
       id: "00000000-0000-0000-0000-000000000002" # OilProduct-2
       title: "OilProduct-2"
-  name: "Tank-10"
+#  name: "Tank-10"
   status: "work"
   grc: "1 3"
   trc: "2 1"
@@ -175,7 +175,7 @@
       ns: Product
       id: "00000000-0000-0000-0000-000000000001" # Oil-1
       title: "Oil-1"
-  name: "Tank-11"
+#  name: "Tank-11"
   status: "work"
   grc: "1 3"
   trc: "1 2"
@@ -192,7 +192,7 @@
       ns: Product
       id: "00000000-0000-0000-0000-000000000001" # Oil-1
       title: "Oil-1"
-  name: "Tank-12"
+#  name: "Tank-12"
   status: "work"
   grc: "1 3"
   trc: "2 2"
@@ -209,7 +209,7 @@
       ns: Product
       id: "00000000-0000-0000-0000-000000000002" # OilProduct-2
       title: "OilProduct-2"
-  name: "Tank-13"
+#  name: "Tank-13"
   status: "work"
   grc: "2 1"
   trc: "1 1"
@@ -226,7 +226,7 @@
       ns: Product
       id: "00000000-0000-0000-0000-000000000001" # Oil-1
       title: "Oil-1"
-  name: "Tank-14"
+#  name: "Tank-14"
   status: "work"
   grc: "2 1"
   trc: "1 2"
@@ -243,8 +243,7 @@
       ns: Product
       id: "00000000-0000-0000-0000-000000000002" # OilProduct-2
       title: "OilProduct-2"
-
-  name: "Tank-15"
+#  name: "Tank-15"
   status: "work"
   grc: "2 1"
   trc: "1 3"

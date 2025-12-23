@@ -20,6 +20,8 @@ use taxon_core::actors::ipc::errors::internal_error;
 use taxon_core::infrastructure::data::{DataChange, DataLink, SharedData};
 use taxon_core::infrastructure::device::{FacilityEvent, FacilityEventRule};
 use taxon_core::prelude::{IPCActionKind, IPCActorMsg, IPCMessageCrate};
+use tracing::debug;
+use tracing::warn;
 use tracing::{error, info};
 use uuid::Uuid;
 
@@ -239,69 +241,167 @@ impl Actor for IpcHandler {
           }
 
           // ===================== TankConfigSet =====================
+
           if action.kind == IPCActionKind::SetData
             && action.name.as_deref() == Some("tank_config_set")
-          // && action.args.is_some()
+            && action.args.is_some()
           {
-            let args = match serde_json::from_value::<TankConfig>(action.args.clone().unwrap()) {
-              Ok(args) => args,
-              Err(err) => {
-                let err = internal_error(action.name.clone(), None)
-                  .with_message(format!("tank_config_set: {}", err));
+            info!(
+              "tank_config_set: enter kind={:?} name={:?} target={:?} has_args={}",
+              action.kind,
+              action.name,
+              action.target,
+              action.args.is_some()
+            );
 
-                error!("tank_config_set: {err:?}");
-                let _ = state
-                  .ipc_router
-                  .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
-                  .map_err(|err| {
-                    error!("tank_config_set: to_replay_msg {}", err);
-                  });
+            // 1) device_id без panic
+            let device_id = match action.target.device_id {
+              Some(id) => id,
+              None => {
+                error!("tank_config_set: device_id is None");
+                let err = internal_error(action.name.clone(), None)
+                  .with_message("tank_config_set: device_id is None".to_string());
+
+                let msg = ipc_msg.to_replay_msg(Option::<()>::None, Some(err));
+                if let Err(e) = state.ipc_router.send_message(msg) {
+                  error!("tank_config_set: failed to send error reply: {e}");
+                }
                 return Ok(());
               }
             };
-            let config_vars_path = format!(
-              "assets/db/tanks/{}/config.yaml",
-              action.target.device_id.unwrap()
-            );
 
-            let config_content = fs::read_to_string(&config_vars_path)?;
-            let old_config: TankConfig = serde_saphyr::from_str(&config_content)
-              .map_err(|err| format!("Cant parse config: {err:?}"))?;
-            let new_config = args;
+            // 2) args без panic
+            let args_value = match action.args.clone() {
+              Some(v) => v,
+              None => {
+                error!("tank_config_set: args is None");
+                let err = internal_error(action.name.clone(), None)
+                  .with_message("tank_config_set: args is None".to_string());
 
-            let _changes = DataChange::generate_changes(
+                let msg = ipc_msg.to_replay_msg(Option::<()>::None, Some(err));
+                if let Err(e) = state.ipc_router.send_message(msg) {
+                  error!("tank_config_set: failed to send error reply: {e}");
+                }
+                return Ok(());
+              }
+            };
+
+            // 3) parse json args
+            let new_config: TankConfig = match serde_json::from_value(args_value) {
+              Ok(v) => {
+                debug!("tank_config_set: args parsed OK");
+                v
+              }
+              Err(err) => {
+                error!("tank_config_set: args parse error: {err}");
+                let err = internal_error(action.name.clone(), None)
+                  .with_message(format!("tank_config_set: args parse error: {err}"));
+
+                let msg = ipc_msg.to_replay_msg(Option::<()>::None, Some(err));
+                if let Err(e) = state.ipc_router.send_message(msg) {
+                  error!("tank_config_set: failed to send error reply: {e}");
+                }
+                return Ok(());
+              }
+            };
+
+            // 4) read old config
+            let config_vars_path = format!("assets/db/tanks/{}/config.yaml", device_id);
+            info!("tank_config_set: reading file: {}", config_vars_path);
+
+            let config_content = match fs::read_to_string(&config_vars_path) {
+              Ok(s) => s,
+              Err(e) => {
+                error!("tank_config_set: read_to_string failed: {e}");
+                let err = internal_error(action.name.clone(), None)
+                  .with_message(format!("tank_config_set: read error: {e}"));
+
+                let msg = ipc_msg.to_replay_msg(Option::<()>::None, Some(err));
+                if let Err(e2) = state.ipc_router.send_message(msg) {
+                  error!("tank_config_set: failed to send error reply: {e2}");
+                }
+                return Ok(());
+              }
+            };
+
+            let old_config: TankConfig = match serde_saphyr::from_str(&config_content) {
+              Ok(v) => v,
+              Err(err) => {
+                error!("tank_config_set: yaml parse failed: {err:?}");
+                let err = internal_error(action.name.clone(), None)
+                  .with_message(format!("tank_config_set: cant parse config.yaml: {err:?}"));
+
+                let msg = ipc_msg.to_replay_msg(Option::<()>::None, Some(err));
+                if let Err(e2) = state.ipc_router.send_message(msg) {
+                  error!("tank_config_set: failed to send error reply: {e2}");
+                }
+                return Ok(());
+              }
+            };
+
+            // 5) changes
+            info!("tank_config_set: generating changes...");
+            let changes = DataChange::generate_changes(
               &old_config,
               &new_config,
               "admin".into(),
               Local::now(),
-              action.target.device_id.unwrap(),
+              device_id,
               new_config
                 .basic_data
-                .name
+                .title
                 .clone()
-                .unwrap_or("".into())
+                .unwrap_or_default()
                 .into(),
               "Tank".into(),
             );
-            info!("Change: {_changes:#?}");
-            if !_changes.is_empty() {
-              let _ = DataChange::insert_many(_changes).await;
-            }
-            if let Err(err) = fs::write(
-              config_vars_path,
-              serde_saphyr::to_string(&new_config).unwrap(),
-            ) {
-              let err = internal_error(action.name.clone(), None)
-                .with_message(format!("event_rule_set: write error: {err:?}"));
 
-              error!("event_rule_set: ошибка записи eventrules.yaml: {err:?}");
-              let _ = state
-                .ipc_router
-                .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
-                .map_err(|err| {
-                  error!("event_rule_set: to_replay_msg {}", err);
-                });
+            info!("tank_config_set: changes count={}", changes.len());
+            debug!("tank_config_set: changes={:#?}", changes);
+
+            if !changes.is_empty() {
+              match DataChange::insert_many(changes).await {
+                Ok(_) => info!("tank_config_set: changes inserted OK"),
+                Err(e) => warn!("tank_config_set: insert_many failed (still continue): {e:?}"),
+              }
+            }
+
+            // 6) write new config
+            let yaml_out = match serde_saphyr::to_string(&new_config) {
+              Ok(s) => s,
+              Err(e) => {
+                error!("tank_config_set: to_string failed: {e:?}");
+                let err = internal_error(action.name.clone(), None)
+                  .with_message(format!("tank_config_set: serialize error: {e:?}"));
+
+                let msg = ipc_msg.to_replay_msg(Option::<()>::None, Some(err));
+                if let Err(e2) = state.ipc_router.send_message(msg) {
+                  error!("tank_config_set: failed to send error reply: {e2}");
+                }
+                return Ok(());
+              }
+            };
+
+            info!("tank_config_set: writing file...");
+            if let Err(e) = fs::write(&config_vars_path, yaml_out) {
+              error!("tank_config_set: write failed: {e:?}");
+              let err = internal_error(action.name.clone(), None)
+                .with_message(format!("tank_config_set: write error: {e:?}"));
+
+              let msg = ipc_msg.to_replay_msg(Option::<()>::None, Some(err));
+              if let Err(e2) = state.ipc_router.send_message(msg) {
+                error!("tank_config_set: failed to send error reply: {e2}");
+              }
               return Ok(());
+            }
+
+            // 7) ВОТ ЭТОГО РАНЬШЕ НЕ БЫЛО: success reply
+            info!("tank_config_set: sending success reply...");
+            let msg = ipc_msg.to_replay_msg(Some(()), None); // или Some(new_config.clone()), если ожидаешь данные
+            if let Err(e) = state.ipc_router.send_message(msg) {
+              error!("tank_config_set: failed to send success reply: {e}");
+            } else {
+              info!("tank_config_set: success reply sent");
             }
 
             return Ok(());

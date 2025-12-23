@@ -45,8 +45,8 @@ pub struct Tank {
   pub group: SmolStr,
   /// Продукт
   pub product: DataLink<Product>,
-  /// Наименование
-  pub name: SmolStr,
+  // /// Наименование
+  // pub name: SmolStr,
   /// Статус
   pub status: TankStatus,
   /// ГРК (группа резервуарного комплекса)
@@ -67,9 +67,9 @@ impl SharedData for Tank {
   fn id(&self) -> &Uuid {
     &self.id
   }
-  fn title(&self) -> Option<&SmolStr> {
-    Some(&self.name)
-  }
+  // fn title(&self) -> Option<&SmolStr> {
+  //   Some(&self.title)
+  // }
 }
 /// Расширенные показатели цистерны
 #[derive(Default, Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]

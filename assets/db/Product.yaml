@@ -1,21 +1,15 @@
-- id: "00000000-0000-0000-0000-000000000001"
-  ns: Product
-  type: Oil
+- type: Oil
+  id: "00000000-0000-0000-0000-000000000001"
   title: "Oil-1"
   product_weight: null
-  volume_product_at_15: null
+  volume_at_15: null
+  vapor_density_method: manual
+  vapor_density: null
 
-  vapor:
-    method: manual
-    vapor_density: null
-
-- id: "00000000-0000-0000-0000-000000000002"
-  ns: Product
-  type: OilProduct
+- type: OilProduct
+  id: "00000000-0000-0000-0000-000000000002"
   title: "OilProduct-2"
   product_weight: null
-  volume_product_at_15: null
-  vapor:
-    method: calculated
-    initial_boiling_point: null
-
+  volume_at_15: null
+  vapor_density_method: calculated
+  initial_boiling_point: null

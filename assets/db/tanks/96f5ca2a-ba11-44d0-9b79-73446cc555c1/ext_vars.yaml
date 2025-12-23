@@ -39,10 +39,10 @@ temperatures:
     level: 11000
     name: T7
   - value: 19.4
-    level: 12500
+    level: 11500
     name: T8
   - value: 15.6
-    level: 15000
+    level: 11900
     name: T9
 volume_coarse: 1650.574
 volume_relative_error_limit: 0.19
