@@ -1,7 +1,9 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+use crate::types::tanks::TankStatus;
 use serde_with::*;
+
 /** Конфигурация цистерны */
 #[derive(Default, Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
 #[skip_serializing_none]
@@ -33,6 +35,8 @@ pub struct TankParameters {
   pub salts_percent: Option<f32>,
   /** Тип цистерны */
   pub impurities_percent: Option<f32>,
+
+  pub status: TankStatus,
 }
 
 /** Основные данные цистерны */
