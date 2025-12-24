@@ -46,6 +46,7 @@ construction:
   linear_expansion: 0.00001249999968422344
   mass_floating_coating: 2877.0
 parameters:
+  status: work
   density_at_15: 11.0
   water_percent: 0.0
   salts_percent: 0.0

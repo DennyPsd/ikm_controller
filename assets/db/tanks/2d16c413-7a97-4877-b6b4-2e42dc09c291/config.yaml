@@ -9,6 +9,7 @@ basic_data:
   product: 00000000-0000-0000-0000-000000000002
   maximum_allowable_product_level: 12070.0
 parameters:
+  status: work
   density_at_15: 0.0
   water_percent: 0.0
   salts_percent: 0.0
