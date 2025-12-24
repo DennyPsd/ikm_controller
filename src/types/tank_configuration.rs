@@ -12,12 +12,27 @@ pub struct TankConfig {
   pub levels_of_point_sensors: LevelsOfPointSensors,
   /** Конструкция */
   pub construction: Construction,
+  /** данные заполняются в параметрах резервуара */
+  pub parameters: TankParameters,
   /** Метод расчета массы */
   pub mass_calculation_method: MassCalculationMethod,
   /** Показатели точности измерений */
   pub measurement_accuracy_indicators: MeasurementAccuracyIndicators,
   /** Блок калибровки */
   pub calibration_block: Calibration,
+}
+
+#[derive(Default, Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
+#[skip_serializing_none]
+pub struct TankParameters {
+  /** Наименование */
+  pub density_at_15: Option<f32>,
+  /** Парк резервуаров */
+  pub water_percent: Option<f32>,
+  /** Группа */
+  pub salts_percent: Option<f32>,
+  /** Тип цистерны */
+  pub impurities_percent: Option<f32>,
 }
 
 /** Основные данные цистерны */

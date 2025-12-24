@@ -9,6 +9,7 @@ use crate::msges::kmh_report_set::KMHReportSet;
 use crate::msges::load_grad_table::LoadGradTable;
 use crate::msges::park_list::ParkList;
 use crate::msges::product_create::ProductCreate;
+use crate::msges::product_delete::{ProductDelete, ProductDeleteArgs};
 use crate::msges::product_list::ProductList;
 use crate::msges::product_set::ProductSet;
 use crate::msges::tank_config_set::TankConfigSet;
@@ -38,4 +39,5 @@ pub fn ikm_controller_client_api() -> AsyncapiBuilder {
     .operation::<UserLogout, ()>()
     .operation::<ProductCreate, ()>()
     .operation::<ProductSet, ()>()
+    .operation::<ProductDelete, ()>()
 }
