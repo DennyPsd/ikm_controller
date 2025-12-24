@@ -740,7 +740,6 @@ impl Actor for IpcHandler {
                 });
               return Ok(());
             }
-v
             if let Some(msg) = ipc_msg.to_replay_msg(Some(json!(deleted)), None) {
               info!("product_delete: отправляем ответ в ipc_router");
               let _ = state.ipc_router.send_message(Some(msg));
