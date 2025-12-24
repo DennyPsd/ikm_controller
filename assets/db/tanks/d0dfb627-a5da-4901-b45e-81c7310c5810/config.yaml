@@ -8,6 +8,7 @@ basic_data:
   basic_height: 12070.0
   product: 00000000-0000-0000-0000-000000000001
   maximum_allowable_product_level: 12070.0
+  air_temp_verify: null
 levels_of_point_sensors:
   hysteresis: 2.0
   points:
@@ -42,8 +43,13 @@ levels_of_point_sensors:
       index: 9
       value: 15000.0
 construction:
-  linear_expansion: 0.0000125
+  linear_expansion: 0.00001249999968422344
   mass_floating_coating: 2877.0
+parameters:
+  density_at_15: 11.0
+  water_percent: 0.0
+  salts_percent: 0.0
+  impurities_percent: 0.0
 mass_calculation_method:
   method: "1"
   switching_level: 3500.0
@@ -52,14 +58,14 @@ mass_calculation_method:
   p1_reference_point: 1242.0
   reference_point: 0.0
 measurement_accuracy_indicators:
-  limit_permissible_absolute_error: 0.001
+  limit_permissible_absolute_error: 0.0010000000474974513
   hydrostatic_device_limit: 110000.0
   pressure_device_limit: 10000.0
   limit_permissible_absolute_measurement_reservoir_level: 1.0
   limit_permissible_absolute_measurement_level_raw_water: 1.0
   limit_permissible_absolute_measurement_temp_products_and_vapours: 0.5
   limit_permissible_absolute_measurement_oil_densities: 1.0
-  drawing_calibration_table: 10
+  drawing_calibration_table: 10.0
   hydrostatic_device_vpi: null
   pressure_device_vpi: null
 calibration_block:
@@ -67,31 +73,31 @@ calibration_block:
   level_point_sensors:
     - id: T0
       index: 0
-      value: 15
+      value: 15.0
     - id: T1
       index: 1
-      value: 15
+      value: 15.0
     - id: T2
       index: 2
-      value: 50
+      value: 50.0
     - id: T3
       index: 3
-      value: -20
+      value: -20.0
     - id: T4
       index: 4
-      value: -20
+      value: -20.0
     - id: T5
       index: 5
-      value: -20
+      value: -20.0
     - id: T6
       index: 6
-      value: -20
+      value: -20.0
     - id: T7
       index: 7
-      value: -20
+      value: -20.0
     - id: T8
       index: 8
-      value: -20
+      value: -20.0
     - id: T9
       index: 9
-      value: -20
+      value: -20.0
