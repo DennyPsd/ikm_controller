@@ -13,7 +13,7 @@ pub enum TankStatus {
   #[default]
   Work,
   Error,
-  Status,
+  Stop,
 }
 
 /// Базовые показатели цистерны
