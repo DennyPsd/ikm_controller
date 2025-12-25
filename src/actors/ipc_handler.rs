@@ -1223,7 +1223,13 @@ impl Actor for IpcHandler {
               "load_grad_table: успешно записали grad_table в {}",
               grad_path
             );
-
+            info!("load_grad_table: sending success reply...");
+            let msg = ipc_msg.to_replay_msg(Some(()), None);
+            if let Err(e) = state.ipc_router.send_message(msg) {
+              error!("load_grad_table: failed to send success reply: {e}");
+            } else {
+              info!("load_grad_table: success reply sent");
+            }
             return Ok(());
           }
 
