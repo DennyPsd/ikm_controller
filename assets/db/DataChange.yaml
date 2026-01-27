@@ -1,3 +1,83 @@
+- id: 019b5563-510f-7cb3-a67d-1abdc2a7c5e4
+  trx_id: 019b5563-510e-7832-882a-bb283cf943ab
+  data_id: 0f77a636-e538-4e85-bab5-00d4921674cf
+  data_ns: Tank
+  changed_at: 2025-12-25T15:02:10.830128+03:00
+  changed_by: admin
+  ns_title: Tank-3 - Конфигурация цистерны
+  field_title: /parameters/status
+  field_old_value: "\"work\""
+  field_new_value: "\"error\""
+- id: 019b5563-3389-7a32-90d1-febf27ebdd1b
+  trx_id: 019b5563-3388-7f70-b3a6-0fd701637888
+  data_id: 0f77a636-e538-4e85-bab5-00d4921674cf
+  data_ns: Tank
+  changed_at: 2025-12-25T15:02:03.271452+03:00
+  changed_by: admin
+  ns_title: Tank-3 - Конфигурация цистерны
+  field_title: /parameters/density_at_15
+  field_old_value: "0.0"
+  field_new_value: "null"
+- id: 019b5563-3389-7a32-90d1-fec1b520466e
+  trx_id: 019b5563-3388-7f70-b3a6-0fd701637888
+  data_id: 0f77a636-e538-4e85-bab5-00d4921674cf
+  data_ns: Tank
+  changed_at: 2025-12-25T15:02:03.271452+03:00
+  changed_by: admin
+  ns_title: Tank-3 - Конфигурация цистерны
+  field_title: /parameters/water_percent
+  field_old_value: "0.0"
+  field_new_value: "null"
+- id: 019b5563-3389-7a32-90d1-fed2b136883d
+  trx_id: 019b5563-3388-7f70-b3a6-0fd701637888
+  data_id: 0f77a636-e538-4e85-bab5-00d4921674cf
+  data_ns: Tank
+  changed_at: 2025-12-25T15:02:03.271452+03:00
+  changed_by: admin
+  ns_title: Tank-3 - Конфигурация цистерны
+  field_title: /parameters/salts_percent
+  field_old_value: "0.0"
+  field_new_value: "null"
+- id: 019b5563-3389-7a32-90d1-fee056ee1ce9
+  trx_id: 019b5563-3388-7f70-b3a6-0fd701637888
+  data_id: 0f77a636-e538-4e85-bab5-00d4921674cf
+  data_ns: Tank
+  changed_at: 2025-12-25T15:02:03.271452+03:00
+  changed_by: admin
+  ns_title: Tank-3 - Конфигурация цистерны
+  field_title: /parameters/impurities_percent
+  field_old_value: "0.0"
+  field_new_value: "null"
+- id: 019b5563-3389-7a32-90d1-fefbef2b2329
+  trx_id: 019b5563-3388-7f70-b3a6-0fd701637888
+  data_id: 0f77a636-e538-4e85-bab5-00d4921674cf
+  data_ns: Tank
+  changed_at: 2025-12-25T15:02:03.271452+03:00
+  changed_by: admin
+  ns_title: Tank-3 - Конфигурация цистерны
+  field_title: /parameters/status
+  field_old_value: "\"error\""
+  field_new_value: "\"work\""
+- id: 019b5558-d456-7472-9bd4-998656eb0e8f
+  trx_id: 019b5558-d455-7e43-891f-856acd9d7f36
+  data_id: d0dfb627-a5da-4901-b45e-81c7310c5810
+  data_ns: Tank
+  changed_at: 2025-12-25T14:50:43.540966+03:00
+  changed_by: admin
+  ns_title: Tank-2 - Конфигурация цистерны
+  field_title: /parameters/status
+  field_old_value: "\"work\""
+  field_new_value: "\"stop\""
+- id: 019b5558-c1a6-7363-9d27-ea4c2425065b
+  trx_id: 019b5558-c1a4-7063-990d-77d8dfe0a8ff
+  data_id: 0f77a636-e538-4e85-bab5-00d4921674cf
+  data_ns: Tank
+  changed_at: 2025-12-25T14:50:38.755449+03:00
+  changed_by: admin
+  ns_title: Tank-3 - Конфигурация цистерны
+  field_title: /parameters/status
+  field_old_value: "\"work\""
+  field_new_value: "\"error\""
 - id: 019b4b03-e1bd-7980-a3ed-226b612e727b
   trx_id: 019b4b03-e1bc-74f2-8662-2e423ade8527
   data_id: 96f5ca2a-ba11-44d0-9b79-73446cc555c1

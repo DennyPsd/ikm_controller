@@ -211,7 +211,7 @@
       title: "OilProduct-2"
 #  name: "Tank-13"
 #  status: "work"
-  grc: "2 1"
+  grc: "2 2"
   trc: "1 1"
   display_params:
     min_tank_level: 0.0
@@ -228,7 +228,7 @@
       title: "Oil-1"
 #  name: "Tank-14"
 #  status: "work"
-  grc: "2 1"
+  grc: "2 2"
   trc: "1 2"
   display_params:
     min_tank_level: 0.0
@@ -245,7 +245,7 @@
       title: "OilProduct-2"
 #  name: "Tank-15"
 #  status: "work"
-  grc: "2 1"
+  grc: "2 2"
   trc: "1 3"
   display_params:
     min_tank_level: 0.0

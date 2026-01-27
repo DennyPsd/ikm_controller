@@ -38,7 +38,6 @@ pub struct IpcHandlerState {
   pub ipc_router: ActorRef<Option<IPCActorMsg>>,
   #[allow(dead_code)]
   pub subscribers: Vec<Subscriber>,
-
   // новый актор для kmh
   #[allow(dead_code)]
   pub kmh_handler: ActorRef<KmhIpcHandlerMsg>,
