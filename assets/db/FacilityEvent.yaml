@@ -1648,3 +1648,1488 @@
       ns: FacilityEventRule
       id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
   value: 4546.0
+- id: 019bff26-92fb-7971-bd9a-49cb85aaf91e
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-27T14:11:16.731111+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 9129.0
+- id: 019bff26-9305-7e92-8ca1-b41ac4fdc83f
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-27T14:11:16.741225+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 6128.0
+- id: 019bff26-9309-75e3-a763-ff4edea7c7f3
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-27T14:11:16.745245+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 10528.0
+- id: 019bff26-9317-73f2-981a-a2a922cd710a
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-27T14:11:16.759313+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 3489.0
+- id: 019bff26-931a-7f81-a0e8-c089b3fcafd6
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-27T14:11:16.762750+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 7121.0
+- id: 019bff26-9322-73b2-aca8-010d39f15912
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-27T14:11:16.770800+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 10528.0
+- id: 019bff26-9326-7a32-9f1d-2fa309a879b2
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-27T14:11:16.774034+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 5515.0
+- id: 019bff26-9329-7f63-bc7b-283d6083fb27
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-27T14:11:16.777195+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 8630.0
+- id: 019bff26-932c-7851-9248-605cbf150275
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-27T14:11:16.780282+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 7121.0
+- id: 019bff26-932f-7cf1-ad92-3617ef5d192b
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-27T14:11:16.783328+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 6128.0
+- id: 019bff26-9332-7d30-b20a-74404f5ff55b
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-27T14:11:16.786285+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 7815.0
+- id: 019bff26-9335-7a02-a243-bcecb30ff014
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-27T14:11:16.789247+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 8628.0
+- id: 019bff26-bc2c-74e2-8ce8-a033995f7a85
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-27T14:11:27.276366+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 4546.0
+- id: 019bff26-bc3e-7a20-a3e3-dd0fb3673db2
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-27T14:11:27.294215+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 1234.0
+- id: 019bff26-bc4a-7d42-bdf2-f08909b55b95
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-27T14:11:27.306008+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 4546.0
+- id: 019c0380-cdfe-7d11-b0e4-15670c58ad91
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:28:18.942182+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 9129.0
+- id: 019c0380-ce08-79e1-a98d-4606225fb239
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:28:18.952270+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 6128.0
+- id: 019c0380-ce0c-7810-999b-0a873eb0d433
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:28:18.956255+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 10528.0
+- id: 019c0380-ce19-7133-84d2-d710f0c1241d
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:28:18.969572+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 3489.0
+- id: 019c0380-ce1f-7fb3-9e65-548de1d43d41
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:28:18.975281+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 7121.0
+- id: 019c0380-ce29-7b90-b543-d65c0fcababe
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:28:18.985667+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 10528.0
+- id: 019c0380-ce2d-7df1-8245-b03b86b5f031
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:28:18.989301+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 5515.0
+- id: 019c0380-ce30-79d1-b996-132d8b32db94
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:28:18.992720+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 8630.0
+- id: 019c0380-ce34-75c1-9321-c8350ebb20f3
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:28:18.996007+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 7121.0
+- id: 019c0380-ce37-7f42-bff4-60bec68c51f8
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:28:18.999636+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 6128.0
+- id: 019c0380-ce3a-7611-90d6-8a69cd0210dc
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:28:19.002935+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 7815.0
+- id: 019c0380-ce3e-7b12-9b1a-bbe826a8e71d
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:28:19.006149+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 8628.0
+- id: 019c0380-f749-7333-bf39-6793f85dcf7d
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:28:29.513618+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 4546.0
+- id: 019c0380-f75b-7231-8452-9a28cc72c531
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:28:29.531065+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 1234.0
+- id: 019c0380-f766-7a62-b7eb-8a9afbcf10e0
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:28:29.542455+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 4546.0
+- id: 019c0381-6f50-7791-b4c6-81adde8353d6
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:29:00.240379+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 9129.0
+- id: 019c0381-6f5a-78e0-bbb2-de451848ad3a
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:29:00.250576+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 6128.0
+- id: 019c0381-6f63-7942-b9d1-89425560e219
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:29:00.259981+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 10528.0
+- id: 019c0381-6f72-74a0-9b55-51806f825236
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:29:00.274163+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 3489.0
+- id: 019c0381-6f76-7e71-bb28-5d8823c97086
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:29:00.278136+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 7121.0
+- id: 019c0381-6f7e-7671-bfcc-b6a3c4790a8d
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:29:00.286782+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 10528.0
+- id: 019c0381-6f82-74a0-8473-57217f4bb4d3
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:29:00.290051+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 5515.0
+- id: 019c0381-6f86-7d91-ab0a-5c4ac6a01f06
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:29:00.294194+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 8630.0
+- id: 019c0381-6f89-7dc2-b947-ec1345a76247
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:29:00.297455+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 7121.0
+- id: 019c0381-6f8c-7470-b391-2daed48fc3b8
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:29:00.300528+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 6128.0
+- id: 019c0381-6f8f-7b70-8836-d956e072a301
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:29:00.303519+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 7815.0
+- id: 019c0381-6f92-7c10-bc0e-3d84ed37e404
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:29:00.306469+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 8628.0
+- id: 019c0381-9883-7e20-8f98-cb8ea198b97a
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:29:10.787209+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 4546.0
+- id: 019c0381-9892-7a02-af00-9523298828d5
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:29:10.802308+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 1234.0
+- id: 019c0381-989c-7073-bd3b-4845f0104999
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:29:10.812771+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 4546.0
+- id: 019c0382-009d-78d2-8972-a69a937633ab
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:29:37.437481+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 9129.0
+- id: 019c0382-00a7-7033-9ba1-b3d1577e00d4
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:29:37.447018+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 6128.0
+- id: 019c0382-00aa-74a2-991b-a5a40556ac0f
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:29:37.450782+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 10528.0
+- id: 019c0382-00b7-7a01-af04-8ca650815657
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:29:37.463778+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 3489.0
+- id: 019c0382-00bb-70b2-9890-3c40c8e23273
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:29:37.467525+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 7121.0
+- id: 019c0382-00c3-7290-a4c0-49e471dda65a
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:29:37.475447+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 10528.0
+- id: 019c0382-00c6-7643-8d34-eceacabdbf71
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:29:37.478607+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 5515.0
+- id: 019c0382-00c9-74f2-8b23-83dea22a2876
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:29:37.481686+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 8630.0
+- id: 019c0382-00cc-72a2-b122-df8efef1f3de
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:29:37.484941+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 7121.0
+- id: 019c0382-00d0-7932-b875-34c2f75ebde3
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:29:37.488334+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 6128.0
+- id: 019c0382-00d3-7ce3-b6c5-501036c74df0
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:29:37.491409+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 7815.0
+- id: 019c0382-00d6-7b33-ba4a-eaa56477311d
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:29:37.494389+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 8628.0
+- id: 019c0382-29f8-7541-a44c-07b7ce5e7068
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:29:48.024400+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 4546.0
+- id: 019c0382-2a0a-70b1-ac03-34a59cf85084
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:29:48.042091+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 1234.0
+- id: 019c0382-2a1a-7f51-969c-8ae2e2f9e7b7
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:29:48.058278+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 4546.0
+- id: 019c0392-a270-7661-a617-4fd573b3c88c
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:47:47.440724+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 9129.0
+- id: 019c0392-a279-7e81-a895-3fc7a0323dfc
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:47:47.449941+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 6128.0
+- id: 019c0392-a27d-7af0-8e75-39c90372e299
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:47:47.453540+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 10528.0
+- id: 019c0392-a28a-72c0-8671-f4b1b765f5e0
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:47:47.466144+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 3489.0
+- id: 019c0392-a28d-7e61-a996-6c29733feeed
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:47:47.469390+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 7121.0
+- id: 019c0392-a294-7c62-9733-40386446dd60
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:47:47.476701+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 10528.0
+- id: 019c0392-a297-7600-ae8e-54f2aa1c6346
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:47:47.479737+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 5515.0
+- id: 019c0392-a29a-70a1-ba7f-8a20aa133661
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:47:47.482887+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 8630.0
+- id: 019c0392-a29e-7471-aa0f-04c3250d8360
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:47:47.486068+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 7121.0
+- id: 019c0392-a2a1-76c0-9e55-a9a4cc4b28ae
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:47:47.489106+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 6128.0
+- id: 019c0392-a2a4-7611-b07c-579e8f5d73c4
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:47:47.492163+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 7815.0
+- id: 019c0392-a2a7-7b82-8f9c-e64c306e0de0
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:47:47.495126+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 8628.0
+- id: 019c0392-cbbf-7d22-8c14-e127458e8522
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:47:58.015044+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 4546.0
+- id: 019c0392-cbcf-7d80-b7f1-51ed8d5b06ae
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:47:58.031873+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 1234.0
+- id: 019c0392-cbda-7002-a89a-67de9e33ad19
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:47:58.042806+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 4546.0
+- id: 019c0394-604c-72f3-9c5b-26f259764f85
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:49:41.581008+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 9129.0
+- id: 019c0394-6056-7251-a798-f4fa84a64126
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:49:41.590540+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 6128.0
+- id: 019c0394-605a-7890-be3b-690d878cb392
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:49:41.594253+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 10528.0
+- id: 019c0394-6067-7ef3-aeb6-de17e6738fae
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:49:41.607113+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 3489.0
+- id: 019c0394-606a-78e2-a9ef-79ffb868b78e
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:49:41.610454+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 7121.0
+- id: 019c0394-6071-73b3-9e08-e0c2ed245f44
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:49:41.617839+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 10528.0
+- id: 019c0394-6075-77a2-a7f8-7028b013d5df
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:49:41.621335+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 5515.0
+- id: 019c0394-6078-7b41-8261-03315ff2d73e
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:49:41.624680+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 8630.0
+- id: 019c0394-607b-7e23-aaa0-16c93f9bfa25
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:49:41.627709+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 7121.0
+- id: 019c0394-607e-7c60-b0c8-84defd07016a
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:49:41.630821+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 6128.0
+- id: 019c0394-6081-7d41-b46b-a4677635a5d0
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:49:41.633850+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 7815.0
+- id: 019c0394-6085-71f1-97ee-2f3d90b06ec5
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:49:41.637301+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 8628.0
+- id: 019c0394-89a3-7301-abeb-9ceb79ca96df
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:49:52.163657+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 4546.0
+- id: 019c0394-89b4-7cb0-a750-7ac53bf07485
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:49:52.180226+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 1234.0
+- id: 019c0394-89bf-7291-8eac-392a0f7bba3b
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:49:52.191128+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 4546.0
+- id: 019c0397-808f-7670-bc0d-e8ecee7ad4e0
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:53:06.447154+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 9129.0
+- id: 019c0397-8096-7250-8546-c3b891d95817
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:53:06.454319+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 6128.0
+- id: 019c0397-8099-7b31-9e4f-eb226cfa94d4
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:53:06.457284+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 10528.0
+- id: 019c0397-80a4-7231-a0fa-0f64a4c90280
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:53:06.468079+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 3489.0
+- id: 019c0397-80a7-7923-b0fd-841e9b91fd48
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:53:06.471142+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 7121.0
+- id: 019c0397-80ae-7ab0-aba3-b0b937334e7e
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:53:06.478620+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 10528.0
+- id: 019c0397-80b1-76f1-8021-eb3617471618
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:53:06.481841+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 5515.0
+- id: 019c0397-80b5-7213-a1a8-4a1e2901ed63
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:53:06.485096+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 8630.0
+- id: 019c0397-80b8-78e1-986f-8cd632434e14
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:53:06.488192+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 7121.0
+- id: 019c0397-80bb-7a73-a447-b64c58e5dfee
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:53:06.491269+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 6128.0
+- id: 019c0397-80be-7b73-ae77-795e9d624aec
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:53:06.494303+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 7815.0
+- id: 019c0397-80c1-75b2-9c08-f73d0f8ea0ef
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:53:06.497584+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 8628.0
+- id: 019c0397-a9d4-7141-8b70-15ef54ab2e8b
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:53:17.012258+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 4546.0
+- id: 019c0397-a9e2-7962-bc24-a0c2c987a921
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:53:17.026574+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 1234.0
+- id: 019c0397-a9ec-7553-8d51-7335078e986a
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:53:17.036624+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 4546.0
+- id: 019c0398-0d09-7940-bc7f-83023cf0c840
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:53:42.409430+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 9129.0
+- id: 019c0398-0d11-79e1-aecb-01712887c0dc
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:53:42.417819+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 6128.0
+- id: 019c0398-0d15-79b2-ba28-d41f87ed3b22
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:53:42.421064+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 10528.0
+- id: 019c0398-0d20-78a2-89d1-ba4f6d3a3668
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:53:42.432729+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 3489.0
+- id: 019c0398-0d24-7f80-b9a8-cf706bd59b57
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:53:42.436026+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 7121.0
+- id: 019c0398-0d35-71b2-81e8-a0c0d2123af4
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:53:42.453248+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 10528.0
+- id: 019c0398-0d38-7d12-94ec-140428fd6458
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:53:42.456583+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 5515.0
+- id: 019c0398-0d3b-7393-b52b-1181dfec3f07
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:53:42.459837+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 8630.0
+- id: 019c0398-0d3f-7391-99bd-697e8dd04ab2
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:53:42.463028+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 7121.0
+- id: 019c0398-0d42-7a50-8245-486f26fd3a07
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:53:42.466350+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 6128.0
+- id: 019c0398-0d45-78d3-b0da-82f72db3c251
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:53:42.469652+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 7815.0
+- id: 019c0398-0d48-7b00-9231-cb6a1113c731
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:53:42.472823+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 8628.0
+- id: 019c0398-36a6-77d1-9c59-a90f428ffaf2
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:53:53.062877+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 4546.0
+- id: 019c0398-36b5-7783-9d22-1b64f64815f5
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:53:53.077080+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 1234.0
+- id: 019c0398-36bf-7c70-9d9c-cff0613dc779
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:53:53.087949+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 4546.0
+- id: 019c0399-3b86-72c3-bc0d-f990e79ef675
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:54:59.846515+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 9129.0
+- id: 019c0399-3b8f-7cc0-bc44-429ca28094d0
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:54:59.855811+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 6128.0
+- id: 019c0399-3b93-7713-acf2-0aa46fa1bf88
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:54:59.859536+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 10528.0
+- id: 019c0399-3ba0-7483-88ee-f0aac2e6d8be
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:54:59.872171+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 3489.0
+- id: 019c0399-3ba3-76a2-8de0-7804b95d0087
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:54:59.875508+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 7121.0
+- id: 019c0399-3baa-70b0-ab03-712130f9beec
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:54:59.882858+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 10528.0
+- id: 019c0399-3bad-7121-8aee-d0bd78dafbf0
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:54:59.885953+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 5515.0
+- id: 019c0399-3bb1-7c12-a024-7e7c5a3b5798
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:54:59.889135+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 8630.0
+- id: 019c0399-3bb4-7a20-aa3e-2af740af2c25
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:54:59.892463+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 7121.0
+- id: 019c0399-3bb7-7a32-a56d-99b0cffa08b7
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:54:59.895688+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 6128.0
+- id: 019c0399-3bba-7fd2-ba04-80dd9843ebd1
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:54:59.898750+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 7815.0
+- id: 019c0399-3bbd-7440-89d0-c9ad3e3e1464
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:54:59.901994+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 8628.0
+- id: 019c0399-6510-7350-b8e9-ab67b85ef110
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:55:10.480519+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 4546.0
+- id: 019c0399-6520-7420-b581-f97708302ea1
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:55:10.496804+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 1234.0
+- id: 019c0399-652b-77f1-982d-26ae627bd750
+  target:
+    type: Data
+    data_ns: Tank
+  severity: EMERGENCY
+  starts_at: 2026-01-28T10:55:10.507398+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 4546.0

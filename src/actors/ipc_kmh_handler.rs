@@ -7,7 +7,7 @@ use crate::types::tank_configuration::TankConfig;
 use crate::types::tanks::{BaseVars, ExtVars, Tank};
 use crate::types::type_traits::KMHReportExt;
 use chrono::Local;
-use ikm_calc::calculation::kmh::{KMHCalculator, KMHReport, TapeClass};
+use ikm_calc::calculation::kmh::{KMHCalculator, KMHReport, TapeClass, TemperatureSensor};
 use ractor::{Actor, ActorProcessingErr, ActorRef};
 use serde_json::json;
 use smol_str::SmolStr;
@@ -76,6 +76,49 @@ impl KmhIpcHandler {
       mass_channels: None,
       volume_channels: None,
       density_channels: None,
+    }
+  }
+
+  /// ВСЕГДА забиваем temperature_channels из ext_vars.temperatures
+  /// (temperature_controlled пока ставим равным измеренному, чтобы таблица была заполнена).
+  fn fill_temperature_channels_from_ext(report: &mut KMHReport, ext: &ExtVars) {
+    // ext.temperatures ожидается как Vec<{ value, level, name }>
+    // Если у тебя temperatures = Option<Vec<_>>, то поменяй на:
+    // let temps = ext.temperatures.as_deref().unwrap_or(&[]);
+    let temps = &ext.temperatures;
+    info!(
+      "fill_temperature_channels_from_ext: ext.temperatures.len={} (before fill report.temperature_channels.len={})",
+      temps.len(),
+      report.temperature_channels.len()
+    );
+
+    if temps.is_empty() {
+      report.temperature_channels.clear();
+      info!(
+        "fill_temperature_channels_from_ext: temps empty -> cleared report.temperature_channels"
+      );
+      return;
+    }
+
+    let mut channels: Vec<TemperatureSensor> = Vec::with_capacity(temps.len());
+    for t in temps.iter() {
+      let mut ch = TemperatureSensor::default();
+      ch.level = t.level as f64;
+      ch.temperature = t.value as f64;
+      ch.temperature_controlled = t.value as f64;
+      channels.push(ch);
+    }
+    report.temperature_channels = channels;
+
+    info!(
+      "fill_temperature_channels_from_ext: AFTER fill report.temperature_channels.len={}",
+      report.temperature_channels.len()
+    );
+    if let Some(first) = report.temperature_channels.get(0) {
+      info!(
+        "fill_temperature_channels_from_ext: first sensor = {:?}",
+        first
+      );
     }
   }
 
@@ -153,8 +196,6 @@ impl Actor for KmhIpcHandler {
             && action.name.as_deref() == Some("kmh_report_list")
             && action.args.is_some()
           {
-            // info!("KmhIpcHandler: обработка action 'kmh_report_list'");
-
             let args =
               match serde_json::from_value::<KMHReportListArgs>(action.args.clone().unwrap()) {
                 Ok(args) => args,
@@ -162,7 +203,6 @@ impl Actor for KmhIpcHandler {
                   let err = internal_error(action.name.clone(), None)
                     .with_message(format!("kmh_report_list: {}", err));
 
-                  // info!("kmh_report_list: шлём ошибку в ipc_router (bad args)");
                   let _ = state
                     .ipc_router
                     .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
@@ -172,18 +212,11 @@ impl Actor for KmhIpcHandler {
                   return Ok(());
                 }
               };
-            //
-            // info!(
-            //   "kmh_report_list: ids.len() = {}, fields = {:?}",
-            //   args.ids.len(),
-            //   args.fields
-            // );
 
             let dir_path = "assets/db/kmh_reports";
             let mut reports: Vec<KMHReportInstance> = Vec::new();
 
             if args.ids.is_empty() {
-              // читаем все файлы из директории kmh_reports
               match fs::read_dir(dir_path) {
                 Ok(entries) => {
                   for entry in entries {
@@ -224,13 +257,11 @@ impl Actor for KmhIpcHandler {
                   }
                 }
                 Err(err) => {
-                  // если директории нет — считаем, что просто ещё нет отчётов
                   if err.kind() != std::io::ErrorKind::NotFound {
                     let err = internal_error(action.name.clone(), None)
                       .with_message(format!("kmh_report_list: read_dir {dir_path}: {err:?}"));
 
                     if let Some(msg) = ipc_msg.to_replay_msg(Option::<()>::None, Some(err)) {
-                      // info!("kmh_report_list: шлём ошибку в ipc_router (read_dir)");
                       let _ = state.ipc_router.send_message(Some(msg));
                     } else {
                       error!("kmh_report_list: to_replay_msg вернул None при ошибке read_dir");
@@ -240,7 +271,6 @@ impl Actor for KmhIpcHandler {
                 }
               }
             } else {
-              // ids трактуем как id отчётов
               for id in &args.ids {
                 let file_path = format!("{}/{}.json", dir_path, id);
 
@@ -256,51 +286,34 @@ impl Actor for KmhIpcHandler {
                       );
                     }
                   },
-                  Err(_err) => {
-                    // info!("kmh_report_list: нет файла отчёта {} ({err:?})", file_path);
-                  }
+                  Err(_err) => {}
                 }
               }
             }
 
-            // Приводим к нужному уровню детализации
             let reports = match args.fields {
-              KMHReportListFields::Minimal => {
-                // Minimal: возвращаем только «шапку» отчёта.
-                // Поле `data` обнуляем, `tank` гарантированно делаем Link.
-                reports
-                  .into_iter()
-                  .map(|mut r| {
-                    r.data = KmhIpcHandler::empty_kmh_report();
-                    r.tank = r.tank.into_link_sync();
-                    r
-                  })
-                  .collect::<Vec<_>>()
-              }
-              KMHReportListFields::All => {
-                // All: возвращаем всё как есть
-                reports
-                  .into_iter()
-                  .map(|mut r| {
-                    let tl = r.tank.into_link_sync();
-                    r.tank = get_tank_full(*tl.id()).map(DataLink::Data).unwrap_or(tl);
-                    r
-                  })
-                  .collect::<Vec<_>>()
-              }
-              KMHReportListFields::Exact(_fields) => {
-                // TODO: тонкая выборка полей по списку `fields`.
-                // Пока ведём себя как All.
-                reports
-              }
+              KMHReportListFields::Minimal => reports
+                .into_iter()
+                .map(|mut r| {
+                  r.data = KmhIpcHandler::empty_kmh_report();
+                  r.tank = r.tank.into_link_sync();
+                  r
+                })
+                .collect::<Vec<_>>(),
+              KMHReportListFields::All => reports
+                .into_iter()
+                .map(|mut r| {
+                  let tl = r.tank.into_link_sync();
+                  r.tank = get_tank_full(*tl.id()).map(DataLink::Data).unwrap_or(tl);
+                  r
+                })
+                .collect::<Vec<_>>(),
+              KMHReportListFields::Exact(_fields) => reports,
             };
-
-            // info!("kmh_report_list: найдено {} отчётов", reports.len());
 
             let reply = KMHReportListReply { data: reports };
 
             if let Some(msg) = ipc_msg.to_replay_msg(Some(json!(reply)), None) {
-              // info!("kmh_report_list: отправляем ответ в ipc_router");
               let _ = state.ipc_router.send_message(Some(msg));
             } else {
               error!("kmh_report_list: to_replay_msg вернул None");
@@ -308,14 +321,12 @@ impl Actor for KmhIpcHandler {
 
             return Ok(());
           }
+
           // ===================== KMH_REPORT_CREATE =====================
           if action.kind == IPCActionKind::GetData
             && action.name.as_deref() == Some("kmh_report_create")
             && action.args.is_some()
           {
-            // info!("KmhIpcHandler: обработка action 'kmh_report_create'");
-
-            //  Парсим аргументы: { device_id: Uuid }
             let args =
               match serde_json::from_value::<KMHReportCreateArgs>(action.args.clone().unwrap()) {
                 Ok(args) => args,
@@ -323,7 +334,6 @@ impl Actor for KmhIpcHandler {
                   let err = internal_error(action.name.clone(), None)
                     .with_message(format!("kmh_report_create: {}", err));
 
-                  // info!("kmh_report_create: шлём ошибку в ipc_router (bad args)");
                   let _ = state
                     .ipc_router
                     .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
@@ -334,12 +344,6 @@ impl Actor for KmhIpcHandler {
                 }
               };
 
-            // info!(
-            //   "kmh_report_create: создание болванки отчёта для tank/device_id={}",
-            //   args.device_id
-            // );
-
-            // Читаем tanks.yaml и ищем нужный танк
             let tanks: Vec<Tank> = Tank::load_list().await;
 
             let tank = match tanks.into_iter().find(|t| t.id == args.device_id) {
@@ -351,7 +355,6 @@ impl Actor for KmhIpcHandler {
                 ));
 
                 if let Some(msg) = ipc_msg.to_replay_msg(Option::<()>::None, Some(err)) {
-                  // info!("kmh_report_create: шлём ошибку в ipc_router (tank not found)");
                   let _ = state.ipc_router.send_message(Some(msg));
                 } else {
                   error!("kmh_report_create: to_replay_msg вернул None (tank not found)");
@@ -360,7 +363,6 @@ impl Actor for KmhIpcHandler {
               }
             };
 
-            // Подтягиваем конфиг + base_vars + ext_vars + meta для этого танка
             let config_path = format!("assets/db/tanks/{}/config.yaml", args.device_id);
             let base_vars_path = format!("assets/db/tanks/{}/base_vars.yaml", args.device_id);
             let ext_vars_path = format!("assets/db/tanks/{}/ext_vars.yaml", args.device_id);
@@ -377,13 +379,7 @@ impl Actor for KmhIpcHandler {
                   None
                 }
               },
-              Err(_err) => {
-                // info!(
-                //   "kmh_report_create: нет config для {} ({err:?})",
-                //   args.device_id
-                // );
-                None
-              }
+              Err(_err) => None,
             };
 
             let base_vars: Option<BaseVars> = match File::open(&base_vars_path) {
@@ -397,31 +393,38 @@ impl Actor for KmhIpcHandler {
                   None
                 }
               },
-              Err(_err) => {
-                // info!(
-                //   "kmh_report_create: нет base_vars для {} ({err:?})",
-                //   args.device_id
-                // );
-                None
-              }
+              Err(_err) => None,
             };
 
             let ext_vars: Option<ExtVars> = match File::open(&ext_vars_path) {
               Ok(f) => match serde_saphyr::from_reader::<File, ExtVars>(f) {
-                Ok(v) => Some(v),
+                Ok(v) => {
+                  info!(
+                    "kmh_report_create: ext_vars loaded from {} | temperatures.len={}",
+                    ext_vars_path,
+                    v.temperatures.len()
+                  );
+                  for (i, t) in v.temperatures.iter().enumerate().take(5) {
+                    info!(
+                      "kmh_report_create: ext_vars.temp[{}] level={} value={} name={}",
+                      i, t.level, t.value, t.name
+                    );
+                  }
+                  Some(v)
+                }
                 Err(err) => {
                   error!(
-                    "kmh_report_create: не удалось распарсить ext_vars {}: {err:?}",
+                    "kmh_report_create: FAILED to parse ext_vars {}: {err:?}",
                     ext_vars_path
                   );
                   None
                 }
               },
-              Err(_err) => {
-                // info!(
-                //   "kmh_report_create: нет ext_vars для {} ({err:?})",
-                //   args.device_id
-                // );
+              Err(err) => {
+                error!(
+                  "kmh_report_create: FAILED to open ext_vars {}: {err:?}",
+                  ext_vars_path
+                );
                 None
               }
             };
@@ -437,24 +440,15 @@ impl Actor for KmhIpcHandler {
                   None
                 }
               },
-              Err(_err) => {
-                // info!(
-                //   "kmh_report_create: нет meta для calc/{} ({err:?})",
-                //   args.device_id
-                // );
-                None
-              }
+              Err(_err) => None,
             };
 
-            // утилита для парсинга f64 из Option<String> (с запятой/точкой)
             let _parse_opt_f64 = |s: &Option<String>| {
               s.as_ref()
                 .and_then(|v| v.replace(',', ".").parse::<f64>().ok())
             };
 
-            // Базовая «болванка» KMHReport
             let mut kmh_report = KMHReport {
-              // Окружение
               air_temperature_outside: 0.0,
               air_pressure_outside: 0.0,
               wind_speed: 0.0,
@@ -463,22 +457,18 @@ impl Actor for KmhIpcHandler {
               nominal_height: 0.0,
               delta_height: 0.0,
 
-              // Плотности
               density_verified: 0.0,
               density_measured: 0.0,
               density_measured_controlled: (0.0, 0.0, 0.0),
 
-              // Объёмы / массы
               product_volume_measured: 0.0,
               volume_coarse: 0.0,
               air_temp_verify: 0.0,
               pontoon_mass: 0.0,
               product_mass_measured: 0.0,
 
-              // Температура паров
               vapor_temp: 0.0,
 
-              // Рулетка / допуски
               tape_class: TapeClass::default(),
               delta_v_max: 0.0,
               delta_m_max: 0.0,
@@ -486,7 +476,6 @@ impl Actor for KmhIpcHandler {
               wall_alpha_coefficient: 0.0,
               pressure_coefficient: 0.0,
 
-              // Каналы
               level_channels: None,
               temperature_channels: Vec::new(),
               mass_channels: None,
@@ -494,52 +483,55 @@ impl Actor for KmhIpcHandler {
               density_channels: None,
             };
 
-            // Если есть meta.json — обогащаем через Constants → KMHReport
             if let Some(m) = &meta {
               kmh_report.apply_constants(&m.constants);
             }
-            // tank_product_density
-            // Если есть config.yaml — переопределяем то, что явно задано в конфиге
+
             if let Some(cfg) = &config {
-              // HБ — базовая высота резервуара
               if let Some(h) = &cfg.basic_data.basic_height {
                 kmh_report.nominal_height = *h as f64;
               }
 
-              // αст — линейное расширение стенки резервуара
               if let Some(a) = &cfg.construction.linear_expansion {
                 kmh_report.wall_alpha_coefficient = *a as f64;
               }
 
-              // m(понтона) — масса понтона
               if let Some(m) = &cfg.construction.mass_floating_coating {
                 kmh_report.pontoon_mass = *m as f64;
               }
 
-              // ΔH — предел абсолютной погрешности измерения уровня
               if let Some(dh) = &cfg
                 .measurement_accuracy_indicators
                 .limit_permissible_absolute_measurement_reservoir_level
               {
                 kmh_report.delta_height = *dh as f64;
               }
-              // Температура воздуха при поверке резервуара
+
               if let Some(dh) = &cfg.basic_data.air_temp_verify {
                 kmh_report.air_temp_verify = *dh as f64;
               }
-
-              // Остальные поля KMHReport из конфига пока не трогаем — оператор + расчёт.
             }
 
-            //  Если есть base_vars + ext_vars — обогащаем измерениями
+            // apply_base_ext (если есть оба)
             if let (Some(base), Some(ext)) = (&base_vars, &ext_vars) {
               kmh_report.apply_base_ext(base, ext);
             }
+            info!(
+              "kmh_report_create: AFTER apply_base_ext temperature_channels.len={}",
+              kmh_report.temperature_channels.len()
+            );
 
-            // DataLink<Tank> через SharedData::new_link_to()
+            // ВАЖНО: температура всегда берётся из ext_vars.temperatures и кладётся в temperature_channels
+            if let Some(ext) = &ext_vars {
+              KmhIpcHandler::fill_temperature_channels_from_ext(&mut kmh_report, ext);
+            }
+            info!(
+              "kmh_report_create: AFTER fill_temperature_channels_from_ext temperature_channels.len={}",
+              kmh_report.temperature_channels.len()
+            );
+
             let tank_link = tank.new_link_to();
 
-            // Собираем KMHReportInstance
             let now = Local::now();
             let report_id = Uuid::now_v7();
 
@@ -558,7 +550,6 @@ impl Actor for KmhIpcHandler {
               data: kmh_report,
             };
 
-            // Создаём директорию и пишем файл assets/db/kmh_reports/{id}.json
             let dir_path = "assets/db/kmh_reports";
             if let Err(err) = fs::create_dir_all(dir_path) {
               let err = internal_error(action.name.clone(), None).with_message(format!(
@@ -566,7 +557,6 @@ impl Actor for KmhIpcHandler {
               ));
 
               if let Some(msg) = ipc_msg.to_replay_msg(Option::<()>::None, Some(err)) {
-                // info!("kmh_report_create: шлём ошибку в ipc_router (create_dir_all)");
                 let _ = state.ipc_router.send_message(Some(msg));
               } else {
                 error!("kmh_report_create: to_replay_msg вернул None (create_dir_all)");
@@ -585,7 +575,6 @@ impl Actor for KmhIpcHandler {
                 .with_message(format!("kmh_report_create: write {:?}: {err:?}", file_path));
 
               if let Some(msg) = ipc_msg.to_replay_msg(Option::<()>::None, Some(err)) {
-                // info!("kmh_report_create: шлём ошибку в ipc_router (write)");
                 let _ = state.ipc_router.send_message(Some(msg));
               } else {
                 error!("kmh_report_create: to_replay_msg вернул None при ошибке записи файла");
@@ -593,12 +582,7 @@ impl Actor for KmhIpcHandler {
               return Ok(());
             }
 
-            // Отправляем обратно уже заполненный KMHReportInstance
             if let Some(msg) = ipc_msg.to_replay_msg(Some(json!(kmh_instance)), None) {
-              // info!(
-              //   "kmh_report_create: отправляем созданный отчёт id={} в ipc_router",
-              //   report_id
-              // );
               let _ = state.ipc_router.send_message(Some(msg));
             } else {
               error!("kmh_report_create: to_replay_msg вернул None");
@@ -612,8 +596,6 @@ impl Actor for KmhIpcHandler {
             && action.name.as_deref() == Some("kmh_report_calc")
             && action.args.is_some()
           {
-            // info!("KmhIpcHandler: обработка action 'kmh_report_calc'");
-
             let raw_args = action.args.clone().unwrap();
 
             if let Ok(pretty) = serde_json::to_string_pretty(&raw_args) {
@@ -630,7 +612,6 @@ impl Actor for KmhIpcHandler {
                     v.id, v.title, v.status
                   );
 
-                  // Логируем data до расчёта
                   info!("kmh_report_calc: data ДО расчёта (Debug): {:?}", v.data);
                   if let Ok(pretty) = serde_json::to_string_pretty(&v.data) {
                     info!("kmh_report_calc: data ДО расчёта (JSON):\n{}", pretty);
@@ -658,13 +639,11 @@ impl Actor for KmhIpcHandler {
               kmh_instance.id
             );
 
-            // 1. Чистый пересчёт
             let mut calc = KMHCalculator {
               report: kmh_instance.data.clone(),
             };
             let calculated_report = calc.get_results();
 
-            // --- ЛОГ РЕЗУЛЬТАТА РАСЧЁТА ---
             info!(
               "kmh_report_calc: результат расчёта (Debug) для report_id={}: {:?}",
               kmh_instance.id, calculated_report
@@ -681,7 +660,6 @@ impl Actor for KmhIpcHandler {
               );
             }
 
-            // (опционально) самопроверка: сможем ли мы ЭТО потом прочитать как KMHReport?
             if let Ok(pretty) = serde_json::to_string(&calculated_report) {
               match serde_json::from_str::<KMHReport>(&pretty) {
                 Ok(_) => {
@@ -695,7 +673,6 @@ impl Actor for KmhIpcHandler {
               }
             }
 
-            // --- Выставляем статус отчёта по результату расчёта ---
             let new_status = KmhIpcHandler::status_from_report(&calculated_report);
             info!(
               "kmh_report_calc: выставляем статус отчёта report_id={} => {:?}",
@@ -705,7 +682,6 @@ impl Actor for KmhIpcHandler {
             kmh_instance.status = new_status;
             kmh_instance.data = calculated_report;
 
-            // Сохраняем на диск в assets/db/kmh_reports/{id}.json
             let dir_path = "assets/db/kmh_reports";
             if let Err(err) = fs::create_dir_all(dir_path) {
               let err = internal_error(action.name.clone(), None).with_message(format!(
@@ -750,7 +726,7 @@ impl Actor for KmhIpcHandler {
                 kmh_instance.id
               );
             }
-            // Отправляем обратно уже пересчитанный и сохранённый инстанс
+
             if let Some(msg) = ipc_msg.to_replay_msg(Some(json!(kmh_instance)), None) {
               info!("kmh_report_calc: отправляем ответ в ipc_router");
               let _ = state.ipc_router.send_message(Some(msg));
@@ -766,36 +742,17 @@ impl Actor for KmhIpcHandler {
             && action.name.as_deref() == Some("kmh_report_set")
             && action.args.is_some()
           {
-            // info!(
-            //   "KMH_REPORT_SET: старт обработки action='kmh_report_set', target.device_id={:?}",
-            //   action.target.device_id
-            // );
-
-            // ---------- Парсим args ----------
             let raw_args = action.args.clone().unwrap();
-            if let Ok(_args_pretty) = serde_json::to_string_pretty(&raw_args) {
-              // info!("KMH_REPORT_SET: сырые args из IPC:\n{}", args_pretty);
-            } else {
-              // info!(
-              //   "KMH_REPORT_SET: не удалось красиво вывести args, логирую как Debug: {raw_args:?}"
-              // );
-            }
+            if let Ok(_args_pretty) = serde_json::to_string_pretty(&raw_args) {}
 
             let kmh_instance = match serde_json::from_value::<KMHReportInstance>(raw_args.clone()) {
-              Ok(v) => {
-                // info!(
-                //   "KMH_REPORT_SET: args успешно распарсены в KMHReportInstance: id={:?}, title={:?}",
-                //   v.id, v.title
-                // );
-                v
-              }
+              Ok(v) => v,
               Err(err) => {
                 error!("KMH_REPORT_SET: ошибка парсинга KMHReportInstance из args: {err:?}");
 
                 let err = internal_error(action.name.clone(), None)
                   .with_message(format!("kmh_report_set: cannot parse args: {err}"));
 
-                // info!("KMH_REPORT_SET: отправляем ошибку в ipc_router (bad args)");
                 if let Err(send_err) = state
                   .ipc_router
                   .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
@@ -808,14 +765,7 @@ impl Actor for KmhIpcHandler {
               }
             };
 
-            // info!(
-            //   "KMH_REPORT_SET: будем сохранять КМХ-отчёт БЕЗ пересчёта: report_id={:?}, title={:?}",
-            //   kmh_instance.id, kmh_instance.title
-            // );
-
-            // ---------- Создаём директорию для отчётов ----------
             let dir_path = "assets/db/kmh_reports";
-            // info!("KMH_REPORT_SET: проверяем/создаём директорию для отчётов: {dir_path}");
 
             if let Err(err) = fs::create_dir_all(dir_path) {
               error!("KMH_REPORT_SET: ошибка create_dir_all('{dir_path}'): {err:?}");
@@ -824,7 +774,6 @@ impl Actor for KmhIpcHandler {
               ));
 
               if let Some(msg) = ipc_msg.to_replay_msg(Option::<()>::None, Some(err)) {
-                // info!("KMH_REPORT_SET: шлём ошибку в ipc_router (create_dir_all)");
                 if let Err(send_err) = state.ipc_router.send_message(Some(msg)) {
                   error!(
                     "KMH_REPORT_SET: ошибка отправки ответа в ipc_router (create_dir_all): {send_err:?}"
@@ -838,11 +787,7 @@ impl Actor for KmhIpcHandler {
               return Ok(());
             }
 
-            // info!("KMH_REPORT_SET: директория для отчётов готова: {dir_path}");
-
-            // ---------- Формируем путь до файла и пишем JSON ----------
             let file_path = format!("{}/{}.json", dir_path, kmh_instance.id);
-            // info!("KMH_REPORT_SET: сохраняем отчёт в файл: {}", file_path);
 
             let write_result: Result<(), _> = File::create(&file_path).and_then(|f| {
               serde_json::to_writer_pretty(f, &kmh_instance).map_err(std::io::Error::other)
@@ -858,7 +803,6 @@ impl Actor for KmhIpcHandler {
                 .with_message(format!("kmh_report_set: write {:?}: {err:?}", file_path));
 
               if let Some(msg) = ipc_msg.to_replay_msg(Option::<()>::None, Some(err)) {
-                // info!("KMH_REPORT_SET: шлём ошибку в ipc_router (write error)");
                 if let Err(send_err) = state.ipc_router.send_message(Some(msg)) {
                   error!(
                     "KMH_REPORT_SET: ошибка отправки ответа в ipc_router (write error): {send_err:?}"
@@ -873,17 +817,7 @@ impl Actor for KmhIpcHandler {
               return Ok(());
             }
 
-            // info!(
-            //   "KMH_REPORT_SET: отчёт успешно сохранён: report_id={:?}, file={}",
-            //   kmh_instance.id, file_path
-            // );
-
-            // ---------- Отправляем успешный ответ ----------
             if let Some(msg) = ipc_msg.to_replay_msg(Some(json!(kmh_instance)), None) {
-              // info!(
-              //   "KMH_REPORT_SET: отправляем успешный ответ в ipc_router по report_id={:?}",
-              //   kmh_instance.id
-              // );
               if let Err(send_err) = state.ipc_router.send_message(Some(msg)) {
                 error!(
                   "KMH_REPORT_SET: ошибка отправки успешного ответа в ipc_router: {send_err:?}"
@@ -896,18 +830,8 @@ impl Actor for KmhIpcHandler {
               );
             }
 
-            // info!(
-            //   "KMH_REPORT_SET: обработка kmh_report_set завершена для report_id={:?}",
-            //   kmh_instance.id
-            // );
-
             return Ok(());
           }
-
-          // info!(
-          //   "KmhIpcHandler: непонятный action для kmh: name={:?}, kind={:?} — игнорируем",
-          //   action.name, action.kind
-          // );
         }
       }
     }
@@ -919,7 +843,6 @@ impl Actor for KmhIpcHandler {
 fn export_kmh_report_to_xlsx(
   instance: &KMHReportInstance,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-  // Хелпер: номер колонки (1-based) -> буква(ы) Excel
   fn col_letter(mut idx: u32) -> String {
     let mut s = String::new();
     while idx > 0 {
@@ -935,7 +858,6 @@ fn export_kmh_report_to_xlsx(
     return Err(format!("kmh_report template not found at {:?}", template_path).into());
   }
 
-  // Читаем шаблон
   let mut book = reader::xlsx::read(template_path)?;
   let sheet = book
     .get_sheet_mut(&0)
@@ -943,45 +865,34 @@ fn export_kmh_report_to_xlsx(
 
   let report = &instance.data;
 
-  // ====== ШАПКА / МЕТА ======
-
   let created = instance.created_at.with_timezone(&Local);
 
-  // Дата протокола (J2)
   sheet
     .get_cell_mut("J2")
     .set_value(created.format("%d.%m.%Y").to_string());
 
-  // Время протокола (L2)
   sheet
     .get_cell_mut("L2")
     .set_value(created.format("%H:%M").to_string());
 
-  // Номер резервуара (C3) – используем title, либо что-то по умолчанию
   let tank_id = instance
     .title
     .clone()
     .unwrap_or_else(|| format!("КМХ отчёт {}", instance.id).into());
 
   sheet.get_cell_mut("C3").set_value(tank_id);
-
-  // C4 должно быть "ikm"
   sheet.get_cell_mut("C4").set_value("ikm");
 
-  // ====== БЛОК «МЕТЕО» (F8–F10) ======
   sheet
     .get_cell_mut("F8")
-    .set_value(report.air_temperature_outside.to_string()); // tвнеш
+    .set_value(report.air_temperature_outside.to_string());
   sheet
     .get_cell_mut("F9")
-    .set_value(report.air_pressure_outside.to_string()); // давление
+    .set_value(report.air_pressure_outside.to_string());
   sheet
     .get_cell_mut("F10")
-    .set_value(report.wind_speed.to_string()); // скорость ветра
+    .set_value(report.wind_speed.to_string());
 
-  // ====== ОСНОВНЫЕ КОНСТАНТЫ / КОНФИГ ======
-
-  // Класс рулетки (K14) – 1/2/3
   let tape_class_val: i32 = match report.tape_class {
     TapeClass::One => 1,
     TapeClass::Two => 2,
@@ -991,38 +902,30 @@ fn export_kmh_report_to_xlsx(
     .get_cell_mut("K14")
     .set_value(tape_class_val.to_string());
 
-  // αS (коэф. лин. расширения рулетки) – K15
   sheet
     .get_cell_mut("K15")
     .set_value(report.ruler_alpha_coefficient.to_string());
 
-  // αСТ (коэф. лин. расширения стенки) – K16
   sheet
     .get_cell_mut("K16")
     .set_value(report.wall_alpha_coefficient.to_string());
 
-  // HБ – базовая высота резервуара – K17
   sheet
     .get_cell_mut("K17")
     .set_value(report.nominal_height.to_string());
 
-  // tв – температура воздуха при поверке резервуара – K18
   sheet
     .get_cell_mut("K18")
     .set_value(report.air_temp_verify.to_string());
 
-  // tA – температура паров – C29
   sheet
     .get_cell_mut("C29")
     .set_value(report.vapor_temp.to_string());
 
-  // Показания уровня ИС H – B29
   sheet
     .get_cell_mut("B29")
     .set_value(report.measured_height.to_string());
 
-  // ====== ГАЗОВОЕ ПРОСТРАНСТВО (строка 23) ======
-  // В шаблоне 4 пары: (B23,C23), (D23,E23), (F23,G23), (H23,I23)
   for (idx, (high, low)) in report.gas_layer_height_measured_points.iter().enumerate() {
     if idx >= 4 {
       break;
@@ -1038,8 +941,6 @@ fn export_kmh_report_to_xlsx(
     sheet.get_cell_mut(&*addr_low).set_value(low.to_string());
   }
 
-  // ====== ТЕМПЕРАТУРНЫЕ КАНАЛЫ (Таблица 1, строки 34–42) ======
-  // B(row) – уровень, C(row) – tис, E(row) – t0
   for (idx, sensor) in report.temperature_channels.iter().enumerate() {
     if idx >= 10 {
       break;
@@ -1050,12 +951,10 @@ fn export_kmh_report_to_xlsx(
     let addr_t_meas = format!("C{}", row);
     let addr_t_ctrl = format!("E{}", row);
 
-    // A(row) – уровень
     sheet
       .get_cell_mut(&*addr_level)
       .set_value(sensor.level.to_string());
 
-    // C(row) – tис
     sheet
       .get_cell_mut(&*addr_t_meas)
       .set_value(sensor.temperature.to_string());
@@ -1065,13 +964,10 @@ fn export_kmh_report_to_xlsx(
       .set_value(sensor.temperature_controlled.to_string());
   }
 
-  // ====== КАНАЛ ПЛОТНОСТИ ======
-  // ρ(ис) – C48
   sheet
     .get_cell_mut("C48")
     .set_value(report.density_measured.to_string());
 
-  // ρ(в), ρ(с), ρ(н) – E48, E49, E50
   sheet
     .get_cell_mut("E48")
     .set_value(report.density_measured_controlled.0.to_string());
@@ -1082,186 +978,36 @@ fn export_kmh_report_to_xlsx(
     .get_cell_mut("E50")
     .set_value(report.density_measured_controlled.2.to_string());
 
-  // ρ0 (по поверке / ручным) – K54
   sheet
     .get_cell_mut("K54")
     .set_value(report.density_verified.to_string());
 
-  // Масса понтона – K53
   sheet
     .get_cell_mut("K53")
     .set_value(report.pontoon_mass.to_string());
 
-  // ====== КАНАЛ ОБЪЁМА (строка 57) ======
-  // V(ис) – B57
   sheet
     .get_cell_mut("B57")
     .set_value(report.product_volume_measured.to_string());
 
-  // Vгр – E57 (объём по градуировочной таблице)
   sheet
     .get_cell_mut("E57")
     .set_value(report.volume_coarse.to_string());
 
-  // δV (допустимое отклонение по объёму) – I57
   sheet
     .get_cell_mut("I57")
     .set_value(report.delta_v_max.to_string());
 
-  // ====== КАНАЛ МАССЫ (строка 62) ======
-  // m(ис) – B62
   sheet
     .get_cell_mut("B62")
     .set_value(report.product_mass_measured.to_string());
 
-  // δm (максимальная) – G62
   sheet
     .get_cell_mut("G62")
     .set_value(report.delta_m_max.to_string());
 
-  // ====== Сохранение ======
   let out_path = format!("assets/downloads/{}.xlsx", instance.id);
   writer::xlsx::write(&book, &out_path)?;
 
   Ok(())
 }
-// use std::{fs, io, path::Path};
-// use chrono::Local;
-// use serde_json::json;
-// use xlsx_handlebars::render_template;
-//
-// fn export_kmh_report_to_xlsx(
-//   instance: &KMHReportInstance,
-// ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-//   let template_path = Path::new("assets/report_tempplates/kmh_report.xlsx");
-//
-//   if !template_path.exists() {
-//     return Err(Box::new(io::Error::new(
-//       io::ErrorKind::NotFound,
-//       format!("kmh_report template not found at {:?}", template_path),
-//     )));
-//   }
-//
-//   // читаем xlsx-шаблон как байты
-//   let template_bytes = fs::read(template_path)?;
-//
-//   let report = &instance.data;
-//   let created = instance.created_at.with_timezone(&Local);
-//
-//   // заголовок — как и раньше: либо title, либо "КМХ отчёт <id>"
-//   let tank_id: String = instance
-//       .title
-//       .clone()
-//       .unwrap_or_else(|| format!("КМХ отчёт {}", instance.id).into())
-//       .to_string();
-//
-//   // класс рулетки -> 1/2/3
-//   let tape_class_val: i32 = match report.tape_class {
-//     TapeClass::One => 1,
-//     TapeClass::Two => 2,
-//     TapeClass::Three => 3,
-//   };
-//
-//   // газовое пространство — массив точек
-//   let gas_points: Vec<_> = report
-//       .gas_layer_height_measured_points
-//       .iter()
-//       .enumerate()
-//       .map(|(idx, (high, low))| {
-//         json!({
-//         "index": idx + 1,
-//         "high": high,
-//         "low": low,
-//       })
-//       })
-//       .collect();
-//
-//   // температурные каналы
-//   let temperature_channels: Vec<_> = report
-//       .temperature_channels
-//       .iter()
-//       .enumerate()
-//       .map(|(idx, sensor)| {
-//         json!({
-//         "index": idx + 1,
-//         "level": sensor.level,
-//         "temperature": sensor.temperature,
-//         "temperature_controlled": sensor.temperature_controlled,
-//       })
-//       })
-//       .collect();
-//
-//   // плотность (тройка)
-//   let (rho_v, rho_s, rho_n) = report.density_measured_controlled;
-//
-//   // формируем JSON для handlebars
-//   let data = json!({
-//     // шапка
-//     "created_date": created.format("%d.%m.%Y").to_string(),
-//     "created_time": created.format("%H:%M").to_string(),
-//     "tank_id": tank_id,
-//     "source": "ikm",
-//
-//     // блок «Метео»
-//     "meteo": {
-//       "air_temperature_outside": report.air_temperature_outside,
-//       "air_pressure_outside":   report.air_pressure_outside,
-//       "wind_speed":             report.wind_speed,
-//     },
-//
-//     // основные константы
-//     "tape_class":              tape_class_val,
-//     "ruler_alpha_coefficient": report.ruler_alpha_coefficient,
-//     "wall_alpha_coefficient":  report.wall_alpha_coefficient,
-//     "nominal_height":          report.nominal_height,
-//     "air_temp_verify":         report.air_temp_verify,
-//
-//     // tA, H и т.п.
-//     "vapor_temp":      report.vapor_temp,
-//     "measured_height": report.measured_height,
-//
-//     // газовое пространство
-//     "gas_points": gas_points,
-//
-//     // температурные каналы (таблица 1)
-//     "temperature_channels": temperature_channels,
-//
-//     // плотность
-//     "density_measured": report.density_measured,
-//     "density_measured_controlled": {
-//       "rho_v": rho_v,
-//       "rho_s": rho_s,
-//       "rho_n": rho_n,
-//     },
-//     "density_verified": report.density_verified,
-//
-//     // понтон
-//     "pontoon_mass": report.pontoon_mass,
-//
-//     // объём
-//     "product_volume_measured": report.product_volume_measured,
-//     "volume_coarse":           report.volume_coarse,
-//     "delta_v_max":             report.delta_v_max,
-//
-//     // масса
-//     "product_mass_measured": report.product_mass_measured,
-//     "delta_m_max":           report.delta_m_max,
-//   });
-//
-//   // рендерим шаблон через xlsx-handlebars
-//   let rendered_bytes = match render_template(template_bytes, &data) {
-//     Ok(bytes) => bytes,
-//     Err(e) => {
-//       return Err(Box::new(io::Error::new(
-//         io::ErrorKind::Other,
-//         format!("xlsx-handlebars render failed: {e}"),
-//       )));
-//     }
-//   };
-//
-//   // сохраняем готовый отчёт
-//   let out_path = format!("assets/report_tempplates/{}.xlsx", instance.id);
-//   fs::write(&out_path, rendered_bytes)?;
-//
-//   Ok(())
-// }
