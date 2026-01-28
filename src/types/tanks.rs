@@ -7,7 +7,14 @@ use taxon_core::infrastructure::data::{DataLink, SharedData};
 use uuid::Uuid;
 
 /// Тип статуса цистерны
-pub type TankStatus = String;
+#[derive(Default, Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq, Hash)]
+#[serde(rename_all = "lowercase")]
+pub enum TankStatus {
+  #[default]
+  Work,
+  Error,
+  Stop,
+}
 
 /// Базовые показатели цистерны
 #[derive(Default, Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
@@ -47,8 +54,8 @@ pub struct Tank {
   pub product: DataLink<Product>,
   // /// Наименование
   // pub name: SmolStr,
-  /// Статус
-  pub status: TankStatus,
+  // /// Статус
+  // pub status: TankStatus,
   /// ГРК (группа резервуарного комплекса)
   pub grc: SmolStr,
   /// ТРК (тип резервуарного комплекса)

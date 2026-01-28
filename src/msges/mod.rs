@@ -9,6 +9,7 @@ pub mod kmh_report_set;
 pub mod load_grad_table;
 pub mod park_list;
 pub mod product_create;
+pub mod product_delete;
 pub mod product_list;
 pub mod product_set;
 pub mod tank_config_set;

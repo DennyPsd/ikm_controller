@@ -38,7 +38,6 @@ pub struct IpcHandlerState {
   pub ipc_router: ActorRef<Option<IPCActorMsg>>,
   #[allow(dead_code)]
   pub subscribers: Vec<Subscriber>,
-
   // новый актор для kmh
   #[allow(dead_code)]
   pub kmh_handler: ActorRef<KmhIpcHandlerMsg>,
@@ -82,7 +81,6 @@ impl Actor for IpcHandler {
           info!("Modbus IPC_Handler: raw msg =\n{}", s);
         }
 
-        // сначала проверяем, kmh ли это — если да, просто форвардим в kmh-актор и выходим
         if let Some(action) = ipc_msg.as_action() {
           let is_kmh = (action.kind == IPCActionKind::GetData
             && action.name.as_deref() == Some("kmh_report_list"))
@@ -97,7 +95,6 @@ impl Actor for IpcHandler {
           }
         }
 
-        // дальше вся остальная логика как раньше (tank_list, products_list, …)
         if let Some(action) = ipc_msg.as_action() {
           info!(
             "Modbus IPC_Handler: action.name={:?}, kind={:?}, target.module_name={:?}, data_ns={:?}",
@@ -644,6 +641,114 @@ impl Actor for IpcHandler {
             return Ok(());
           }
 
+          // ===================== PRODUCT_DELETE =====================
+          if action.kind == IPCActionKind::SetData
+            && action.name.as_deref() == Some("product_delete")
+          {
+            info!("product_delete: обработка запроса");
+
+            if action.args.is_none() {
+              let err = internal_error(action.name.clone(), None)
+                .with_message("product_delete: empty args");
+
+              info!("product_delete: шлём ошибку в ipc_router (empty args)");
+              let _ = state
+                .ipc_router
+                .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                .map_err(|err| {
+                  error!("product_delete: to_replay_msg {}", err);
+                });
+              return Ok(());
+            }
+
+            let args = action.args.clone().unwrap();
+            let id_opt: Option<Uuid> = match &args {
+              serde_json::Value::String(s) => Uuid::parse_str(s.trim()).ok(),
+              serde_json::Value::Object(obj) => obj
+                .get("id")
+                .and_then(|v| v.as_str())
+                .and_then(|s| Uuid::parse_str(s.trim()).ok()),
+              _ => None,
+            };
+
+            let id = match id_opt {
+              Some(id) => id,
+              None => {
+                let err = internal_error(action.name.clone(), None)
+                  .with_message("product_delete: bad args, expected {id:\"uuid\"} or \"uuid\"");
+
+                info!("product_delete: шлём ошибку в ipc_router (bad args)");
+                let _ = state
+                  .ipc_router
+                  .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                  .map_err(|err| {
+                    error!("product_delete: to_replay_msg {}", err);
+                  });
+                return Ok(());
+              }
+            };
+
+            if id.is_nil() {
+              let err =
+                internal_error(action.name.clone(), None).with_message("product_delete: id is nil");
+
+              info!("product_delete: шлём ошибку — пустой id");
+              let _ = state
+                .ipc_router
+                .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                .map_err(|err| {
+                  error!("product_delete: to_replay_msg {}", err);
+                });
+              return Ok(());
+            }
+
+            info!("product_delete: входящий id = {}", id);
+
+            let mut products = Product::load_list().await;
+
+            let pos = match products.iter().position(|p| p.id() == &id) {
+              Some(pos) => pos,
+              None => {
+                let err = internal_error(action.name.clone(), None)
+                  .with_message(format!("product_delete: product with id {id} not found"));
+
+                error!("product_delete: продукт с id {id} не найден");
+                let _ = state
+                  .ipc_router
+                  .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                  .map_err(|err| {
+                    error!("product_delete: to_replay_msg {}", err);
+                  });
+                return Ok(());
+              }
+            };
+
+            let deleted = products.remove(pos);
+            info!("product_delete: удалён продукт id={}", id);
+
+            if let Err(err) = Product::save_all(products).await {
+              let err = internal_error(action.name.clone(), None)
+                .with_message(format!("product_delete: save_all error: {err:?}"));
+
+              error!("product_delete: ошибка записи Products.yaml: {err:?}");
+              let _ = state
+                .ipc_router
+                .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                .map_err(|err| {
+                  error!("product_delete: to_replay_msg {}", err);
+                });
+              return Ok(());
+            }
+            if let Some(msg) = ipc_msg.to_replay_msg(Some(json!(deleted)), None) {
+              info!("product_delete: отправляем ответ в ipc_router");
+              let _ = state.ipc_router.send_message(Some(msg));
+            } else {
+              error!("product_delete: to_replay_msg вернул None");
+            }
+
+            return Ok(());
+          }
+
           // ===================== EVENT_LIST =====================
           if action.kind == IPCActionKind::GetData
             && action.name.as_deref() == Some("event_list")
@@ -1117,7 +1222,13 @@ impl Actor for IpcHandler {
               "load_grad_table: успешно записали grad_table в {}",
               grad_path
             );
-
+            info!("load_grad_table: sending success reply...");
+            let msg = ipc_msg.to_replay_msg(Some(()), None);
+            if let Err(e) = state.ipc_router.send_message(msg) {
+              error!("load_grad_table: failed to send success reply: {e}");
+            } else {
+              info!("load_grad_table: success reply sent");
+            }
             return Ok(());
           }
 

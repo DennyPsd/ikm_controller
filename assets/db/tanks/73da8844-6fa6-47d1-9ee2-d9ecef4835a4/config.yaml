@@ -8,6 +8,12 @@ basic_data:
   basic_height: 12070.0
   product: 00000000-0000-0000-0000-000000000001
   maximum_allowable_product_level: 12070.0
+parameters:
+  status: work
+  density_at_15: 0.0
+  water_percent: 0.0
+  salts_percent: 0.0
+  impurities_percent: 0.0
 levels_of_point_sensors:
   hysteresis: 2.0
   points:

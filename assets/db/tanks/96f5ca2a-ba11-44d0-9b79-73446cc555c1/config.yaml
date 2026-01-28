@@ -45,6 +45,12 @@ levels_of_point_sensors:
 construction:
   linear_expansion: 0.00001249999968422344
   mass_floating_coating: 2877.0
+parameters:
+  status: work
+  density_at_15: 11.0
+  water_percent: 1.0
+  salts_percent: 0.0
+  impurities_percent: 0.0
 mass_calculation_method:
   method: "2"
   switching_level: 10500.0
