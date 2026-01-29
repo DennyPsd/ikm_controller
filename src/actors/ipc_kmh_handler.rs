@@ -46,13 +46,13 @@ impl KmhIpcHandler {
       gas_layer_height_measured_points: Vec::new(),
       measured_height: 0.0,
       nominal_height: 0.0,
+      base_measured_height: f64::NAN,
       delta_height: 0.0,
-      basic_height_measured: f64::NAN,
 
       // Плотности
       density_verified: 0.0,
       density_measured: 0.0,
-      density_measured_controlled: (0.0, 0.0, 0.0),
+      density_measured_controlled: (None, None, None),
 
       // Объёмы / массы
       product_volume_measured: 0.0,
@@ -457,12 +457,12 @@ impl Actor for KmhIpcHandler {
               gas_layer_height_measured_points: Vec::new(),
               measured_height: 0.0,
               nominal_height: 0.0,
+              base_measured_height: f64::NAN,
               delta_height: 0.0,
-              basic_height_measured: f64::NAN,
 
               density_verified: 0.0,
               density_measured: 0.0,
-              density_measured_controlled: (0.0, 0.0, 0.0),
+              density_measured_controlled: (None, None, None),
 
               product_volume_measured: 0.0,
               volume_coarse: 0.0,
@@ -645,7 +645,20 @@ impl Actor for KmhIpcHandler {
             let mut calc = KMHCalculator {
               report: kmh_instance.data.clone(),
             };
-            let calculated_report = calc.get_results();
+            let calculated_report = match calc.get_results() {
+              Ok(calculated_report) => calculated_report,
+              Err(err) => {
+                let err =
+                  internal_error(action.name.clone(), None).with_message(format!("${}", err));
+
+                if let Some(msg) = ipc_msg.to_replay_msg(Option::<()>::None, Some(err)) {
+                  let _ = state.ipc_router.send_message(Some(msg));
+                } else {
+                  error!("kmh_report_calc: to_replay_msg вернул None (calculated_report)");
+                }
+                return Ok(());
+              }
+            };
 
             info!(
               "kmh_report_calc: результат расчёта (Debug) для report_id={}: {:#?}",
@@ -971,15 +984,24 @@ fn export_kmh_report_to_xlsx(
     .get_cell_mut("C48")
     .set_value(report.density_measured.to_string());
 
-  sheet
-    .get_cell_mut("E48")
-    .set_value(report.density_measured_controlled.0.to_string());
-  sheet
-    .get_cell_mut("E49")
-    .set_value(report.density_measured_controlled.1.to_string());
-  sheet
-    .get_cell_mut("E50")
-    .set_value(report.density_measured_controlled.2.to_string());
+  sheet.get_cell_mut("E48").set_value(
+    report
+      .density_measured_controlled
+      .0
+      .map_or("".to_string(), |v| v.to_string()),
+  );
+  sheet.get_cell_mut("E49").set_value(
+    report
+      .density_measured_controlled
+      .1
+      .map_or("".to_string(), |v| v.to_string()),
+  );
+  sheet.get_cell_mut("E50").set_value(
+    report
+      .density_measured_controlled
+      .2
+      .map_or("".to_string(), |v| v.to_string()),
+  );
 
   sheet
     .get_cell_mut("K54")
