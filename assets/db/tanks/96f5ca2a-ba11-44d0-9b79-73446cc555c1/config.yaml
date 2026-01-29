@@ -8,7 +8,7 @@ basic_data:
   basic_height: 12070.0
   product: 00000000-0000-0000-0000-000000000001
   maximum_allowable_product_level: 12070.0
-  air_temp_verify: 111.0
+  air_temp_verify: 11.0
 levels_of_point_sensors:
   hysteresis: 2.0
   points:
@@ -44,20 +44,20 @@ levels_of_point_sensors:
       value: 11900.0
 construction:
   linear_expansion: 0.00001249999968422344
-  mass_floating_coating: 2877.0
+  mass_floating_coating: null
 parameters:
-  status: work
   density_at_15: 11.0
   water_percent: 1.0
   salts_percent: 0.0
   impurities_percent: 0.0
+  status: work
 mass_calculation_method:
   method: "2"
   switching_level: 10500.0
   switching_level_hysteresis: 2.0
   p3_p1: 12758.0
   p1_reference_point: 1242.0
-  reference_point: 0.0
+  reference_point: 1.0
 measurement_accuracy_indicators:
   limit_permissible_absolute_error: 0.0010000000474974513
   hydrostatic_device_limit: 110000.0
@@ -66,7 +66,7 @@ measurement_accuracy_indicators:
   limit_permissible_absolute_measurement_level_raw_water: 1.0
   limit_permissible_absolute_measurement_temp_products_and_vapours: 0.5
   limit_permissible_absolute_measurement_oil_densities: 1.0
-  drawing_calibration_table: 10.0
+  drawing_calibration_table: 0.4000000059604645
   hydrostatic_device_vpi: 45.0
   pressure_device_vpi: 45.0
 calibration_block:

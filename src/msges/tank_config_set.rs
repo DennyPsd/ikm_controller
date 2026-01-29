@@ -22,7 +22,7 @@ impl IPCMessageDef for TankConfigSet {
   fn target() -> Option<IPCTarget> {
     Some(IPCTarget {
       data_ns: Some("TankConfig".into()),
-      device_id: Some(Uuid::max()),
+      device_id: Some(Uuid::nil()),
       ..ActionTargetKind::Device.to_target()
     })
   }

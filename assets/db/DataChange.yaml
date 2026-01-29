@@ -1,3 +1,63 @@
+- id: 019c0a00-b90e-7e01-b61f-17ac3255b5a3
+  trx_id: 019c0a00-b90e-7e01-b61f-179a9943d380
+  data_id: 96f5ca2a-ba11-44d0-9b79-73446cc555c1
+  data_ns: Tank
+  changed_at: 2026-01-29T16:45:45.486348300+03:00
+  changed_by: admin
+  ns_title: Tank-1 - Конфигурация цистерны
+  field_title: /calibration_block/level_point_sensors/0/value
+  field_old_value: "-15.0"
+  field_new_value: "15.0"
+- id: 019c09ff-8417-7b33-8152-c8ba12fb3cf6
+  trx_id: 019c09ff-8416-7ca1-9c66-5b4c04822d27
+  data_id: 96f5ca2a-ba11-44d0-9b79-73446cc555c1
+  data_ns: Tank
+  changed_at: 2026-01-29T16:44:26.390346400+03:00
+  changed_by: admin
+  ns_title: Tank-1 - Конфигурация цистерны
+  field_title: /basic_data/air_temp_verify
+  field_old_value: "111.0"
+  field_new_value: "11.0"
+- id: 019c09ff-8417-7b33-8152-c8ce909d9a23
+  trx_id: 019c09ff-8416-7ca1-9c66-5b4c04822d27
+  data_id: 96f5ca2a-ba11-44d0-9b79-73446cc555c1
+  data_ns: Tank
+  changed_at: 2026-01-29T16:44:26.390346400+03:00
+  changed_by: admin
+  ns_title: Tank-1 - Конфигурация цистерны
+  field_title: /construction/mass_floating_coating
+  field_old_value: "2877.0"
+  field_new_value: "null"
+- id: 019c09ff-8417-7b33-8152-c8d4023da270
+  trx_id: 019c09ff-8416-7ca1-9c66-5b4c04822d27
+  data_id: 96f5ca2a-ba11-44d0-9b79-73446cc555c1
+  data_ns: Tank
+  changed_at: 2026-01-29T16:44:26.390346400+03:00
+  changed_by: admin
+  ns_title: Tank-1 - Конфигурация цистерны
+  field_title: /mass_calculation_method/reference_point
+  field_old_value: "0.0"
+  field_new_value: "1.0"
+- id: 019c09ff-8417-7b33-8152-c8ef50065d24
+  trx_id: 019c09ff-8416-7ca1-9c66-5b4c04822d27
+  data_id: 96f5ca2a-ba11-44d0-9b79-73446cc555c1
+  data_ns: Tank
+  changed_at: 2026-01-29T16:44:26.390346400+03:00
+  changed_by: admin
+  ns_title: Tank-1 - Конфигурация цистерны
+  field_title: /measurement_accuracy_indicators/drawing_calibration_table
+  field_old_value: "10.0"
+  field_new_value: "0.4"
+- id: 019c09ff-8417-7b33-8152-c8fdcafd7fbd
+  trx_id: 019c09ff-8416-7ca1-9c66-5b4c04822d27
+  data_id: 96f5ca2a-ba11-44d0-9b79-73446cc555c1
+  data_ns: Tank
+  changed_at: 2026-01-29T16:44:26.390346400+03:00
+  changed_by: admin
+  ns_title: Tank-1 - Конфигурация цистерны
+  field_title: /calibration_block/level_point_sensors/0/value
+  field_old_value: "15.0"
+  field_new_value: "-15.0"
 - id: 019b5563-510f-7cb3-a67d-1abdc2a7c5e4
   trx_id: 019b5563-510e-7832-882a-bb283cf943ab
   data_id: 0f77a636-e538-4e85-bab5-00d4921674cf

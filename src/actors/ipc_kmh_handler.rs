@@ -11,6 +11,7 @@ use ikm_calc::calculation::kmh::{KMHCalculator, KMHReport, TapeClass, Temperatur
 use ractor::{Actor, ActorProcessingErr, ActorRef};
 use serde_json::json;
 use smol_str::SmolStr;
+use std::f64;
 use std::fs::{self, File};
 use std::path::Path;
 use taxon_core::actors::ipc::errors::internal_error;
@@ -46,6 +47,7 @@ impl KmhIpcHandler {
       measured_height: 0.0,
       nominal_height: 0.0,
       delta_height: 0.0,
+      basic_height_measured: f64::NAN,
 
       // Плотности
       density_verified: 0.0,
@@ -456,6 +458,7 @@ impl Actor for KmhIpcHandler {
               measured_height: 0.0,
               nominal_height: 0.0,
               delta_height: 0.0,
+              basic_height_measured: f64::NAN,
 
               density_verified: 0.0,
               density_measured: 0.0,
@@ -530,7 +533,7 @@ impl Actor for KmhIpcHandler {
               kmh_report.temperature_channels.len()
             );
 
-            let tank_link = tank.new_link_to();
+            let tank_link = tank.as_link();
 
             let now = Local::now();
             let report_id = Uuid::now_v7();
@@ -645,33 +648,33 @@ impl Actor for KmhIpcHandler {
             let calculated_report = calc.get_results();
 
             info!(
-              "kmh_report_calc: результат расчёта (Debug) для report_id={}: {:?}",
+              "kmh_report_calc: результат расчёта (Debug) для report_id={}: {:#?}",
               kmh_instance.id, calculated_report
             );
 
-            if let Ok(pretty) = serde_json::to_string_pretty(&calculated_report) {
-              info!(
-                "kmh_report_calc: результат расчёта (JSON) для report_id={}:\n{}",
-                kmh_instance.id, pretty
-              );
-            } else {
-              error!(
-                "kmh_report_calc: не удалось сериализовать calculated_report в JSON для логов"
-              );
-            }
+            // if let Ok(pretty) = serde_json::to_string_pretty(&calculated_report) {
+            //   info!(
+            //     "kmh_report_calc: результат расчёта (JSON) для report_id={}:\n{}",
+            //     kmh_instance.id, pretty
+            //   );
+            // } else {
+            //   error!(
+            //     "kmh_report_calc: не удалось сериализовать calculated_report в JSON для логов"
+            //   );
+            // }
 
-            if let Ok(pretty) = serde_json::to_string(&calculated_report) {
-              match serde_json::from_str::<KMHReport>(&pretty) {
-                Ok(_) => {
-                  info!("kmh_report_calc: самопроверка десериализации KMHReport прошла успешно");
-                }
-                Err(err) => {
-                  error!(
-                    "kmh_report_calc: САМОПРОВЕРКА провалилась: calculated_report уже сейчас не десериализуется в KMHReport: {err:?}"
-                  );
-                }
-              }
-            }
+            // if let Ok(pretty) = serde_json::to_string(&calculated_report) {
+            //   match serde_json::from_str::<KMHReport>(&pretty) {
+            //     Ok(_) => {
+            //       info!("kmh_report_calc: самопроверка десериализации KMHReport прошла успешно");
+            //     }
+            //     Err(err) => {
+            //       error!(
+            //         "kmh_report_calc: САМОПРОВЕРКА провалилась: calculated_report уже сейчас не десериализуется в KMHReport: {err:?}"
+            //       );
+            //     }
+            //   }
+            // }
 
             let new_status = KmhIpcHandler::status_from_report(&calculated_report);
             info!(

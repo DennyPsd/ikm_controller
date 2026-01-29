@@ -641,7 +641,7 @@ impl TankCalcActor {
                 severity: rule.severity(),
                 starts_at: Local::now(),
                 ends_at: None,
-                rule: rule.new_link_to(),
+                rule: rule.as_link(),
                 acknowledged: None,
                 value,
               };

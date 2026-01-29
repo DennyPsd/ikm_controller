@@ -21,7 +21,7 @@ impl IPCMessageDef for KMHReportSet {
   fn target() -> Option<IPCTarget> {
     Some(IPCTarget {
       data_ns: Some("KMHReport".into()),
-      // data_id: Some(Uuid::max()),
+      // data_id: Some(Uuid::nil()),
       ..ActionTargetKind::Device.to_target()
     })
   }
