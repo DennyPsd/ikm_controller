@@ -2,6 +2,7 @@ use crate::actors::ipc_kmh_handler::KmhIpcHandlerMsg;
 use crate::actors::modbus::modbus_fabric::ModbusFabricMsg;
 use crate::msges::data_change_list::DataChangeArgs;
 use crate::msges::event_list::EventListArgs;
+use crate::msges::event_rule_create::EventRuleCreateArgs;
 use crate::msges::load_grad_table::LoadGradTableArgs;
 use crate::msges::product_create::ProductCreateArgs;
 use crate::msges::product_list::ProductListArgs;
@@ -878,9 +879,11 @@ impl Actor for IpcHandler {
 
             return Ok(());
           }
+
           // ===================== EVENT_RULE_SET =====================
           if action.kind == IPCActionKind::SetData
-            && action.name.as_deref() == Some("event_rule_set")
+            && (action.name.as_deref() == Some("event_rule_set")
+              || action.name.as_deref() == Some("event_rule_create"))
           {
             info!("event_rule_set: обработка запроса");
 
@@ -898,21 +901,56 @@ impl Actor for IpcHandler {
               return Ok(());
             }
 
-            let rule: FacilityEventRule = match serde_json::from_value(action.args.clone().unwrap())
-            {
-              Ok(r) => r,
-              Err(err) => {
-                let err = internal_error(action.name.clone(), None)
-                  .with_message(format!("event_rule_set: {}", err));
+            let rule: FacilityEventRule = if action.name.as_deref() == Some("event_rule_create") {
+              let rule: EventRuleCreateArgs =
+                match serde_json::from_value(action.args.clone().unwrap()) {
+                  Ok(r) => r,
+                  Err(err) => {
+                    let err = internal_error(action.name.clone(), None)
+                      .with_message(format!("event_rule_create: {}", err));
 
-                info!("event_rule_set: шлём ошибку в ipc_router (bad args)");
-                let _ = state
-                  .ipc_router
-                  .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
-                  .map_err(|err| {
-                    error!("event_rule_set: to_replay_msg {}", err);
-                  });
-                return Ok(());
+                    info!("event_rule_create: шлём ошибку в ipc_router (bad args)");
+                    let _ = state
+                      .ipc_router
+                      .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                      .map_err(|err| {
+                        error!("event_rule_create: to_replay_msg {}", err);
+                      });
+                    return Ok(());
+                  }
+                };
+              match rule.try_into() {
+                Ok(r) => r,
+                Err(err) => {
+                  let err = internal_error(action.name.clone(), None)
+                    .with_message(format!("event_rule_create: {}", 0));
+
+                  info!("event_rule_create: шлём ошибку в ipc_router (bad args)");
+                  let _ = state
+                    .ipc_router
+                    .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                    .map_err(|err| {
+                      error!("event_rule_create: to_replay_msg {}", 0);
+                    });
+                  return Ok(());
+                }
+              }
+            } else {
+              match serde_json::from_value(action.args.clone().unwrap()) {
+                Ok(r) => r,
+                Err(err) => {
+                  let err = internal_error(action.name.clone(), None)
+                    .with_message(format!("event_rule_set: {}", err));
+
+                  info!("event_rule_set: шлём ошибку в ipc_router (bad args)");
+                  let _ = state
+                    .ipc_router
+                    .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                    .map_err(|err| {
+                      error!("event_rule_set: to_replay_msg {}", err);
+                    });
+                  return Ok(());
+                }
               }
             };
 

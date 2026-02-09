@@ -1,5 +1,6 @@
 use crate::msges::data_change_list::DataChangeList;
 use crate::msges::event_list::EventList;
+use crate::msges::event_rule_create::{EventRuleCreate, EventRuleCreateArgs};
 use crate::msges::event_rule_list::EventRuleList;
 use crate::msges::event_rule_set::EventRuleSet;
 use crate::msges::kmh_report_calc::KMHReportCalc;
@@ -27,6 +28,7 @@ pub fn ikm_controller_client_api() -> AsyncapiBuilder {
     .operation::<TankConfigSet, ()>()
     .operation::<DataChangeList, ()>()
     .operation::<EventList, ()>()
+    .operation::<EventRuleCreate, ()>()
     .operation::<EventRuleList, ()>()
     .operation::<EventRuleSet, ()>()
     .operation::<ParkList, ()>()

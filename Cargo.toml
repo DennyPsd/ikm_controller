@@ -28,8 +28,8 @@ opt-level = 3
 
 [profile.release]
 panic = "abort"
-opt-level = "s"
-lto = "thin"
+opt-level = 3
+lto = true
 codegen-units = 1
 incremental = false
 debug = false
@@ -38,9 +38,9 @@ strip = "debuginfo"
 [profile.dev]
 panic = "abort"
 incremental = true
-lto = "off"
+lto = false
 [profile.dev.package."*"]
-opt-level = 3
+opt-level = 2
 
 
 #####################################
@@ -71,7 +71,7 @@ url = { version = "^2.5", features = ["serde"] }
 uuid = { version = "^1.17", features = ["v4", "v5", "v7", "serde"] }
 bytes = "1"
 semver = { version = "^1", features = ["serde"] }
-smol_str = { version = "0.2", features = ["serde", "arbitrary"] }
+smol_str = { version = "0.3", features = ["serde", "arbitrary"] }
 
 #------------ Parse/Serialize/Validate ------------#
 serde = { version = "^1.0", features = ["derive", "rc"] }
@@ -83,12 +83,12 @@ serde_json = { version = "^1.0", features = [
   "raw_value",
 ] }
 serde_with = { version = "3.4", features = ["json"] }
-schemars = { version = "^1", features = [
+schemars = { version = "1.2", features = [
   "chrono04",
   "url2",
   "uuid1",
   "smallvec1",
-  "smol_str02",
+  "smol_str03",
   "semver1",
   "bytes1",
   "indexmap2",
