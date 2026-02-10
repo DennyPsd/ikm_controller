@@ -14,7 +14,9 @@ pub struct EventRuleCreate;
 pub enum EventRuleCreateArgs {
   /// var.name,min,max
   LimitsExceeded {
-    tank_id: Option<Uuid>,
+    target: IPCTarget,
+
+    target_title: Option<SmolStr>,
     var_path: Vec<SmolStr>,
     min: Option<i64>,
     max: Option<i64>,
@@ -29,7 +31,8 @@ impl TryInto<FacilityEventRule> for EventRuleCreateArgs {
   type Error = ();
   fn try_into(self) -> Result<FacilityEventRule, Self::Error> {
     let EventRuleCreateArgs::LimitsExceeded {
-      tank_id,
+      target,
+      target_title,
       var_path,
       min,
       max,
@@ -41,12 +44,8 @@ impl TryInto<FacilityEventRule> for EventRuleCreateArgs {
     } = self;
     Ok(FacilityEventRule::LimitsExceeded {
       id: Uuid::now_v7(),
-      target: IPCTarget {
-        data_ns: Some("Tank".into()),
-        data_id: tank_id,
-        ..ActionTargetKind::Data.to_target()
-      },
-      target_title: Some("Tank".into()),
+      target,
+      target_title,
       var_path,
       min,
       max,

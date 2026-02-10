@@ -3,6 +3,7 @@ use crate::actors::modbus::modbus_fabric::ModbusFabricMsg;
 use crate::msges::data_change_list::DataChangeArgs;
 use crate::msges::event_list::EventListArgs;
 use crate::msges::event_rule_create::EventRuleCreateArgs;
+use crate::msges::event_rule_list::EventRuleListArgs;
 use crate::msges::load_grad_table::LoadGradTableArgs;
 use crate::msges::product_create::ProductCreateArgs;
 use crate::msges::product_list::ProductListArgs;
@@ -879,7 +880,45 @@ impl Actor for IpcHandler {
 
             return Ok(());
           }
+          // ===================== EVENT_RULE_LIST =====================
+          if action.kind == IPCActionKind::GetData
+            && action.name.as_deref() == Some("event_rule_list")
+            && action.args.is_some()
+          {
+            let args =
+              match serde_json::from_value::<EventRuleListArgs>(action.args.clone().unwrap()) {
+                Ok(args) => args,
+                Err(err) => {
+                  let err = internal_error(action.name.clone(), None)
+                    .with_message(format!("event_rule_list: {}", err));
 
+                  info!("event_rule_list: шлём ошибку в ipc_router (bad args)");
+                  let _ = state
+                    .ipc_router
+                    .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                    .map_err(|err| {
+                      error!("event_rule_list: to_replay_msg {}", err);
+                    });
+                  return Ok(());
+                }
+              };
+
+            info!(
+              "event_rule_list: входные аргументы: ids.len() = {}, fields = {:?}",
+              args.ids.len(),
+              args.fields
+            );
+            let events = FacilityEventRule::load_list().await;
+
+            if let Some(msg) = ipc_msg.to_replay_msg(Some(json!({ "data": events })), None) {
+              info!("event_rule_list: отправляем ответ в ipc_router");
+              let _ = state.ipc_router.send_message(Some(msg));
+            } else {
+              error!("event_rule_list: to_replay_msg вернул None");
+            }
+
+            return Ok(());
+          }
           // ===================== EVENT_RULE_SET =====================
           if action.kind == IPCActionKind::SetData
             && (action.name.as_deref() == Some("event_rule_set")
