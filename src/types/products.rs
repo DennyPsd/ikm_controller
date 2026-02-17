@@ -1,7 +1,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use smol_str::SmolStr;
-use taxon_core::infrastructure::data::SharedData;
+use taxon_core::infrastructure::data::DataModel;
 use uuid::Uuid;
 
 #[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
@@ -53,7 +53,7 @@ impl Default for Product {
   }
 }
 
-impl SharedData for Product {
+impl DataModel for Product {
   fn id(&self) -> &Uuid {
     match self {
       Product::Oil { id, .. } => id,

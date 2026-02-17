@@ -3,7 +3,7 @@ use crate::types::tank_configuration::TankConfig;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use smol_str::SmolStr;
-use taxon_core::infrastructure::data::{DataLink, SharedData};
+use taxon_core::infrastructure::data::{DataLink, DataModel};
 use uuid::Uuid;
 
 /// Тип статуса цистерны
@@ -70,7 +70,7 @@ pub struct Tank {
   pub display_params: Option<TankDisplay>,
 }
 #[ractor::async_trait]
-impl SharedData for Tank {
+impl DataModel for Tank {
   fn id(&self) -> &Uuid {
     &self.id
   }

@@ -4,7 +4,7 @@ use ikm_calc::calculation::kmh::KMHReport;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use smol_str::SmolStr;
-use taxon_core::infrastructure::data::{DataLink, SharedData};
+use taxon_core::infrastructure::data::{DataLink, DataModel};
 use uuid::Uuid;
 
 #[derive(Default, Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
@@ -36,7 +36,7 @@ pub struct KMHReportInstance {
   pub data: KMHReport,
 }
 
-impl SharedData for KMHReportInstance {
+impl DataModel for KMHReportInstance {
   fn id(&self) -> &Uuid {
     &self.id
   }
@@ -69,7 +69,7 @@ pub struct KMHGraduationTable {
   pub data: Vec<Vec<f64>>,
 }
 
-impl SharedData for KMHGraduationTable {
+impl DataModel for KMHGraduationTable {
   fn id(&self) -> &Uuid {
     &self.id
   }

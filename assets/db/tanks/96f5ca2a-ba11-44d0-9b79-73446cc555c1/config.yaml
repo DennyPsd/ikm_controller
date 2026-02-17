@@ -70,7 +70,7 @@ measurement_accuracy_indicators:
   hydrostatic_device_vpi: 45.0
   pressure_device_vpi: 45.0
 calibration_block:
-  level_coefficient: -2.0
+  level_coefficient: -3.0
   level_point_sensors:
     - id: T0
       index: 0

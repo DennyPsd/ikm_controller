@@ -19,7 +19,7 @@ use serde_json::{json, to_string_pretty};
 use std::collections::HashMap;
 use std::fs::{self, File};
 use taxon_core::actors::ipc::errors::internal_error;
-use taxon_core::infrastructure::data::{DataChange, DataLink, SharedData};
+use taxon_core::infrastructure::data::{DataChange, DataLink, DataModel};
 use taxon_core::infrastructure::device::{FacilityEvent, FacilityEventRule};
 use taxon_core::prelude::{IPCActionKind, IPCActorMsg, IPCMessageCrate};
 use tracing::debug;

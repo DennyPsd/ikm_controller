@@ -20,7 +20,7 @@ use crate::types::{
 
 use crate::types::type_traits::CalculationResultExt;
 use ikm_calc::calculation::types::GradTableItem;
-use taxon_core::infrastructure::data::SharedData;
+use taxon_core::infrastructure::data::DataModel;
 use taxon_core::infrastructure::device::{FacilityEvent, FacilityEventRule};
 
 #[allow(dead_code)]

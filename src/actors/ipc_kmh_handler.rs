@@ -15,7 +15,7 @@ use std::f64;
 use std::fs::{self, File};
 use std::path::Path;
 use taxon_core::actors::ipc::errors::internal_error;
-use taxon_core::infrastructure::data::{DataLink, SharedData};
+use taxon_core::infrastructure::data::{DataLink, DataModel};
 use taxon_core::prelude::{IPCActionKind, IPCActorMsg, IPCMessageCrate};
 use tracing::{error, info};
 use umya_spreadsheet::{reader, writer};

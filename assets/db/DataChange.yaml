@@ -1,3 +1,113 @@
+- id: 019c0e95-5904-71a0-b17a-58f7c90f40a4
+  trx_id: 019c0e95-5903-7283-b281-6659c80988a5
+  data_id: 96f5ca2a-ba11-44d0-9b79-73446cc555c1
+  data_ns: Tank
+  changed_at: 2026-01-30T14:06:34.627022+03:00
+  changed_by: admin
+  ns_title: Tank-1 - Конфигурация цистерны
+  field_title: /calibration_block/level_point_sensors/0/value
+  field_old_value: "16.0"
+  field_new_value: "15.0"
+- id: 019c0e95-3300-7700-bf6c-da173e7fb94a
+  trx_id: 019c0e95-32ff-7b10-aa24-f740ccf305fd
+  data_id: 96f5ca2a-ba11-44d0-9b79-73446cc555c1
+  data_ns: Tank
+  changed_at: 2026-01-30T14:06:24.894935+03:00
+  changed_by: admin
+  ns_title: Tank-1 - Конфигурация цистерны
+  field_title: /calibration_block/level_point_sensors/0/value
+  field_old_value: "15.0"
+  field_new_value: "16.0"
+- id: 019c0e95-20d6-7582-affb-c37a8a8dbc34
+  trx_id: 019c0e95-20d5-7073-b1da-9279a1a5b2fa
+  data_id: 96f5ca2a-ba11-44d0-9b79-73446cc555c1
+  data_ns: Tank
+  changed_at: 2026-01-30T14:06:20.244757+03:00
+  changed_by: admin
+  ns_title: Tank-1 - Конфигурация цистерны
+  field_title: /calibration_block/level_coefficient
+  field_old_value: "-2.0"
+  field_new_value: "-3.0"
+- id: 019c0e94-a0bf-7432-b3eb-214f7e4263ef
+  trx_id: 019c0e94-a0be-79e1-891c-c214f2f159e6
+  data_id: 96f5ca2a-ba11-44d0-9b79-73446cc555c1
+  data_ns: Tank
+  changed_at: 2026-01-30T14:05:47.454014+03:00
+  changed_by: admin
+  ns_title: Tank-1 - Конфигурация цистерны
+  field_title: /calibration_block/level_coefficient
+  field_old_value: "-3.0"
+  field_new_value: "-2.0"
+- id: 019c0e92-1949-7f40-836f-ec36de29bce3
+  trx_id: 019c0e92-1948-7cb1-bf47-f15364397e35
+  data_id: 96f5ca2a-ba11-44d0-9b79-73446cc555c1
+  data_ns: Tank
+  changed_at: 2026-01-30T14:03:01.704311+03:00
+  changed_by: admin
+  ns_title: Tank-1 - Конфигурация цистерны
+  field_title: /calibration_block/level_coefficient
+  field_old_value: "-2.0"
+  field_new_value: "-3.0"
+- id: 019c0e91-7c98-7fe1-9d75-2f2fe58a701c
+  trx_id: 019c0e91-7c98-7fe1-9d75-2f1d98a6e8ab
+  data_id: 96f5ca2a-ba11-44d0-9b79-73446cc555c1
+  data_ns: Tank
+  changed_at: 2026-01-30T14:02:21.591965+03:00
+  changed_by: admin
+  ns_title: Tank-1 - Конфигурация цистерны
+  field_title: /calibration_block/level_coefficient
+  field_old_value: "-3.0"
+  field_new_value: "-2.0"
+- id: 019c0e90-f639-7d20-bc3c-cec70a4159e8
+  trx_id: 019c0e90-f638-79e2-9b27-c5e81a9e1391
+  data_id: 96f5ca2a-ba11-44d0-9b79-73446cc555c1
+  data_ns: Tank
+  changed_at: 2026-01-30T14:01:47.192600+03:00
+  changed_by: admin
+  ns_title: Tank-1 - Конфигурация цистерны
+  field_title: /calibration_block/level_coefficient
+  field_old_value: "-2.0"
+  field_new_value: "-3.0"
+- id: 019c0e8e-c106-7cc3-8f66-b7b56f9c5946
+  trx_id: 019c0e8e-c105-77f2-aede-91072ef7cb36
+  data_id: 96f5ca2a-ba11-44d0-9b79-73446cc555c1
+  data_ns: Tank
+  changed_at: 2026-01-30T13:59:22.501316+03:00
+  changed_by: admin
+  ns_title: Tank-1 - Конфигурация цистерны
+  field_title: /calibration_block/level_coefficient
+  field_old_value: "-3.0"
+  field_new_value: "-2.0"
+- id: 019c0e8d-90db-75e1-8e9a-5366a6aec717
+  trx_id: 019c0e8d-90db-75e1-8e9a-5356b77a4735
+  data_id: 96f5ca2a-ba11-44d0-9b79-73446cc555c1
+  data_ns: Tank
+  changed_at: 2026-01-30T13:58:04.634750+03:00
+  changed_by: admin
+  ns_title: Tank-1 - Конфигурация цистерны
+  field_title: /calibration_block/level_coefficient
+  field_old_value: "-2.0"
+  field_new_value: "-3.0"
+- id: 019c0e8c-3511-7082-9fc9-25699a8e1079
+  trx_id: 019c0e8c-3511-7082-9fc9-255a5678cff1
+  data_id: 96f5ca2a-ba11-44d0-9b79-73446cc555c1
+  data_ns: Tank
+  changed_at: 2026-01-30T13:56:35.600738+03:00
+  changed_by: admin
+  ns_title: Tank-1 - Конфигурация цистерны
+  field_title: /calibration_block/level_coefficient
+  field_old_value: "-3.0"
+  field_new_value: "-2.0"
+- id: 019c0e8a-f464-7b81-8dfa-7c5e32d64f49
+  trx_id: 019c0e8a-f463-7f51-8167-af4db8ab0493
+  data_id: 96f5ca2a-ba11-44d0-9b79-73446cc555c1
+  data_ns: Tank
+  changed_at: 2026-01-30T13:55:13.506665+03:00
+  changed_by: admin
+  ns_title: Tank-1 - Конфигурация цистерны
+  field_title: /calibration_block/level_coefficient
+  field_old_value: "-2.0"
+  field_new_value: "-3.0"
 - id: 019c0a00-b90e-7e01-b61f-17ac3255b5a3
   trx_id: 019c0a00-b90e-7e01-b61f-179a9943d380
   data_id: 96f5ca2a-ba11-44d0-9b79-73446cc555c1
