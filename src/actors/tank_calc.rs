@@ -644,6 +644,7 @@ impl TankCalcActor {
                 rule: rule.as_link(),
                 acknowledged: None,
                 value,
+                comment: None,
               };
 
               info!(
