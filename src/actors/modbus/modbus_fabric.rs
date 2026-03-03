@@ -13,7 +13,7 @@ use crate::actors::serial_scanner::parse_group_port_id;
 
 use serde_json::json;
 use smol_str::SmolStr as SS;
-use taxon_core::infrastructure::device::{FacilityDevice, FacilityDeviceMeta, ModbusDeviceMeta};
+use taxon_core::infrastructure::device::{FacilityDevice, FacilityDeviceMeta, ModbusDeviceMeta, NAMURStatus};
 
 // добавил
 use crate::types::parks::Park;
@@ -332,7 +332,12 @@ impl Actor for ModbusFabricActor {
                 dev.attrs = Some(map);
               }
 
-              dev.connected = raw.is_some();
+              // Статус девайса. Normal - онлайн, FunctionCheck - офлайн
+              if raw.is_some() {
+                dev.set_status(NAMURStatus::Normal);
+              } else {
+                dev.set_status(NAMURStatus::FunctionCheck);
+              }
             }
           }
         }

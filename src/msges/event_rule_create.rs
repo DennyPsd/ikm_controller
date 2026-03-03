@@ -1,7 +1,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use smol_str::SmolStr;
-use taxon_core::infrastructure::device::{FacilityEventRule, FacilitySeverity};
+use taxon_core::infrastructure::device::{FacilityEventRule, NAMURStatus};
 use taxon_core::prelude::{
   ActionTargetKind, IPCActionKind, IPCMessageDef, IPCMessageDir, IPCTarget,
 };
@@ -23,7 +23,7 @@ pub enum EventRuleCreateArgs {
     description: SmolStr,
     help: SmolStr,
     name: SmolStr,
-    severity: FacilitySeverity,
+    severity: NAMURStatus,
     threshold: Option<f32>,
   },
 }
