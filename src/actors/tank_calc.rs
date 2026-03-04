@@ -20,8 +20,8 @@ use crate::types::{
 
 use crate::types::type_traits::CalculationResultExt;
 use ikm_calc::calculation::types::GradTableItem;
-use taxon_core::infrastructure::data::DataModel;
-use taxon_core::infrastructure::device::{FacilityEvent, FacilityEventRule};
+use taxon_core::components::data::DataModel;
+use taxon_core::components::device::{FacilityEvent, FacilityEventRule};
 
 #[allow(dead_code)]
 #[derive(Deserialize, Debug)]
@@ -143,7 +143,6 @@ impl Actor for TankCalcActor {
 
         for tank in tanks.iter_mut() {
           let tank_id = tank.id;
-          tank.load_all().await;
           if let Err(e) = self.process_tank(tank, state, &event_rules).await {
             error!("Ошибка ID tank {}: {}", tank_id, e);
           }

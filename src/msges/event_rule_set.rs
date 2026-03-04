@@ -1,6 +1,6 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use taxon_core::infrastructure::device::FacilityEventRule;
+use taxon_core::components::device::FacilityEventRule;
 use taxon_core::prelude::{
   ActionTargetKind, IPCActionKind, IPCMessageDef, IPCMessageDir, IPCTarget,
 };

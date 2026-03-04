@@ -18,9 +18,9 @@ use ractor::{Actor, ActorProcessingErr, ActorRef};
 use serde_json::{json, to_string_pretty};
 use std::collections::HashMap;
 use std::fs::{self, File};
-use taxon_core::actors::ipc::errors::internal_error;
-use taxon_core::infrastructure::data::{DataChange, DataLink, DataModel};
-use taxon_core::infrastructure::device::{FacilityEvent, FacilityEventRule};
+use taxon_core::ipc::errors::internal_error;
+use taxon_core::components::data::{DataChange, DataLink, DataModel};
+use taxon_core::components::device::{FacilityEvent, FacilityEventRule};
 use taxon_core::prelude::{IPCActionKind, IPCActorMsg, IPCMessageCrate};
 use tracing::debug;
 use tracing::warn;
@@ -111,7 +111,7 @@ impl Actor for IpcHandler {
             let args = match serde_json::from_value::<TankListArgs>(action.args.clone().unwrap()) {
               Ok(args) => args,
               Err(err) => {
-                let err = internal_error(action.name.clone(), None)
+                let err = internal_error(action.name.clone())
                   .with_message(format!("tank_list: {}", err));
 
                 info!("tank_list: шлём ошибку в ipc_router (bad args)");
@@ -258,7 +258,7 @@ impl Actor for IpcHandler {
               Some(id) => id,
               None => {
                 error!("tank_config_set: device_id is None");
-                let err = internal_error(action.name.clone(), None)
+                let err = internal_error(action.name.clone())
                   .with_message("tank_config_set: device_id is None".to_string());
 
                 let msg = ipc_msg.to_replay_msg(Option::<()>::None, Some(err));
@@ -274,7 +274,7 @@ impl Actor for IpcHandler {
               Some(v) => v,
               None => {
                 error!("tank_config_set: args is None");
-                let err = internal_error(action.name.clone(), None)
+                let err = internal_error(action.name.clone())
                   .with_message("tank_config_set: args is None".to_string());
 
                 let msg = ipc_msg.to_replay_msg(Option::<()>::None, Some(err));
@@ -293,7 +293,7 @@ impl Actor for IpcHandler {
               }
               Err(err) => {
                 error!("tank_config_set: args parse error: {err}");
-                let err = internal_error(action.name.clone(), None)
+                let err = internal_error(action.name.clone())
                   .with_message(format!("tank_config_set: args parse error: {err}"));
 
                 let msg = ipc_msg.to_replay_msg(Option::<()>::None, Some(err));
@@ -312,7 +312,7 @@ impl Actor for IpcHandler {
               Ok(s) => s,
               Err(e) => {
                 error!("tank_config_set: read_to_string failed: {e}");
-                let err = internal_error(action.name.clone(), None)
+                let err = internal_error(action.name.clone())
                   .with_message(format!("tank_config_set: read error: {e}"));
 
                 let msg = ipc_msg.to_replay_msg(Option::<()>::None, Some(err));
@@ -327,7 +327,7 @@ impl Actor for IpcHandler {
               Ok(v) => v,
               Err(err) => {
                 error!("tank_config_set: yaml parse failed: {err:?}");
-                let err = internal_error(action.name.clone(), None)
+                let err = internal_error(action.name.clone())
                   .with_message(format!("tank_config_set: cant parse config.yaml: {err:?}"));
 
                 let msg = ipc_msg.to_replay_msg(Option::<()>::None, Some(err));
@@ -370,7 +370,7 @@ impl Actor for IpcHandler {
               Ok(s) => s,
               Err(e) => {
                 error!("tank_config_set: to_string failed: {e:?}");
-                let err = internal_error(action.name.clone(), None)
+                let err = internal_error(action.name.clone())
                   .with_message(format!("tank_config_set: serialize error: {e:?}"));
 
                 let msg = ipc_msg.to_replay_msg(Option::<()>::None, Some(err));
@@ -384,7 +384,7 @@ impl Actor for IpcHandler {
             info!("tank_config_set: writing file...");
             if let Err(e) = fs::write(&config_vars_path, yaml_out) {
               error!("tank_config_set: write failed: {e:?}");
-              let err = internal_error(action.name.clone(), None)
+              let err = internal_error(action.name.clone())
                 .with_message(format!("tank_config_set: write error: {e:?}"));
 
               let msg = ipc_msg.to_replay_msg(Option::<()>::None, Some(err));
@@ -417,7 +417,7 @@ impl Actor for IpcHandler {
             {
               Ok(args) => args,
               Err(err) => {
-                let err = internal_error(action.name.clone(), None)
+                let err = internal_error(action.name.clone())
                   .with_message(format!("products_list: {}", err));
 
                 info!("products_list: шлём ошибку в ipc_router (bad args)");
@@ -455,7 +455,7 @@ impl Actor for IpcHandler {
             info!("product_create: обработка запроса");
 
             if action.args.is_none() {
-              let err = internal_error(action.name.clone(), None)
+              let err = internal_error(action.name.clone())
                 .with_message("product_create: empty args");
 
               info!("product_create: шлём ошибку в ipc_router (empty args)");
@@ -472,7 +472,7 @@ impl Actor for IpcHandler {
               match serde_json::from_value(action.args.clone().unwrap()) {
                 Ok(p) => p,
                 Err(err) => {
-                  let err = internal_error(action.name.clone(), None)
+                  let err = internal_error(action.name.clone())
                     .with_message(format!("product_create: {}", err));
 
                   info!("product_create: шлём ошибку в ipc_router (bad args)");
@@ -521,7 +521,7 @@ impl Actor for IpcHandler {
             products.push(product.clone());
 
             if let Err(err) = Product::save_all(products).await {
-              let err = internal_error(action.name.clone(), None)
+              let err = internal_error(action.name.clone())
                 .with_message(format!("product_create: save_all error: {err:?}"));
 
               error!("product_create: ошибка записи Products.yaml: {err:?}");
@@ -551,7 +551,7 @@ impl Actor for IpcHandler {
 
             if action.args.is_none() {
               let err =
-                internal_error(action.name.clone(), None).with_message("product_set: empty args");
+                internal_error(action.name.clone()).with_message("product_set: empty args");
 
               info!("product_set: шлём ошибку в ipc_router (empty args)");
               let _ = state
@@ -567,7 +567,7 @@ impl Actor for IpcHandler {
             let product: Product = match serde_json::from_value(action.args.clone().unwrap()) {
               Ok(p) => p,
               Err(err) => {
-                let err = internal_error(action.name.clone(), None)
+                let err = internal_error(action.name.clone())
                   .with_message(format!("product_set: {}", err));
 
                 info!("product_set: шлём ошибку в ipc_router (bad args)");
@@ -585,7 +585,7 @@ impl Actor for IpcHandler {
             info!("product_set: входящий product.id = {}", id);
 
             if id.is_nil() {
-              let err = internal_error(action.name.clone(), None)
+              let err = internal_error(action.name.clone())
                 .with_message("product_set: id is nil, используйте product_create для создания");
 
               info!("product_set: шлём ошибку — пустой id");
@@ -605,7 +605,7 @@ impl Actor for IpcHandler {
               info!("product_set: обновляем существующий продукт {}", id);
               products[pos] = product.clone();
             } else {
-              let err = internal_error(action.name.clone(), None)
+              let err = internal_error(action.name.clone())
                 .with_message(format!("product_set: product with id {id} not found"));
 
               error!("product_set: продукт с id {id} не найден");
@@ -619,7 +619,7 @@ impl Actor for IpcHandler {
             }
 
             if let Err(err) = Product::save_all(products).await {
-              let err = internal_error(action.name.clone(), None)
+              let err = internal_error(action.name.clone())
                 .with_message(format!("product_set: save_all error: {err:?}"));
 
               error!("product_set: ошибка записи Product.yaml: {err:?}");
@@ -650,7 +650,7 @@ impl Actor for IpcHandler {
             info!("product_delete: обработка запроса");
 
             if action.args.is_none() {
-              let err = internal_error(action.name.clone(), None)
+              let err = internal_error(action.name.clone())
                 .with_message("product_delete: empty args");
 
               info!("product_delete: шлём ошибку в ipc_router (empty args)");
@@ -676,7 +676,7 @@ impl Actor for IpcHandler {
             let id = match id_opt {
               Some(id) => id,
               None => {
-                let err = internal_error(action.name.clone(), None)
+                let err = internal_error(action.name.clone())
                   .with_message("product_delete: bad args, expected {id:\"uuid\"} or \"uuid\"");
 
                 info!("product_delete: шлём ошибку в ipc_router (bad args)");
@@ -692,7 +692,7 @@ impl Actor for IpcHandler {
 
             if id.is_nil() {
               let err =
-                internal_error(action.name.clone(), None).with_message("product_delete: id is nil");
+                internal_error(action.name.clone()).with_message("product_delete: id is nil");
 
               info!("product_delete: шлём ошибку — пустой id");
               let _ = state
@@ -711,7 +711,7 @@ impl Actor for IpcHandler {
             let pos = match products.iter().position(|p| p.id() == &id) {
               Some(pos) => pos,
               None => {
-                let err = internal_error(action.name.clone(), None)
+                let err = internal_error(action.name.clone())
                   .with_message(format!("product_delete: product with id {id} not found"));
 
                 error!("product_delete: продукт с id {id} не найден");
@@ -729,7 +729,7 @@ impl Actor for IpcHandler {
             info!("product_delete: удалён продукт id={}", id);
 
             if let Err(err) = Product::save_all(products).await {
-              let err = internal_error(action.name.clone(), None)
+              let err = internal_error(action.name.clone())
                 .with_message(format!("product_delete: save_all error: {err:?}"));
 
               error!("product_delete: ошибка записи Products.yaml: {err:?}");
@@ -761,7 +761,7 @@ impl Actor for IpcHandler {
             let args = match serde_json::from_value::<EventListArgs>(action.args.clone().unwrap()) {
               Ok(args) => args,
               Err(err) => {
-                let err = internal_error(action.name.clone(), None)
+                let err = internal_error(action.name.clone())
                   .with_message(format!("event_list: {}", err));
 
                 info!("event_list: шлём ошибку в ipc_router (bad args)");
@@ -845,7 +845,7 @@ impl Actor for IpcHandler {
             {
               Ok(args) => args,
               Err(err) => {
-                let err = internal_error(action.name.clone(), None)
+                let err = internal_error(action.name.clone())
                   .with_message(format!("data_change_list: {}", err));
 
                 info!("data_change_list: шлём ошибку в ipc_router (bad args)");
@@ -889,7 +889,7 @@ impl Actor for IpcHandler {
               match serde_json::from_value::<EventRuleListArgs>(action.args.clone().unwrap()) {
                 Ok(args) => args,
                 Err(err) => {
-                  let err = internal_error(action.name.clone(), None)
+                  let err = internal_error(action.name.clone())
                     .with_message(format!("event_rule_list: {}", err));
 
                   info!("event_rule_list: шлём ошибку в ipc_router (bad args)");
@@ -927,7 +927,7 @@ impl Actor for IpcHandler {
             info!("event_rule_set: обработка запроса");
 
             if action.args.is_none() {
-              let err = internal_error(action.name.clone(), None)
+              let err = internal_error(action.name.clone())
                 .with_message("event_rule_set: empty args");
 
               info!("event_rule_set: шлём ошибку в ipc_router (empty args)");
@@ -945,7 +945,7 @@ impl Actor for IpcHandler {
                 match serde_json::from_value(action.args.clone().unwrap()) {
                   Ok(r) => r,
                   Err(err) => {
-                    let err = internal_error(action.name.clone(), None)
+                    let err = internal_error(action.name.clone())
                       .with_message(format!("event_rule_create: {}", err));
 
                     info!("event_rule_create: шлём ошибку в ipc_router (bad args)");
@@ -961,7 +961,7 @@ impl Actor for IpcHandler {
               match rule.try_into() {
                 Ok(r) => r,
                 Err(err) => {
-                  let err = internal_error(action.name.clone(), None)
+                  let err = internal_error(action.name.clone())
                     .with_message(format!("event_rule_create: {}", 0));
 
                   info!("event_rule_create: шлём ошибку в ipc_router (bad args)");
@@ -978,7 +978,7 @@ impl Actor for IpcHandler {
               match serde_json::from_value(action.args.clone().unwrap()) {
                 Ok(r) => r,
                 Err(err) => {
-                  let err = internal_error(action.name.clone(), None)
+                  let err = internal_error(action.name.clone())
                     .with_message(format!("event_rule_set: {}", err));
 
                   info!("event_rule_set: шлём ошибку в ipc_router (bad args)");
@@ -1033,7 +1033,7 @@ impl Actor for IpcHandler {
             info!("load_grad_table: обработка запроса");
 
             if action.args.is_none() {
-              let err = internal_error(action.name.clone(), None)
+              let err = internal_error(action.name.clone())
                 .with_message("load_grad_table: empty args");
 
               info!("load_grad_table: шлём ошибку в ipc_router (empty args)");
@@ -1050,7 +1050,7 @@ impl Actor for IpcHandler {
               match serde_json::from_value::<LoadGradTableArgs>(action.args.clone().unwrap()) {
                 Ok(args) => args,
                 Err(err) => {
-                  let err = internal_error(action.name.clone(), None)
+                  let err = internal_error(action.name.clone())
                     .with_message(format!("load_grad_table: bad args: {}", err));
 
                   error!("load_grad_table: bad args: {err:?}");
@@ -1070,7 +1070,7 @@ impl Actor for IpcHandler {
             let decoded = match general_purpose::STANDARD.decode(args.table.trim()) {
               Ok(bytes) => bytes,
               Err(err) => {
-                let err = internal_error(action.name.clone(), None)
+                let err = internal_error(action.name.clone())
                   .with_message(format!("load_grad_table: base64 decode error: {}", err));
 
                 error!("load_grad_table: base64 decode error: {err:?}");
@@ -1087,7 +1087,7 @@ impl Actor for IpcHandler {
             let csv_str = match String::from_utf8(decoded) {
               Ok(s) => s,
               Err(err) => {
-                let err = internal_error(action.name.clone(), None)
+                let err = internal_error(action.name.clone())
                   .with_message(format!("load_grad_table: utf8 error: {}", err));
 
                 error!("load_grad_table: utf8 error: {err:?}");
@@ -1127,7 +1127,7 @@ impl Actor for IpcHandler {
                 .collect();
 
               if parts.len() < 3 {
-                let err = internal_error(action.name.clone(), None).with_message(format!(
+                let err = internal_error(action.name.clone()).with_message(format!(
                   "load_grad_table: line {}: expected at least 3 columns, got {}",
                   line_no + 1,
                   parts.len()
@@ -1150,7 +1150,7 @@ impl Actor for IpcHandler {
               let h: f64 = match parts[0].replace(',', ".").parse() {
                 Ok(v) => v,
                 Err(err) => {
-                  let err = internal_error(action.name.clone(), None).with_message(format!(
+                  let err = internal_error(action.name.clone()).with_message(format!(
                     "load_grad_table: line {}: bad level value '{}': {}",
                     line_no + 1,
                     parts[0],
@@ -1174,7 +1174,7 @@ impl Actor for IpcHandler {
               let v: f64 = match parts[1].replace(',', ".").parse() {
                 Ok(v) => v,
                 Err(err) => {
-                  let err = internal_error(action.name.clone(), None).with_message(format!(
+                  let err = internal_error(action.name.clone()).with_message(format!(
                     "load_grad_table: line {}: bad volume value '{}': {}",
                     line_no + 1,
                     parts[1],
@@ -1198,7 +1198,7 @@ impl Actor for IpcHandler {
               let dv: f64 = match parts[2].replace(',', ".").parse() {
                 Ok(v) => v,
                 Err(err) => {
-                  let err = internal_error(action.name.clone(), None).with_message(format!(
+                  let err = internal_error(action.name.clone()).with_message(format!(
                     "load_grad_table: line {}: bad dV value '{}': {}",
                     line_no + 1,
                     parts[2],
@@ -1239,7 +1239,7 @@ impl Actor for IpcHandler {
 
             // создаём директорию tanks/<device_id>, если её ещё нет
             if let Err(err) = fs::create_dir_all(&tank_dir) {
-              let err = internal_error(action.name.clone(), None).with_message(format!(
+              let err = internal_error(action.name.clone()).with_message(format!(
                 "load_grad_table: create_dir_all {tank_dir}: {err:?}"
               ));
 
@@ -1260,7 +1260,7 @@ impl Actor for IpcHandler {
             let grad_json = match serde_json::to_string_pretty(&grad_table) {
               Ok(s) => s,
               Err(err) => {
-                let err = internal_error(action.name.clone(), None).with_message(format!(
+                let err = internal_error(action.name.clone()).with_message(format!(
                   "load_grad_table: serialize grad_table.json error: {}",
                   err
                 ));
@@ -1281,7 +1281,7 @@ impl Actor for IpcHandler {
 
             // пишем файл grad_table.json
             if let Err(err) = fs::write(&grad_path, grad_json) {
-              let err = internal_error(action.name.clone(), None).with_message(format!(
+              let err = internal_error(action.name.clone()).with_message(format!(
                 "load_grad_table: write grad_table.json error: {err:?}"
               ));
 

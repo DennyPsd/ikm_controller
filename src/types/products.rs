@@ -1,7 +1,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use smol_str::SmolStr;
-use taxon_core::infrastructure::data::DataModel;
+use taxon_core::components::data::DataModel;
 use uuid::Uuid;
 
 #[derive(Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]

@@ -14,8 +14,8 @@ use smol_str::SmolStr;
 use std::f64;
 use std::fs::{self, File};
 use std::path::Path;
-use taxon_core::actors::ipc::errors::internal_error;
-use taxon_core::infrastructure::data::{DataLink, DataModel};
+use taxon_core::ipc::errors::internal_error;
+use taxon_core::components::data::{DataLink, DataModel};
 use taxon_core::prelude::{IPCActionKind, IPCActorMsg, IPCMessageCrate};
 use tracing::{error, info};
 use umya_spreadsheet::{reader, writer};
@@ -202,7 +202,7 @@ impl Actor for KmhIpcHandler {
               match serde_json::from_value::<KMHReportListArgs>(action.args.clone().unwrap()) {
                 Ok(args) => args,
                 Err(err) => {
-                  let err = internal_error(action.name.clone(), None)
+                  let err = internal_error(action.name.clone())
                     .with_message(format!("kmh_report_list: {}", err));
 
                   let _ = state
@@ -260,7 +260,7 @@ impl Actor for KmhIpcHandler {
                 }
                 Err(err) => {
                   if err.kind() != std::io::ErrorKind::NotFound {
-                    let err = internal_error(action.name.clone(), None)
+                    let err = internal_error(action.name.clone())
                       .with_message(format!("kmh_report_list: read_dir {dir_path}: {err:?}"));
 
                     if let Some(msg) = ipc_msg.to_replay_msg(Option::<()>::None, Some(err)) {
@@ -333,7 +333,7 @@ impl Actor for KmhIpcHandler {
               match serde_json::from_value::<KMHReportCreateArgs>(action.args.clone().unwrap()) {
                 Ok(args) => args,
                 Err(err) => {
-                  let err = internal_error(action.name.clone(), None)
+                  let err = internal_error(action.name.clone())
                     .with_message(format!("kmh_report_create: {}", err));
 
                   let _ = state
@@ -351,7 +351,7 @@ impl Actor for KmhIpcHandler {
             let tank = match tanks.into_iter().find(|t| t.id == args.device_id) {
               Some(t) => t,
               None => {
-                let err = internal_error(action.name.clone(), None).with_message(format!(
+                let err = internal_error(action.name.clone()).with_message(format!(
                   "kmh_report_create: tank with id={} not found",
                   args.device_id
                 ));
@@ -555,7 +555,7 @@ impl Actor for KmhIpcHandler {
 
             let dir_path = "assets/db/kmh_reports";
             if let Err(err) = fs::create_dir_all(dir_path) {
-              let err = internal_error(action.name.clone(), None).with_message(format!(
+              let err = internal_error(action.name.clone()).with_message(format!(
                 "kmh_report_create: create_dir_all {dir_path}: {err:?}"
               ));
 
@@ -574,7 +574,7 @@ impl Actor for KmhIpcHandler {
             });
 
             if let Err(err) = write_result {
-              let err = internal_error(action.name.clone(), None)
+              let err = internal_error(action.name.clone())
                 .with_message(format!("kmh_report_create: write {:?}: {err:?}", file_path));
 
               if let Some(msg) = ipc_msg.to_replay_msg(Option::<()>::None, Some(err)) {
@@ -623,7 +623,7 @@ impl Actor for KmhIpcHandler {
                   v
                 }
                 Err(err) => {
-                  let err = internal_error(action.name.clone(), None)
+                  let err = internal_error(action.name.clone())
                     .with_message(format!("kmh_report_calc: {}", err));
 
                   info!("kmh_report_calc: шлём ошибку в ipc_router (bad args)");
@@ -649,7 +649,7 @@ impl Actor for KmhIpcHandler {
               Ok(calculated_report) => calculated_report,
               Err(err) => {
                 let err =
-                  internal_error(action.name.clone(), None).with_message(format!("${}", err));
+                  internal_error(action.name.clone()).with_message(format!("${}", err));
 
                 if let Some(msg) = ipc_msg.to_replay_msg(Option::<()>::None, Some(err)) {
                   let _ = state.ipc_router.send_message(Some(msg));
@@ -700,7 +700,7 @@ impl Actor for KmhIpcHandler {
 
             let dir_path = "assets/db/kmh_reports";
             if let Err(err) = fs::create_dir_all(dir_path) {
-              let err = internal_error(action.name.clone(), None).with_message(format!(
+              let err = internal_error(action.name.clone()).with_message(format!(
                 "kmh_report_calc: create_dir_all {dir_path}: {err:?}"
               ));
 
@@ -724,7 +724,7 @@ impl Actor for KmhIpcHandler {
             });
 
             if let Err(err) = write_result {
-              let err = internal_error(action.name.clone(), None)
+              let err = internal_error(action.name.clone())
                 .with_message(format!("kmh_report_calc: write {:?}: {err:?}", file_path));
 
               if let Some(msg) = ipc_msg.to_replay_msg(Option::<()>::None, Some(err)) {
@@ -766,7 +766,7 @@ impl Actor for KmhIpcHandler {
               Err(err) => {
                 error!("KMH_REPORT_SET: ошибка парсинга KMHReportInstance из args: {err:?}");
 
-                let err = internal_error(action.name.clone(), None)
+                let err = internal_error(action.name.clone())
                   .with_message(format!("kmh_report_set: cannot parse args: {err}"));
 
                 if let Err(send_err) = state
@@ -785,7 +785,7 @@ impl Actor for KmhIpcHandler {
 
             if let Err(err) = fs::create_dir_all(dir_path) {
               error!("KMH_REPORT_SET: ошибка create_dir_all('{dir_path}'): {err:?}");
-              let err = internal_error(action.name.clone(), None).with_message(format!(
+              let err = internal_error(action.name.clone()).with_message(format!(
                 "kmh_report_set: create_dir_all {dir_path}: {err:?}"
               ));
 
@@ -815,7 +815,7 @@ impl Actor for KmhIpcHandler {
                 file_path
               );
 
-              let err = internal_error(action.name.clone(), None)
+              let err = internal_error(action.name.clone())
                 .with_message(format!("kmh_report_set: write {:?}: {err:?}", file_path));
 
               if let Some(msg) = ipc_msg.to_replay_msg(Option::<()>::None, Some(err)) {
