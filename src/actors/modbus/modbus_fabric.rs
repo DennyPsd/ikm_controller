@@ -292,6 +292,7 @@ impl Actor for ModbusFabricActor {
         addr,
         raw,
       } => {
+        // info!(port = %port_name, slave, addr, raw = ?raw, "WorkerReport received");
         // Ищем только среди девайсов нужного логического порта
         if let Some(devs_on_port) = state.devices.get_mut(&port_name) {
           for dev in devs_on_port.iter_mut() {

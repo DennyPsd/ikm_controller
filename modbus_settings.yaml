@@ -1,7 +1,7 @@
 groups:
   r33:
     port1:
-      port: "/dev/tty.usbserial-1120"              # или "/dev/ttyUSB0"
+      port: "COM12" #"/dev/tty.usbserial-1120"              # или "/dev/ttyUSB0"
       bitrate: 9600
       parity: "none"                # none | even | odd
       data_bits: 8
@@ -18,7 +18,7 @@ groups:
         - name: "Sensor1 Test"
           slave_id: 1
           registers:
-            - start_reg: 50
+            - start_reg: 5
               regs_count: 2             # раньше bytes: 2
               reg_type: "input_register" # fc04
               value_type: "f32"         # читаем как f32

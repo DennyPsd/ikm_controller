@@ -646,10 +646,10 @@ impl TankCalcActor {
                 comment: None,
               };
 
-              info!(
-                "TankCalc: генерируем событие по правилу {} для танка {} (var={:?}, value={:.3}, min={:?}, max={:?}, secs={})",
-                id, tank.id, var_path, value, min, max, secs
-              );
+              // info!(
+              //   "TankCalc: генерируем событие по правилу {} для танка {} (var={:?}, value={:.3}, min={:?}, max={:?}, secs={})",
+              //   id, tank.id, var_path, value, min, max, secs
+              // );
 
               state.events.as_mut().unwrap().push(event);
               ev_state.event_active = true;

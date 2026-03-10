@@ -80,7 +80,7 @@ pub async fn send_and_read_frame(
   // debug!(
   //   "Modbus TX frame ({} bytes): {}",
   //   frame.len(),
-  //   fmt_hex(frame)
+  //   _fmt_hex(frame)
   // );
 
   port
@@ -103,7 +103,7 @@ pub async fn send_and_read_frame(
   // debug!(
   //   "Modbus RX frame ({} bytes): {}",
   //   frame_rx.len(),
-  //   fmt_hex(&frame_rx)
+  //   _fmt_hex(&frame_rx)
   // );
 
   Ok(frame_rx)

@@ -18,6 +18,7 @@ use crate::msges::tank_list::TankList;
 use crate::msges::user_login::UserLogin;
 use crate::msges::user_logout::UserLogout;
 use taxon_core::prelude::*;
+use taxon_core::components::ipc::IPCRole;
 use taxon_core::utils::asyncapi::AsyncapiBuilder;
 
 #[allow(dead_code)]

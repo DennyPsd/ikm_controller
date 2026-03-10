@@ -8,6 +8,7 @@ use crate::actors::ipc_kmh_handler::{KmhIpcHandler, KmhIpcHandlerMsg, KmhIpcHand
 use crate::actors::modbus::config::ModbusSettings;
 use crate::actors::modbus::modbus_fabric::ModbusFabricActor;
 use crate::actors::tank_calc::TankCalcActor;
+use taxon_core::components::ipc::IPCRole;
 use actors::serial_scanner::SerialScannerActor;
 use clap::Parser;
 pub use msg_def::*;

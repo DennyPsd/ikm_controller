@@ -6,7 +6,7 @@
   help: ""
   name: HH по Массе
   can_end: false
-  severity: EMERGENCY
+  severity: F
   threshold: 10
   target:
     data_ns: Tank
