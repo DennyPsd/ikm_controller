@@ -52,18 +52,18 @@ groups:
 #              # scale: 100.0
 #              # offset: 0.0
 
-#        - name: "Sensor2"
-#          slave_id: 2
-#          registers:
-#            - start_reg: 52
-#              regs_count: 2             # 2 регистра = 4 байта
-#              reg_type: "input_register"
-#              value_type: "f32"
+        - name: "Sensor2"
+          slave_id: 1
+          registers:
+            - start_reg: 18
+              regs_count: 2          # 2 регистра = 4 байта
+              reg_type: "input_register"
+              value_type: "f32"
 #
 #              # пример для "перевернутых" слов (CDAB)
-#              word_format:
-#                swap_words: true
-#                swap_bytes_in_word: false
+              word_format:
+                swap_words: true
+                swap_bytes_in_word: true
 #
 #              # пример: прибор отдаёт в °C сразу, но нам надо в °C со сдвигом
 #              # скажем, надо добавить +2°C (калибровка нуля):

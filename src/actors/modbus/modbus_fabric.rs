@@ -325,6 +325,7 @@ impl Actor for ModbusFabricActor {
 
               let final_value = raw_value * scale + offset;
 
+              //info!("{}", final_value);
               if let Some(attrs) = dev.attrs.as_mut() {
                 attrs.insert(SS::from("value"), json!(final_value));
               } else {
