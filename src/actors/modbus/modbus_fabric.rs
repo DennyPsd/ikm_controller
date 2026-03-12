@@ -1,8 +1,8 @@
 use ractor::{Actor, ActorProcessingErr, ActorRef, RpcReplyPort};
 use smol_str::SmolStr;
 use std::collections::{BTreeMap, HashMap};
-use std::fs::File;
-use std::io::Read;
+use std::fs::{File, OpenOptions};
+use std::io::{Read, Write};
 use taxon_core::components::data::DataModel;
 use taxon_core::utils::default;
 use tokio_serial::SerialStream;
@@ -228,6 +228,8 @@ impl Actor for ModbusFabricActor {
                   emulation: modbus_cfg.emulation.or(line_cfg.emulation),
                 },
                 slaves,
+                tank_id: Some(tank_id),
+                reg_mappings: modbus_cfg.reg_mappings,
               };
 
               info!(
@@ -463,6 +465,46 @@ impl Actor for ModbusFabricActor {
         raw,
       } => {
         // info!(port = %port_name, slave, addr, raw = ?raw, "WorkerReport received");
+
+        // Парсим port_name для получения group_id
+        let (group_id, _port_key) = match parse_group_port_id(&port_name) {
+          Some(v) => v,
+          None => {
+            // port_name может быть в другом формате, пропускаем
+            return Ok(());
+          }
+        };
+
+        // Ищем конфигурацию порта для записи в файл
+        let mut final_value_for_file: Option<f64> = None;
+        let mut var_path_for_file: Option<SmolStr> = None;
+        let mut tank_id_for_file: Option<Uuid> = None;
+
+        if let Some(group_cfg) = state.settings.groups.get(&group_id) {
+          for (_port_key, port_cfg) in group_cfg.iter() {
+            // Проверяем что это режим реальных датчиков
+            if port_cfg.line.emulation == Some(true) {
+              continue; // Пропускаем эмулированные танки
+            }
+
+            // Ищем reg_mappings для данного slave и addr
+            for (var_path, reg_map) in &port_cfg.reg_mappings {
+              if reg_map.slave_id as u16 == slave && reg_map.start_reg == addr {
+                // Нашли соответствие, сохраняем данные для записи
+                if let Some(tank_id) = &port_cfg.tank_id {
+                  var_path_for_file = Some(var_path.clone());
+                  tank_id_for_file = Some(*tank_id);
+                  // Прерываем цикл после нахождения первого соответствия
+                  break;
+                }
+              }
+            }
+            if var_path_for_file.is_some() {
+              break;
+            }
+          }
+        }
+
         // Ищем только среди девайсов нужного логического порта
         if let Some(devs_on_port) = state.devices.get_mut(&port_name) {
           for dev in devs_on_port.iter_mut() {
@@ -494,6 +536,7 @@ impl Actor for ModbusFabricActor {
               };
 
               let final_value = raw_value * scale + offset;
+              final_value_for_file = Some(final_value);
 
               info!("{}", final_value);
               if let Some(attrs) = dev.attrs.as_mut() {
@@ -511,6 +554,77 @@ impl Actor for ModbusFabricActor {
                 dev.set_status(NAMURStatus::FunctionCheck);
               }
             }
+          }
+        }
+
+        // Записываем данные в base_vars/ext_vars файлы для танков с emulated=false
+        if let (Some(final_value), Some(var_path), Some(tank_id)) =
+          (final_value_for_file, var_path_for_file, tank_id_for_file)
+        {
+          let file_path = if var_path.starts_with("/base_vars/") {
+            format!("assets/db/tanks/{}/base_vars.yaml", tank_id)
+          } else if var_path.starts_with("/ext_vars/") {
+            format!("assets/db/tanks/{}/ext_vars.yaml", tank_id)
+          } else {
+            warn!(
+              "ModbusFabric: неизвестный путь переменной {} для танка {}",
+              var_path, tank_id
+            );
+            return Ok(());
+          };
+
+          // Читаем текущий файл
+          if let Ok(mut file) = OpenOptions::new().read(true).write(true).open(&file_path) {
+            let mut contents = String::new();
+            if file.read_to_string(&mut contents).is_ok() {
+              // Извлекаем имя переменной из пути
+              // Например: "/base_vars/weight" -> "weight"
+              let var_name = if var_path.starts_with("/base_vars/") {
+                var_path.trim_start_matches("/base_vars/")
+              } else {
+                var_path.trim_start_matches("/ext_vars/")
+              };
+
+              // Формируем новую строку для YAML
+              let new_line = format!("{}: {}", var_name, final_value);
+
+              // Простая замена: ищем строку "var_name:" и заменяем её
+              let pattern = format!("{}:", var_name);
+              if let Some(start_idx) = contents.find(&pattern) {
+                // Находим конец строки
+                if let Some(end_idx) = contents[start_idx..].find('\n') {
+                  let end_pos = start_idx + end_idx;
+                  // Заменяем строку
+                  contents.replace_range(start_idx..end_pos, &new_line);
+                  // Записываем обратно
+                  if let Ok(mut file) = OpenOptions::new().write(true).truncate(true).open(&file_path) {
+                    if file.write_all(contents.as_bytes()).is_ok() {
+                      info!(
+                        "ModbusFabric: записано значение {} в {} для танка {}",
+                        final_value, var_path, tank_id
+                      );
+                    }
+                  }
+                }
+              } else {
+                // Если переменная не найдена, добавляем её в конец
+                contents.push('\n');
+                contents.push_str(&new_line);
+                if let Ok(mut file) = OpenOptions::new().write(true).truncate(true).open(&file_path) {
+                  if file.write_all(contents.as_bytes()).is_ok() {
+                    info!(
+                      "ModbusFabric: добавлено значение {} в {} для танка {}",
+                      final_value, var_path, tank_id
+                    );
+                  }
+                }
+              }
+            }
+          } else {
+            warn!(
+              "ModbusFabric: не удалось открыть файл {} для записи",
+              file_path
+            );
           }
         }
       }

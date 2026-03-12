@@ -9,6 +9,7 @@ use tokio_serial::{self, DataBits, FlowControl, Parity, StopBits};
 use crate::actors::modbus::protocol::types::{
   ModbusRegType, ModbusValueType, ModbusWordFormat, RegisterAddress, UnitId,
 };
+use crate::types::modbus_config::ModbusRegisterMapping;
 
 #[derive(Default, Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
 pub struct ModbusTimings {
@@ -148,6 +149,15 @@ pub struct ModbusPortConfig {
 
   /// Slave-устройства на этом порту
   pub slaves: Vec<ModbusSlaveConfig>,
+
+  /// ID танка (для записи данных в файлы)
+  #[serde(default)]
+  pub tank_id: Option<uuid::Uuid>,
+
+  /// Мапинг переменных танка на регистры Modbus
+  /// @example {"/base_vars/weight": {...}}
+  #[serde(default)]
+  pub reg_mappings: HashMap<SmolStr, ModbusRegisterMapping>,
 }
 
 /// Конфиг группы: несколько портов внутри резервуара / узла

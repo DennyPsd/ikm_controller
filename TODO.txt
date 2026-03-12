@@ -1,9 +1,12 @@
 Актуальные показания для резервуаров мы берем в base vars
 
-При emulated == true 
-    Отключаем tank_calc на этот резервуар
-    Записываем значения с датчиков в base_vars
+Параметр emulation берем из файла config.yaml у каждого резервуара отдельно.
+При emulation == false
+    [ ] Отключаем tank_calc на этот резервуар
+    [ ] Записываем значения с датчиков в base_vars и ext_vars (в зависимости от ссылки в конфиге резервуара из reg_mappings)
 
-При emulated == false
-    Не включаем modbus_worker при подключении этого порта
-    Включаем tank_calc и записываем в ext_vars данные из time_series.json
+При emulation == true
+    [ ] Не включаем modbus_worker при подключении этого порта
+    [ ] Включаем tank_calc и записываем в ext_vars данные из time_series.json (как сейчас и работает при запуске)
+    [ ] Запускаем tank_calc только на определенные резервуары, только там где emulation = true
+    [ ] По-хорошему надо запускать tank_calc из modbus_worker после прочтения конфига
