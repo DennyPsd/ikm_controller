@@ -1,7 +1,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::types::tanks::TankStatus;
+use crate::types::{modbus_config::ModbusConfig, tanks::TankStatus};
 use serde_with::*;
 
 /** Конфигурация цистерны */
@@ -22,6 +22,8 @@ pub struct TankConfig {
   pub measurement_accuracy_indicators: MeasurementAccuracyIndicators,
   /** Блок калибровки */
   pub calibration_block: Calibration,
+  /** Конфигурация modbus */
+  pub modbus: Option<ModbusConfig>,
 }
 
 #[derive(Default, Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]

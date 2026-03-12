@@ -17,42 +17,10 @@ pub struct ModbusTimings {
   #[allow(dead_code)]
   pub max_preamble_ff: usize,
 }
-#[derive(Default, Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
-pub enum ModbusReply {
-  Ok(Vec<u8>),
-  Err(String),
-  #[default]
-  InProgress,
-  IoBlocked,
-}
-
-// ====== Конфиги Modbus ======
-
-fn default_parity() -> String {
-  "none".into()
-}
-fn default_data_bits() -> u8 {
-  8
-}
-fn default_stop_bits() -> u8 {
-  1
-}
-fn default_polling_ms() -> u64 {
-  1000
-}
-fn default_open_timeout_ms() -> u64 {
-  1500
-}
-fn default_first_byte_timeout_ms() -> u64 {
-  200
-}
-fn default_per_byte_timeout_ms() -> u64 {
-  50
-}
 
 /// Настройки одной физической линии (конкретный /dev/ttyUSB0 / COMx)
 #[derive(Default, Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
-pub struct ModbusLineConfig {
+pub struct ModbusPortConfig {
   /// Имя порта: "/dev/ttyUSB0", "COM3" и т.п.
   pub port: String,
 
@@ -94,7 +62,9 @@ pub struct ModbusLineConfig {
 
 /// Конфиг **одного регистра** (одной точки измерения)
 #[derive(Default, Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
-pub struct ModbusRegisterConfig {
+pub struct ModbusRegisterMapping {
+  /// Modbus unit id
+  pub slave_id: UnitId,
   /// Адрес регистра (holding/input)
   pub start_reg: RegisterAddress,
 
@@ -117,52 +87,21 @@ pub struct ModbusRegisterConfig {
 
   #[serde(default)]
   pub offset: Option<f64>,
-
-  #[serde(default)]
-  /// @example "/base_vars/weight"
-  pub variable: Option<SmolStr>,
-}
-
-/// Один slave на линии, с набором регистров
-#[derive(Default, Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
-pub struct ModbusSlaveConfig {
-  /// Логическое имя slave (для UI)
-  pub name: String,
-
-  /// Modbus unit id
-  pub slave_id: UnitId,
-
-  /// Набор регистров (точек измерения) у этого slave
-  pub registers: Vec<ModbusRegisterConfig>,
 }
 
 /// Один **порт внутри группы** (port1, port2, ...)
 #[derive(Default, Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
-pub struct ModbusPortConfig {
+pub struct ModbusConfig {
   /// Настройки линии
   #[serde(flatten)]
-  pub line: ModbusLineConfig,
+  pub port: ModbusPortConfig,
 
-  /// Slave-устройства на этом порту
-  pub slaves: Vec<ModbusSlaveConfig>,
+  /// Мапинг переменных танка на регистры Modbus
+  /// @example  {"/base_vars/weight": {...}}
+  pub reg_mappings: HashMap<SmolStr, ModbusRegisterMapping>,
 }
 
-/// Конфиг группы: несколько портов внутри резервуара / узла
-///
-/// groups:
-///   r33:
-///     port1: {...}
-///     port2: {...}
-pub type ModbusGroupConfig = HashMap<SmolStr, ModbusPortConfig>;
-
-/// Все настройки модбаса: группы -> порты -> slaves -> регистры
-#[derive(Default, Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
-pub struct ModbusSettings {
-  /// group_id -> (port_key -> ModbusPortConfig)
-  pub groups: HashMap<SmolStr, ModbusGroupConfig>,
-}
-
-impl ModbusLineConfig {
+impl ModbusPortConfig {
   /// Превращаем поля из YAML в ModbusTimings
   pub fn timings(&self) -> ModbusTimings {
     ModbusTimings {
@@ -220,12 +159,34 @@ impl ModbusLineConfig {
   }
 }
 
-impl ModbusPortConfig {
+impl ModbusConfig {
   pub fn timings(&self) -> ModbusTimings {
-    self.line.timings()
+    self.port.timings()
   }
 
   pub fn matches_port(&self, port: &str) -> bool {
-    self.line.port == port
+    self.port.port == port
   }
+}
+
+fn default_parity() -> String {
+  "none".into()
+}
+fn default_data_bits() -> u8 {
+  8
+}
+fn default_stop_bits() -> u8 {
+  1
+}
+fn default_polling_ms() -> u64 {
+  1000
+}
+fn default_open_timeout_ms() -> u64 {
+  1500
+}
+fn default_first_byte_timeout_ms() -> u64 {
+  200
+}
+fn default_per_byte_timeout_ms() -> u64 {
+  50
 }

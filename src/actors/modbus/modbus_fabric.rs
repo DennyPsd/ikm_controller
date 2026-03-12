@@ -13,7 +13,9 @@ use crate::actors::serial_scanner::parse_group_port_id;
 
 use serde_json::json;
 use smol_str::SmolStr as SS;
-use taxon_core::components::device::{FacilityDevice, FacilityDeviceMeta, ModbusDeviceMeta, NAMURStatus};
+use taxon_core::components::device::{
+  FacilityDevice, FacilityDeviceMeta, ModbusDeviceMeta, NAMURStatus,
+};
 
 // добавил
 use crate::types::parks::Park;

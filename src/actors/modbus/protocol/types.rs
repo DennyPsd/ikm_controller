@@ -12,16 +12,17 @@ pub type RegisterAddress = u16;
 pub type CoilAddress = u16;
 
 /// Какой тип регистра читаем
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[derive(Default, Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq, Copy)]
 #[serde(rename_all = "snake_case")]
 pub enum ModbusRegType {
   Coil,
   DiscreteInput,
+  #[default]
   HoldingRegister,
   InputRegister,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[derive(Default, Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq, Copy)]
 #[serde(rename_all = "snake_case")]
 pub enum ModbusValueType {
   // булевое
@@ -38,6 +39,7 @@ pub enum ModbusValueType {
   // multi-word числа (2+ регистра)
   U32,
   I32,
+  #[default]
   F32,
   F64,
 
