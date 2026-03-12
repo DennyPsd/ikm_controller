@@ -184,8 +184,28 @@ impl TankCalcActor {
 
     // Читаем config.yaml
     let config_content = fs::read_to_string(&config_vars_path)?;
-    let _config: TankConfig = serde_saphyr::from_str(&config_content)
+    let config: TankConfig = serde_saphyr::from_str(&config_content)
       .map_err(|err| format!("Cant parse config: {err:?}"))?;
+
+    // Проверяем режим эмуляции
+    // Если emulation == false, то данные пишутся из ModbusWorker, tank_calc не нужен
+    // Если emulation == true или не указан (по умолчанию true для совместимости), то используем tank_calc
+    let is_emulation = config
+      .modbus
+      .as_ref()
+      .and_then(|m| m.emulation)
+      .unwrap_or(true);
+
+    if !is_emulation {
+      // Режим реальных датчиков - tank_calc не запускаем, данные пишутся из ModbusWorker
+      info!(
+        "TankCalc: пропускаем танк {} (режим реальных датчиков)",
+        tank.id
+      );
+      return Ok(());
+    }
+
+    info!("TankCalc: обрабатываем танк {} (режим эмуляции)", tank.id);
 
     let grad_rows = match fs::read_to_string(&grad_table_path) {
       Ok(content) => match serde_json::from_str::<Vec<Vec<f64>>>(&content) {
