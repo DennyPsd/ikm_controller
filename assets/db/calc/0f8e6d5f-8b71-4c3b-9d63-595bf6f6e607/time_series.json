@@ -1,13 +1,13 @@
 [
   {
     "ts": 1763936346,
-    "p1": 64649,
-    "p3": 1994,
+    "/ext_vars/product_temperature": 64649,
+    "/ext_vars/vapour_temperature": 1994,
     "h_measured": 7123,
     "h_v": 12,
-    "density": 926,
-    "t0": 19.6,
-    "t1": 16.3,
+    "/ext_vars/product_density": 926,
+    "/ext_vars/temperatures/0/value": 19.6,
+    "/ext_vars/temperatures/1/value": 16.3,
     "t2": 15.6,
     "t3": 16.9,
     "t4": 19.6,

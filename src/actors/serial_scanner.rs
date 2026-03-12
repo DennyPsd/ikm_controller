@@ -28,6 +28,8 @@ impl SerialScannerActor {
 #[derive(Debug)]
 pub enum SerialScannerMsg {
   Tick,
+  /// Обновить настройки Modbus (после загрузки из Tank)
+  UpdateSettings(ModbusSettings),
 }
 
 /// Сформировать логический id порта по группе и ключу порта:
@@ -71,6 +73,10 @@ impl Actor for SerialScannerActor {
     state: &mut SerialScannerState,
   ) -> Result<(), ActorProcessingErr> {
     match msg {
+      SerialScannerMsg::UpdateSettings(new_settings) => {
+        info!("SerialScanner: обновляем настройки Modbus (загружено из Tank)");
+        state.settings = new_settings;
+      }
       SerialScannerMsg::Tick => {
         let ports = match serialport::available_ports() {
           Ok(v) => v,

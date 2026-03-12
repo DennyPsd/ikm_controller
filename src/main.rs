@@ -34,14 +34,9 @@ fn main() -> Result<(), ModuleError> {
 
   Module::init(IPCRole::Router).map(|module| {
     module.run(async |_cfg, module, ipc_router, _| {
-      // Чтение modbus_settings.yaml
-      let modbus_settings: ModbusSettings = {
-        let yaml_content = std::fs::read_to_string("modbus_settings.yaml")
-          .map_err(|e| ModuleError::Run("read settings".into(), e.into()))?;
-        serde_saphyr::from_str(&yaml_content)
-          .map_err(|e| ModuleError::Run("parse settings".into(), e.into()))?
-      };
-      info!("Настройки ModBus загружены!");
+      // Создаем пустую конфигурацию Modbus - вся информация будет загружена из Tank
+      let modbus_settings = ModbusSettings::default();
+      info!("ModBus настройки будут загружены из Tank конфигурации");
 
       // ----- ModbusFabric ---------
       let (modbus_fabric, _modbus_fabric_handle) = module
@@ -54,7 +49,7 @@ fn main() -> Result<(), ModuleError> {
         .map_err(|err| ModuleError::SpawnErr("ModbusFabric".into(), err))?;
 
       // ----- SerialScanner ---------
-      let (_scanner_actor, _scanner_handle) = module
+      let (scanner_actor, _scanner_handle) = module
         .spawn_linked(
           Some("SerialScanner".into()),
           SerialScannerActor::new(),
@@ -62,6 +57,14 @@ fn main() -> Result<(), ModuleError> {
         )
         .await
         .map_err(|err| ModuleError::SpawnErr("SerialScanner".into(), err))?;
+
+      // Передаём ссылку на SerialScanner в ModbusFabric для обновления настроек
+      let _ = modbus_fabric.cast(crate::actors::modbus::modbus_fabric::ModbusFabricMsg::SetSerialScanner {
+        scanner: scanner_actor.clone(),
+      });
+
+      // Загружаем Modbus конфигурацию из Tank (настройки будут переданы в SerialScanner)
+      let _ = modbus_fabric.cast(crate::actors::modbus::modbus_fabric::ModbusFabricMsg::LoadTanksModbusConfig);
 
       // ----- KmhIpcHandler ---------
       let kmh_state = KmhIpcHandlerState {

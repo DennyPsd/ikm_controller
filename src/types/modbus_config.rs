@@ -10,6 +10,10 @@ use crate::actors::modbus::protocol::types::{
   ModbusRegType, ModbusValueType, ModbusWordFormat, RegisterAddress, UnitId,
 };
 
+// port
+// register_mapping поле
+
+
 #[derive(Default, Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
 pub struct ModbusTimings {
   pub first_byte_timeout: Duration,

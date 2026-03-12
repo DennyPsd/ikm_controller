@@ -101,3 +101,40 @@ calibration_block:
     - id: T9
       index: 9
       value: -20
+#modbus config
+modbus:
+  port: "COM12"
+  bitrate: 9600
+  parity: "none"
+  data_bits: 8
+  stop_bits: 1
+  flow_control: "none"
+  polling_ms: 2000
+  open_timeout_ms: 1500
+  first_byte_timeout_ms: 20
+  per_byte_timeout_ms: 5
+  #emulation: true .TODO. Если true - то берет показания из time_series.json в папке резервуара. Если False - получает значения из реальных датчиков. 
+  #true - читаем из файла time_series.json в определенный tank и записываем в -> base_vars ext_vars
+  # false - записываем из ридера сразу в -> base_vars ext_vars
+  # Также надо будет подключить логику из tank_calc в modbus_fabric
+  reg_mappings:
+    /base_vars/water_lvl: #Тут нужно писать путь до того значения, куда записывать
+      slave_id: 1
+      start_reg: 5
+      regs_count: 2
+      reg_type: "input_register"
+      value_type: "f32"
+      word_format:
+        swap_words: true
+        swap_bytes_in_word: true
+      scale: 100.0
+      offset: 0.0
+    sensor2:
+      slave_id: 1
+      start_reg: 18
+      regs_count: 2
+      reg_type: "input_register"
+      value_type: "f32"
+      word_format:
+        swap_words: true
+        swap_bytes_in_word: true
