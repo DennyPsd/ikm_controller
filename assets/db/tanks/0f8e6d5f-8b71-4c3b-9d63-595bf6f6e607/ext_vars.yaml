@@ -1,4 +1,4 @@
-product_volume: 1286.6649860299412
+product_volume: 1300.6649860299412
 product_level: 7121.0
 water_level: 12.0
 product_temperature: 34.519999999999996
@@ -14,7 +14,7 @@ product_movement_level_measurement_speed: 0.0
 volume_product_calc_below_water: 1.5615999999999999
 volume_raw_water: 1.5615999999999999
 temperatures:
-  - value: 18.9
+  - value: 20.9
     level: 750
     name: T0
   - value: 16.2

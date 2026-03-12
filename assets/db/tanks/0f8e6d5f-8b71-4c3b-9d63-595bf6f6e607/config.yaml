@@ -115,7 +115,7 @@ modbus:
   per_byte_timeout_ms: 5
   emulation: false
   reg_mappings:
-    /base_vars/product_lvl:
+    /base_vars/product_avg_temp:
       slave_id: 1
       start_reg: 5
       regs_count: 2
@@ -126,7 +126,7 @@ modbus:
         swap_bytes_in_word: true
       scale: 100.0
       offset: 0.0
-    /base_vars/product_avg_t:
+    /base_vars/product_level:
       slave_id: 1
       start_reg: 18
       regs_count: 2
