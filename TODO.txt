@@ -1,0 +1,9 @@
+Актуальные показания в base vars
+
+При emulated == true 
+    Отключаем tank_calc на этот резервуар
+    Записываем значения с датчиков в base_vars
+
+При emulated == false
+    Не включаем modbus_worker при подключении этого порта
+    Включаем tank_calc и записываем в ext_vars данные из time_series.json
