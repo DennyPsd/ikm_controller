@@ -12,7 +12,7 @@ use uuid::Uuid;
 use crate::actors::modbus::config::{ModbusPortConfig, ModbusSettings};
 use crate::actors::modbus::modbus_worker::{ModbusWorker, ModbusWorkerMsg};
 use crate::actors::modbus::protocol::utils::reg_type_to_fc;
-use crate::actors::serial_scanner::{parse_group_port_id, SerialScannerMsg};
+use crate::actors::serial_scanner::{SerialScannerMsg, parse_group_port_id};
 use crate::types::tank_configuration::TankConfig;
 use crate::types::tanks::Tank;
 
@@ -97,7 +97,7 @@ pub struct ModbusFabricState {
   // добавил
   pub parks: Vec<Park>,
   pub products: Vec<Product>,
-  
+
   // Ссылка на SerialScanner для передачи обновлённых настроек после загрузки из Tank
   pub serial_scanner: Option<SerialScannerRef>,
 }
@@ -225,6 +225,7 @@ impl Actor for ModbusFabricActor {
                   open_timeout_ms: line_cfg.open_timeout_ms,
                   first_byte_timeout_ms: line_cfg.first_byte_timeout_ms,
                   per_byte_timeout_ms: line_cfg.per_byte_timeout_ms,
+                  emulation: modbus_cfg.emulation.or(line_cfg.emulation),
                 },
                 slaves,
               };
@@ -256,7 +257,7 @@ impl Actor for ModbusFabricActor {
         }
 
         info!("Загружено групп: {}", state.settings.groups.len());
-        
+
         // Передаём обновлённые настройки в SerialScanner
         if let Some(ref scanner) = state.serial_scanner {
           let settings = state.settings.clone();
@@ -264,7 +265,7 @@ impl Actor for ModbusFabricActor {
           info!("ModBusFabric: отправлены обновлённые настройки в SerialScanner");
         }
       }
-      
+
       // Установка ссылки на SerialScanner
       ModbusFabricMsg::SetSerialScanner { scanner } => {
         info!("ModBusFabric: получена ссылка на SerialScanner");
@@ -318,67 +319,79 @@ impl Actor for ModbusFabricActor {
         }
         state.devices.remove(&port_name);
 
-        let timings = port_cfg.timings();
+        // Проверяем режим эмуляции
+        let is_emulation = port_cfg.line.emulation.unwrap_or(false);
 
-        // Спавним воркер под конкретный логический порт
-        let (worker_ref, _jh) = ractor::Actor::spawn(
-          Some(format!("modbus_worker:{port_name}")),
-          ModbusWorker::new(),
-          (
-            timings,
-            stream,
-            myself.clone(),
-            port_name.clone(),
-            port_cfg.clone(),
-          ),
-        )
-        .await
-        .map_err(|e| ActorProcessingErr::from(e.to_string()))?;
+        if is_emulation {
+          // Режим эмуляции: данные читаются из time_series.json через tank_calc
+          // Не запускаем ModbusWorker и не создаем устройства
+          info!(port = %port_name, "ModBusFabric: режим эмуляции включен, ModbusWorker и устройства не создаются");
+        } else {
+          // Реальный режим: запускаем ModbusWorker для чтения данных с датчиков
+          let timings = port_cfg.timings();
 
-        state.workers.insert(port_name.clone(), worker_ref);
-        info!(port = %port_name, "ModBusFabric: worker spawned");
-        let mut port_devices: Vec<FacilityDevice> = Vec::new();
+          // Спавним воркер под конкретный логический порт
+          let (worker_ref, _jh) = ractor::Actor::spawn(
+            Some(format!("modbus_worker:{port_name}")),
+            ModbusWorker::new(),
+            (
+              timings,
+              stream,
+              myself.clone(),
+              port_name.clone(),
+              port_cfg.clone(),
+            ),
+          )
+          .await
+          .map_err(|e| ActorProcessingErr::from(e.to_string()))?;
 
-        for slave_cfg in &port_cfg.slaves {
-          for reg_cfg in &slave_cfg.registers {
-            let mut attrs = BTreeMap::new();
-            attrs.insert(SS::from("value"), json!(0.0));
+          state.workers.insert(port_name.clone(), worker_ref);
+          info!(port = %port_name, "ModBusFabric: worker spawned");
 
-            let scale = reg_cfg.scale.unwrap_or(1.0);
-            let offset = reg_cfg.offset.unwrap_or(0.0);
+          // Создаем устройства только в реальном режиме
+          let mut port_devices: Vec<FacilityDevice> = Vec::new();
 
-            // новый конфиг
-            attrs.insert(SS::from("scale"), json!(scale));
-            attrs.insert(SS::from("offset"), json!(offset));
-            // обратная совместимость
-            attrs.insert(SS::from("mul"), json!(scale));
+          for slave_cfg in &port_cfg.slaves {
+            for reg_cfg in &slave_cfg.registers {
+              let mut attrs = BTreeMap::new();
+              attrs.insert(SS::from("value"), json!(0.0));
 
-            attrs.insert(
-              SS::from("value_type"),
-              json!(format!("{:?}", reg_cfg.value_type)),
-            );
+              let scale = reg_cfg.scale.unwrap_or(1.0);
+              let offset = reg_cfg.offset.unwrap_or(0.0);
 
-            let _dev_type = format!("{}:{}", slave_cfg.name, reg_cfg.start_reg);
+              // новый конфиг
+              attrs.insert(SS::from("scale"), json!(scale));
+              attrs.insert(SS::from("offset"), json!(offset));
+              // обратная совместимость
+              attrs.insert(SS::from("mul"), json!(scale));
 
-            let device = FacilityDevice {
-              device_id: Uuid::now_v7(),
-              port_address: port_name.clone(),
-              meta: Some(FacilityDeviceMeta::Modbus {
-                data: ModbusDeviceMeta {
-                  slave: slave_cfg.slave_id as u16,
-                  addr: reg_cfg.start_reg,
-                  reg: reg_type_to_fc(reg_cfg.reg_type),
-                },
-              }),
-              attrs: Some(attrs),
-              ..default()
-            };
+              attrs.insert(
+                SS::from("value_type"),
+                json!(format!("{:?}", reg_cfg.value_type)),
+              );
 
-            port_devices.push(device);
+              let _dev_type = format!("{}:{}", slave_cfg.name, reg_cfg.start_reg);
+
+              let device = FacilityDevice {
+                device_id: Uuid::now_v7(),
+                port_address: port_name.clone(),
+                meta: Some(FacilityDeviceMeta::Modbus {
+                  data: ModbusDeviceMeta {
+                    slave: slave_cfg.slave_id as u16,
+                    addr: reg_cfg.start_reg,
+                    reg: reg_type_to_fc(reg_cfg.reg_type),
+                  },
+                }),
+                attrs: Some(attrs),
+                ..default()
+              };
+
+              port_devices.push(device);
+            }
           }
+          println!("DEVICES!!!!! {:?}", port_devices);
+          state.devices.insert(port_name.clone(), port_devices);
         }
-        println!("DEVICES!!!!! {:?}", port_devices);
-        state.devices.insert(port_name.clone(), port_devices);
       }
 
       ModbusFabricMsg::DetachPort { port_name } => {

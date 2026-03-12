@@ -13,6 +13,7 @@ groups:
       open_timeout_ms: 1500
       first_byte_timeout_ms: 20
       per_byte_timeout_ms: 5
+      emulation: true
 
       slaves:
         - name: "Sensor1 Test"

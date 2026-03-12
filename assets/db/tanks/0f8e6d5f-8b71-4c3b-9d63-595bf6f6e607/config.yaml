@@ -113,12 +113,10 @@ modbus:
   open_timeout_ms: 1500
   first_byte_timeout_ms: 20
   per_byte_timeout_ms: 5
-  #emulation: true .TODO. Если true - то берет показания из time_series.json в папке резервуара. Если False - получает значения из реальных датчиков. 
-  #true - читаем из файла time_series.json в определенный tank и записываем в -> base_vars ext_vars
-  # false - записываем из ридера сразу в -> base_vars ext_vars
-  # Также надо будет подключить логику из tank_calc в modbus_fabric
+  emulation: true
   reg_mappings:
-    /base_vars/water_lvl: #Тут нужно писать путь до того значения, куда записывать
+    sensor1:
+    #/base_vars/water_lvl: #Тут нужно писать путь до того значения, куда записывать данные с датчика
       slave_id: 1
       start_reg: 5
       regs_count: 2

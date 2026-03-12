@@ -114,6 +114,7 @@ modbus:
   open_timeout_ms: 1500
   first_byte_timeout_ms: 20
   per_byte_timeout_ms: 5
+  emulation: false
   reg_mappings:
     # sensor1:
     #   slave_id: 1
