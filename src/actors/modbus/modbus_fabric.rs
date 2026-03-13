@@ -139,11 +139,11 @@ impl Actor for ModbusFabricActor {
     match msg {
       // Загрузка Modbus конфигурации из Tank
       ModbusFabricMsg::LoadTanksModbusConfig => {
-        info!("ModBusFabric: загрузка Modbus конфигурации из Tank");
+        //info!("ModBusFabric: загрузка Modbus конфигурации из Tank");
 
         // Загружаем все танки
         let tanks = Tank::load_list().await;
-        info!("Загружено {} танков", tanks.len());
+        //info!("Загружено {} танков", tanks.len());
 
         // Для каждого танка загружаем конфигурацию
         for tank in tanks {
@@ -178,10 +178,10 @@ impl Actor for ModbusFabricActor {
           // Если есть Modbus конфигурация, обрабатываем её
           if let Some(config) = tank_config {
             if let Some(modbus_cfg) = config.modbus {
-              info!(
-                "Tank {} имеет Modbus конфигурацию: port={}",
-                tank_id, modbus_cfg.port.port
-              );
+              // info!(
+              //   "Tank {} имеет Modbus конфигурацию: port={}",
+              //   tank_id, modbus_cfg.port.port
+              // );
 
               // Создаем виртуальный порт на основе Tank Modbus конфигурации
               // Port name будет: "tank:{tank_id}"
@@ -232,10 +232,10 @@ impl Actor for ModbusFabricActor {
                 reg_mappings: modbus_cfg.reg_mappings,
               };
 
-              info!(
-                "Создаем виртуальный порт {} для танка {}",
-                port_name, tank_id
-              );
+              // info!(
+              //   "Создаем виртуальный порт {} для танка {}",
+              //   port_name, tank_id
+              // );
 
               // Сохраняем конфигурацию порта в state.settings
               // group_id = tank_id, port_key = "modbus"
@@ -264,13 +264,13 @@ impl Actor for ModbusFabricActor {
         if let Some(ref scanner) = state.serial_scanner {
           let settings = state.settings.clone();
           let _ = scanner.cast(SerialScannerMsg::UpdateSettings(settings));
-          info!("ModBusFabric: отправлены обновлённые настройки в SerialScanner");
+          //info!("ModBusFabric: отправлены обновлённые настройки в SerialScanner");
         }
       }
 
       // Установка ссылки на SerialScanner
       ModbusFabricMsg::SetSerialScanner { scanner } => {
-        info!("ModBusFabric: получена ссылка на SerialScanner");
+        //info!("ModBusFabric: получена ссылка на SerialScanner");
         state.serial_scanner = Some(scanner);
       }
 
@@ -538,7 +538,7 @@ impl Actor for ModbusFabricActor {
               let final_value = raw_value * scale + offset;
               final_value_for_file = Some(final_value);
 
-              info!("{}", final_value);
+              //info!("{}", final_value);
               if let Some(attrs) = dev.attrs.as_mut() {
                 attrs.insert(SS::from("value"), json!(final_value));
               } else {

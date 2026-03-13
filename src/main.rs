@@ -36,7 +36,7 @@ fn main() -> Result<(), ModuleError> {
     module.run(async |_cfg, module, ipc_router, _| {
       // Создаем пустую конфигурацию Modbus - вся информация будет загружена из Tank
       let modbus_settings = ModbusSettings::default();
-      info!("ModBus настройки будут загружены из Tank конфигурации");
+      //info!("ModBus настройки будут загружены из Tank конфигурации");
 
       // ----- ModbusFabric ---------
       let (modbus_fabric, _modbus_fabric_handle) = module

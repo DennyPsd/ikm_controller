@@ -154,7 +154,7 @@ impl Actor for TankCalcActor {
           error!("Ошибка обновления событий: {}", e);
         }
 
-        let _ = myself.send_after(Duration::from_secs(2), || TankCalcMsg::Tick);
+        let _ = myself.send_after(Duration::from_secs(5), || TankCalcMsg::Tick);
       }
     }
 
@@ -199,13 +199,13 @@ impl TankCalcActor {
     if !is_emulation {
       // Режим реальных датчиков - tank_calc не запускаем, данные пишутся из ModbusWorker
       info!(
-        "TankCalc: пропускаем танк {} (режим реальных датчиков)",
+        "TankCalc: танк {} в режиме реальных датчиков",
         tank.id
       );
       return Ok(());
     }
 
-    info!("TankCalc: обрабатываем танк {} (режим эмуляции)", tank.id);
+    //info!("TankCalc: обрабатываем танк {} (режим эмуляции)", tank.id);
 
     let grad_rows = match fs::read_to_string(&grad_table_path) {
       Ok(content) => match serde_json::from_str::<Vec<Vec<f64>>>(&content) {
