@@ -5,7 +5,6 @@ mod types;
 
 use crate::actors::ipc_handler::{IpcHandler, IpcHandlerMsg, IpcHandlerState};
 use crate::actors::ipc_kmh_handler::{KmhIpcHandler, KmhIpcHandlerMsg, KmhIpcHandlerState};
-use crate::actors::modbus::config::ModbusSettings;
 use crate::actors::modbus::modbus_fabric::ModbusFabricActor;
 use crate::actors::tank_calc::TankCalcActor;
 use taxon_core::components::ipc::IPCRole;
@@ -34,16 +33,12 @@ fn main() -> Result<(), ModuleError> {
 
   Module::init(IPCRole::Router).map(|module| {
     module.run(async |_cfg, module, ipc_router, _| {
-      // Создаем пустую конфигурацию Modbus - вся информация будет загружена из Tank
-      let modbus_settings = ModbusSettings::default();
-      //info!("ModBus настройки будут загружены из Tank конфигурации");
-
       // ----- ModbusFabric ---------
       let (modbus_fabric, _modbus_fabric_handle) = module
         .spawn_linked(
           Some("ModbusFabric".into()),
           ModbusFabricActor::new(),
-          modbus_settings.clone(),
+          (),
         )
         .await
         .map_err(|err| ModuleError::SpawnErr("ModbusFabric".into(), err))?;
@@ -53,18 +48,12 @@ fn main() -> Result<(), ModuleError> {
         .spawn_linked(
           Some("SerialScanner".into()),
           SerialScannerActor::new(),
-          (modbus_fabric.clone(), modbus_settings.clone()),
+          modbus_fabric.clone(),
         )
         .await
         .map_err(|err| ModuleError::SpawnErr("SerialScanner".into(), err))?;
 
-      // Передаём ссылку на SerialScanner в ModbusFabric для обновления настроек
-      let _ = modbus_fabric.cast(crate::actors::modbus::modbus_fabric::ModbusFabricMsg::SetSerialScanner {
-        scanner: scanner_actor.clone(),
-      });
-
-      // Загружаем Modbus конфигурацию из Tank (настройки будут переданы в SerialScanner)
-      let _ = modbus_fabric.cast(crate::actors::modbus::modbus_fabric::ModbusFabricMsg::LoadTanksModbusConfig);
+      // SerialScanner сам отправит SetSerialScanner в ModbusFabric при старте + ModbusFabric загрузит конфигурацию из Tank
 
       // ----- KmhIpcHandler ---------
       let kmh_state = KmhIpcHandlerState {

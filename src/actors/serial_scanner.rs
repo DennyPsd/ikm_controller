@@ -51,18 +51,23 @@ pub fn parse_group_port_id(id: &SmolStr) -> Option<(SmolStr, SmolStr)> {
 impl Actor for SerialScannerActor {
   type Msg = SerialScannerMsg;
   type State = SerialScannerState;
-  type Arguments = (ActorRef<ModbusFabricMsg>, ModbusSettings);
+  type Arguments = ActorRef<ModbusFabricMsg>;
 
   async fn pre_start(
     &self,
     myself: ActorRef<Self::Msg>,
-    (fabric, settings): Self::Arguments,
+    fabric: Self::Arguments,
   ) -> Result<Self::State, ActorProcessingErr> {
+    // Отправляем ссылку на себя в ModbusFabric для получения настроек
+    let _ = fabric.cast(ModbusFabricMsg::SetSerialScanner { scanner: myself.clone() });
+    
+    // Запускаем первый тик сканирования
     let _ = myself.cast(SerialScannerMsg::Tick);
+    
     Ok(SerialScannerState {
       fabric,
       known: HashMap::new(),
-      settings,
+      settings: ModbusSettings::default(),
     })
   }
 

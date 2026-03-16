@@ -37,11 +37,7 @@ pub enum ModbusFabricMsg {
     port_name: SmolStr,
   },
 
-  /// Загрузить Modbus конфигурацию из Tank
-  /// Загружает все танки и их Modbus конфигурацию, создает виртуальные порты
-  LoadTanksModbusConfig,
-
-  /// Установить ссылку на SerialScanner для передачи обновлённых настроек
+  /// Установить ссылку на SerialScanner и загрузить конфигурацию из Tank
   SetSerialScanner {
     scanner: SerialScannerRef,
   },
@@ -112,18 +108,18 @@ impl ModbusFabricActor {
 impl Actor for ModbusFabricActor {
   type Msg = ModbusFabricMsg;
   type State = ModbusFabricState;
-  type Arguments = ModbusSettings;
+  type Arguments = ();
 
   async fn pre_start(
     &self,
     _myself: ActorRef<Self::Msg>,
-    settings: Self::Arguments,
+    _args: Self::Arguments,
   ) -> Result<Self::State, ActorProcessingErr> {
     info!("ModBusFabric запущен");
     Ok(ModbusFabricState {
       workers: HashMap::new(),
       devices: HashMap::new(),
-      settings,
+      settings: ModbusSettings::default(),
       parks: Vec::new(),
       products: Vec::new(),
       serial_scanner: None,
@@ -137,19 +133,14 @@ impl Actor for ModbusFabricActor {
     state: &mut Self::State,
   ) -> Result<(), ActorProcessingErr> {
     match msg {
-      // Загрузка Modbus конфигурации из Tank
-      ModbusFabricMsg::LoadTanksModbusConfig => {
-        //info!("ModBusFabric: загрузка Modbus конфигурации из Tank");
-
-        // Загружаем все танки
+      // Установка ссылки на SerialScanner и загрузка конфигурации
+      ModbusFabricMsg::SetSerialScanner { scanner } => {
+        state.serial_scanner = Some(scanner.clone());
+        
+        // Загружаем Modbus конфигурацию из Tank
         let tanks = Tank::load_list().await;
-        //info!("Загружено {} танков", tanks.len());
-
-        // Для каждого танка загружаем конфигурацию
         for tank in tanks {
           let tank_id = tank.id;
-
-          // Читаем config.yaml для танка
           let config_path = format!("assets/db/tanks/{}/config.yaml", tank_id);
           let tank_config: Option<TankConfig> = match File::open(&config_path) {
             Ok(mut file) => {
@@ -167,50 +158,31 @@ impl Actor for ModbusFabricActor {
               }
             }
             Err(e) => {
-              warn!(
-                "Не удалось открыть config.yaml для танка {}: {}",
-                tank_id, e
-              );
+              warn!("Не удалось открыть config.yaml для танка {}: {}", tank_id, e);
               None
             }
           };
 
-          // Если есть Modbus конфигурация, обрабатываем её
           if let Some(config) = tank_config {
             if let Some(modbus_cfg) = config.modbus {
-              // info!(
-              //   "Tank {} имеет Modbus конфигурацию: port={}",
-              //   tank_id, modbus_cfg.port.port
-              // );
-
-              // Создаем виртуальный порт на основе Tank Modbus конфигурации
-              // Port name будет: "tank:{tank_id}"
-              let port_name = SmolStr::from(format!("tank:{}", tank_id));
-
-              // Преобразуем ModbusConfig в ModbusPortConfig
-              // Пока создаем базовую структуру порта
               let line_cfg = modbus_cfg.port;
-
-              // Создаем ModbusPortConfig с slaves из reg_mappings
               let slaves: Vec<crate::actors::modbus::config::ModbusSlaveConfig> = modbus_cfg
                 .reg_mappings
                 .iter()
-                .map(
-                  |(name, reg_map)| crate::actors::modbus::config::ModbusSlaveConfig {
-                    name: name.to_string(),
-                    slave_id: reg_map.slave_id,
-                    registers: vec![crate::actors::modbus::config::ModbusRegisterConfig {
-                      start_reg: reg_map.start_reg,
-                      regs_count: reg_map.regs_count,
-                      reg_type: reg_map.reg_type.clone(),
-                      value_type: reg_map.value_type.clone(),
-                      word_format: reg_map.word_format.clone(),
-                      scale: reg_map.scale,
-                      offset: reg_map.offset,
-                      variable: None,
-                    }],
-                  },
-                )
+                .map(|(name, reg_map)| crate::actors::modbus::config::ModbusSlaveConfig {
+                  name: name.to_string(),
+                  slave_id: reg_map.slave_id,
+                  registers: vec![crate::actors::modbus::config::ModbusRegisterConfig {
+                    start_reg: reg_map.start_reg,
+                    regs_count: reg_map.regs_count,
+                    reg_type: reg_map.reg_type.clone(),
+                    value_type: reg_map.value_type.clone(),
+                    word_format: reg_map.word_format.clone(),
+                    scale: reg_map.scale,
+                    offset: reg_map.offset,
+                    variable: None,
+                  }],
+                })
                 .collect();
 
               let port_cfg = crate::actors::modbus::config::ModbusPortConfig {
@@ -232,14 +204,6 @@ impl Actor for ModbusFabricActor {
                 reg_mappings: modbus_cfg.reg_mappings,
               };
 
-              // info!(
-              //   "Создаем виртуальный порт {} для танка {}",
-              //   port_name, tank_id
-              // );
-
-              // Сохраняем конфигурацию порта в state.settings
-              // group_id = tank_id, port_key = "modbus"
-              // Результирующий логический порт: "{tank_id}:modbus"
               let group_id = SmolStr::from(tank_id.to_string());
               let port_key = SmolStr::from("modbus");
 
@@ -261,17 +225,8 @@ impl Actor for ModbusFabricActor {
         info!("Загружено групп: {}", state.settings.groups.len());
 
         // Передаём обновлённые настройки в SerialScanner
-        if let Some(ref scanner) = state.serial_scanner {
-          let settings = state.settings.clone();
-          let _ = scanner.cast(SerialScannerMsg::UpdateSettings(settings));
-          //info!("ModBusFabric: отправлены обновлённые настройки в SerialScanner");
-        }
-      }
-
-      // Установка ссылки на SerialScanner
-      ModbusFabricMsg::SetSerialScanner { scanner } => {
-        //info!("ModBusFabric: получена ссылка на SerialScanner");
-        state.serial_scanner = Some(scanner);
+        let settings = state.settings.clone();
+        let _ = scanner.cast(SerialScannerMsg::UpdateSettings(settings));
       }
 
       ModbusFabricMsg::AttachPort { port_name, stream } => {
