@@ -18,9 +18,9 @@ use ractor::{Actor, ActorProcessingErr, ActorRef};
 use serde_json::{json, to_string_pretty};
 use std::collections::HashMap;
 use std::fs::{self, File};
-use taxon_core::ipc::errors::internal_error;
 use taxon_core::components::data::{DataChange, DataLink, DataModel};
 use taxon_core::components::device::{FacilityEvent, FacilityEventRule};
+use taxon_core::ipc::errors::internal_error;
 use taxon_core::prelude::{IPCActionKind, IPCActorMsg, IPCMessageCrate};
 use tracing::debug;
 use tracing::warn;
@@ -111,8 +111,8 @@ impl Actor for IpcHandler {
             let args = match serde_json::from_value::<TankListArgs>(action.args.clone().unwrap()) {
               Ok(args) => args,
               Err(err) => {
-                let err = internal_error(action.name.clone())
-                  .with_message(format!("tank_list: {}", err));
+                let err =
+                  internal_error(action.name.clone()).with_message(format!("tank_list: {}", err));
 
                 info!("tank_list: шлём ошибку в ipc_router (bad args)");
                 let _ = state
@@ -359,9 +359,9 @@ impl Actor for IpcHandler {
             debug!("tank_config_set: changes={:#?}", changes);
 
             if !changes.is_empty() {
-              match DataChange::insert_many(changes).await {
+              match DataChange::save_many(changes).await {
                 Ok(_) => info!("tank_config_set: changes inserted OK"),
-                Err(e) => warn!("tank_config_set: insert_many failed (still continue): {e:?}"),
+                Err(e) => warn!("tank_config_set: save_many failed (still continue): {e:?}"),
               }
             }
 
@@ -455,8 +455,8 @@ impl Actor for IpcHandler {
             info!("product_create: обработка запроса");
 
             if action.args.is_none() {
-              let err = internal_error(action.name.clone())
-                .with_message("product_create: empty args");
+              let err =
+                internal_error(action.name.clone()).with_message("product_create: empty args");
 
               info!("product_create: шлём ошибку в ipc_router (empty args)");
               let _ = state
@@ -520,9 +520,9 @@ impl Actor for IpcHandler {
             let mut products = Product::load_list().await;
             products.push(product.clone());
 
-            if let Err(err) = Product::save_all(products).await {
+            if let Err(err) = Product::save_many(products).await {
               let err = internal_error(action.name.clone())
-                .with_message(format!("product_create: save_all error: {err:?}"));
+                .with_message(format!("product_create: save_many error: {err:?}"));
 
               error!("product_create: ошибка записи Products.yaml: {err:?}");
               let _ = state
@@ -550,8 +550,7 @@ impl Actor for IpcHandler {
             info!("product_set: обработка запроса");
 
             if action.args.is_none() {
-              let err =
-                internal_error(action.name.clone()).with_message("product_set: empty args");
+              let err = internal_error(action.name.clone()).with_message("product_set: empty args");
 
               info!("product_set: шлём ошибку в ipc_router (empty args)");
               let _ = state
@@ -567,8 +566,8 @@ impl Actor for IpcHandler {
             let product: Product = match serde_json::from_value(action.args.clone().unwrap()) {
               Ok(p) => p,
               Err(err) => {
-                let err = internal_error(action.name.clone())
-                  .with_message(format!("product_set: {}", err));
+                let err =
+                  internal_error(action.name.clone()).with_message(format!("product_set: {}", err));
 
                 info!("product_set: шлём ошибку в ipc_router (bad args)");
                 let _ = state
@@ -618,9 +617,9 @@ impl Actor for IpcHandler {
               return Ok(());
             }
 
-            if let Err(err) = Product::save_all(products).await {
+            if let Err(err) = Product::save_many(products).await {
               let err = internal_error(action.name.clone())
-                .with_message(format!("product_set: save_all error: {err:?}"));
+                .with_message(format!("product_set: save_many error: {err:?}"));
 
               error!("product_set: ошибка записи Product.yaml: {err:?}");
               let _ = state
@@ -650,8 +649,8 @@ impl Actor for IpcHandler {
             info!("product_delete: обработка запроса");
 
             if action.args.is_none() {
-              let err = internal_error(action.name.clone())
-                .with_message("product_delete: empty args");
+              let err =
+                internal_error(action.name.clone()).with_message("product_delete: empty args");
 
               info!("product_delete: шлём ошибку в ipc_router (empty args)");
               let _ = state
@@ -728,9 +727,9 @@ impl Actor for IpcHandler {
             let deleted = products.remove(pos);
             info!("product_delete: удалён продукт id={}", id);
 
-            if let Err(err) = Product::save_all(products).await {
+            if let Err(err) = Product::save_many(products).await {
               let err = internal_error(action.name.clone())
-                .with_message(format!("product_delete: save_all error: {err:?}"));
+                .with_message(format!("product_delete: save_many error: {err:?}"));
 
               error!("product_delete: ошибка записи Products.yaml: {err:?}");
               let _ = state
@@ -761,8 +760,8 @@ impl Actor for IpcHandler {
             let args = match serde_json::from_value::<EventListArgs>(action.args.clone().unwrap()) {
               Ok(args) => args,
               Err(err) => {
-                let err = internal_error(action.name.clone())
-                  .with_message(format!("event_list: {}", err));
+                let err =
+                  internal_error(action.name.clone()).with_message(format!("event_list: {}", err));
 
                 info!("event_list: шлём ошибку в ipc_router (bad args)");
                 let _ = state
@@ -927,8 +926,8 @@ impl Actor for IpcHandler {
             info!("event_rule_set: обработка запроса");
 
             if action.args.is_none() {
-              let err = internal_error(action.name.clone())
-                .with_message("event_rule_set: empty args");
+              let err =
+                internal_error(action.name.clone()).with_message("event_rule_set: empty args");
 
               info!("event_rule_set: шлём ошибку в ipc_router (empty args)");
               let _ = state
@@ -1014,7 +1013,7 @@ impl Actor for IpcHandler {
               rules.push(rule.clone());
             }
 
-            let _ = FacilityEventRule::save_all(rules).await;
+            let _ = FacilityEventRule::save_many(rules).await;
 
             // В ответ отдаём само правило (Reply = FacilityEventRule)
             if let Some(msg) = ipc_msg.to_replay_msg(Some(json!(rule)), None) {
@@ -1033,8 +1032,8 @@ impl Actor for IpcHandler {
             info!("load_grad_table: обработка запроса");
 
             if action.args.is_none() {
-              let err = internal_error(action.name.clone())
-                .with_message("load_grad_table: empty args");
+              let err =
+                internal_error(action.name.clone()).with_message("load_grad_table: empty args");
 
               info!("load_grad_table: шлём ошибку в ipc_router (empty args)");
               let _ = state

@@ -17,7 +17,6 @@ use crate::types::tank_configuration::TankConfig;
 use crate::types::tanks::Tank;
 
 use serde_json::json;
-use smol_str::SmolStr as SS;
 use taxon_core::components::device::{
   FacilityDevice, FacilityDeviceMeta, ModbusDeviceMeta, NAMURStatus,
 };
@@ -136,7 +135,7 @@ impl Actor for ModbusFabricActor {
       // Установка ссылки на SerialScanner и загрузка конфигурации
       ModbusFabricMsg::SetSerialScanner { scanner } => {
         state.serial_scanner = Some(scanner.clone());
-        
+
         // Загружаем Modbus конфигурацию из Tank
         let tanks = Tank::load_list().await;
         for tank in tanks {
@@ -158,7 +157,10 @@ impl Actor for ModbusFabricActor {
               }
             }
             Err(e) => {
-              warn!("Не удалось открыть config.yaml для танка {}: {}", tank_id, e);
+              warn!(
+                "Не удалось открыть config.yaml для танка {}: {}",
+                tank_id, e
+              );
               None
             }
           };
@@ -169,20 +171,22 @@ impl Actor for ModbusFabricActor {
               let slaves: Vec<crate::actors::modbus::config::ModbusSlaveConfig> = modbus_cfg
                 .reg_mappings
                 .iter()
-                .map(|(name, reg_map)| crate::actors::modbus::config::ModbusSlaveConfig {
-                  name: name.to_string(),
-                  slave_id: reg_map.slave_id,
-                  registers: vec![crate::actors::modbus::config::ModbusRegisterConfig {
-                    start_reg: reg_map.start_reg,
-                    regs_count: reg_map.regs_count,
-                    reg_type: reg_map.reg_type.clone(),
-                    value_type: reg_map.value_type.clone(),
-                    word_format: reg_map.word_format.clone(),
-                    scale: reg_map.scale,
-                    offset: reg_map.offset,
-                    variable: None,
-                  }],
-                })
+                .map(
+                  |(name, reg_map)| crate::actors::modbus::config::ModbusSlaveConfig {
+                    name: name.to_string(),
+                    slave_id: reg_map.slave_id,
+                    registers: vec![crate::actors::modbus::config::ModbusRegisterConfig {
+                      start_reg: reg_map.start_reg,
+                      regs_count: reg_map.regs_count,
+                      reg_type: reg_map.reg_type.clone(),
+                      value_type: reg_map.value_type.clone(),
+                      word_format: reg_map.word_format.clone(),
+                      scale: reg_map.scale,
+                      offset: reg_map.offset,
+                      variable: None,
+                    }],
+                  },
+                )
                 .collect();
 
               let port_cfg = crate::actors::modbus::config::ModbusPortConfig {
@@ -311,19 +315,19 @@ impl Actor for ModbusFabricActor {
           for slave_cfg in &port_cfg.slaves {
             for reg_cfg in &slave_cfg.registers {
               let mut attrs = BTreeMap::new();
-              attrs.insert(SS::from("value"), json!(0.0));
+              attrs.insert("value".to_string(), json!(0.0));
 
               let scale = reg_cfg.scale.unwrap_or(1.0);
               let offset = reg_cfg.offset.unwrap_or(0.0);
 
               // новый конфиг
-              attrs.insert(SS::from("scale"), json!(scale));
-              attrs.insert(SS::from("offset"), json!(offset));
+              attrs.insert("scale".to_string(), json!(scale));
+              attrs.insert("offset".to_string(), json!(offset));
               // обратная совместимость
-              attrs.insert(SS::from("mul"), json!(scale));
+              attrs.insert("mul".to_string(), json!(scale));
 
               attrs.insert(
-                SS::from("value_type"),
+                "value_type".to_string(),
                 json!(format!("{:?}", reg_cfg.value_type)),
               );
 
@@ -398,7 +402,7 @@ impl Actor for ModbusFabricActor {
             && let Some(dev) = list.get_mut(local_idx)
           {
             if let Some(attrs) = dev.attrs.as_mut() {
-              attrs.insert(SS::from("value"), json!(value));
+              attrs.insert("value".to_string(), json!(value));
             }
             info!(
               "ModbusFabric: device idx {} (port {}, local {}) updated = {}",
@@ -472,18 +476,18 @@ impl Actor for ModbusFabricActor {
               let (scale, offset) = {
                 let attrs_ref = dev.attrs.as_ref();
                 let scale = attrs_ref
-                    .and_then(|m| m.get(&SS::from("scale")))
+                    .and_then(|m| m.get(&"scale".to_string()))
                     .and_then(|v| v.as_f64())
                     // поддержка старого поля "mul"
                     .or_else(|| {
                       attrs_ref
-                          .and_then(|m| m.get(&SS::from("mul")))
+                          .and_then(|m| m.get(&"mul".to_string()))
                           .and_then(|v| v.as_f64())
                     })
                     .unwrap_or(1.0);
 
                 let offset = attrs_ref
-                  .and_then(|m| m.get(&SS::from("offset")))
+                  .and_then(|m| m.get(&"offset".to_string()))
                   .and_then(|v| v.as_f64())
                   .unwrap_or(0.0);
 
@@ -495,10 +499,10 @@ impl Actor for ModbusFabricActor {
 
               //info!("{}", final_value);
               if let Some(attrs) = dev.attrs.as_mut() {
-                attrs.insert(SS::from("value"), json!(final_value));
+                attrs.insert("value".to_string(), json!(final_value));
               } else {
                 let mut map = BTreeMap::new();
-                map.insert(SS::from("value"), json!(final_value));
+                map.insert("value".to_string(), json!(final_value));
                 dev.attrs = Some(map);
               }
 
@@ -552,7 +556,11 @@ impl Actor for ModbusFabricActor {
                   // Заменяем строку
                   contents.replace_range(start_idx..end_pos, &new_line);
                   // Записываем обратно
-                  if let Ok(mut file) = OpenOptions::new().write(true).truncate(true).open(&file_path) {
+                  if let Ok(mut file) = OpenOptions::new()
+                    .write(true)
+                    .truncate(true)
+                    .open(&file_path)
+                  {
                     if file.write_all(contents.as_bytes()).is_ok() {
                       info!(
                         "ModbusFabric: записано значение {} в {} для танка {}",
@@ -565,7 +573,11 @@ impl Actor for ModbusFabricActor {
                 // Если переменная не найдена, добавляем её в конец
                 contents.push('\n');
                 contents.push_str(&new_line);
-                if let Ok(mut file) = OpenOptions::new().write(true).truncate(true).open(&file_path) {
+                if let Ok(mut file) = OpenOptions::new()
+                  .write(true)
+                  .truncate(true)
+                  .open(&file_path)
+                {
                   if file.write_all(contents.as_bytes()).is_ok() {
                     info!(
                       "ModbusFabric: добавлено значение {} в {} для танка {}",

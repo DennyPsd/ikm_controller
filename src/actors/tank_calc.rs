@@ -149,7 +149,7 @@ impl Actor for TankCalcActor {
         }
         if state.events.is_some()
           && !state.events.as_ref().unwrap().is_empty()
-          && let Err(e) = FacilityEvent::save_all(state.events.take().unwrap()).await
+          && let Err(e) = FacilityEvent::save_many(state.events.take().unwrap()).await
         {
           error!("Ошибка обновления событий: {}", e);
         }
@@ -198,10 +198,7 @@ impl TankCalcActor {
 
     if !is_emulation {
       // Режим реальных датчиков - tank_calc не запускаем, данные пишутся из ModbusWorker
-      info!(
-        "TankCalc: танк {} в режиме реальных датчиков",
-        tank.id
-      );
+      info!("TankCalc: танк {} в режиме реальных датчиков", tank.id);
       return Ok(());
     }
 
