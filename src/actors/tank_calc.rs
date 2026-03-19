@@ -37,6 +37,66 @@ pub struct Meta {
   pub constants: Constants,
 }
 
+/// Структура для десериализации данных из emulation.json
+#[allow(dead_code)]
+#[derive(Deserialize, Debug)]
+pub struct EmulationEntry {
+  pub time_stap: i64,
+
+  #[serde(rename = "/ext_vars/hydrostatic_pressure")]
+  pub hydrostatic_pressure: f64,
+
+  #[serde(rename = "/ext_vars/vapour_pressure")]
+  pub vapour_pressure: f64,
+
+  pub h_measured: f64,
+
+  #[serde(rename = "/ext_vars/water_level")]
+  pub water_level: f64,
+
+  #[serde(rename = "/ext_vars/product_density")]
+  pub product_density: f64,
+
+  // Temperatures хранятся как плоские ключи: /ext_vars/temperatures/0/value, /ext_vars/temperatures/1/value и т.д.
+  // Используем serde_json::Value для парсинга и затем извлекаем нужные значения
+  #[serde(flatten)]
+  extra: std::collections::HashMap<String, serde_json::Value>,
+}
+
+impl EmulationEntry {
+  fn to_time_series_entry(&self) -> TimeSeriesEntry {
+    TimeSeriesEntry {
+      ts: self.time_stap,
+      // hydrostatic_pressure - это p1 (давление P1)
+      p1: self.hydrostatic_pressure,
+      p3: 0.0, // В emulation.json нет отдельного p3
+      h_measured: self.h_measured,
+      h_v: self.water_level,
+      density: self.product_density,
+      t0: self.extract_temp(0),
+      t1: self.extract_temp(1),
+      t2: self.extract_temp(2),
+      t3: self.extract_temp(3),
+      t4: self.extract_temp(4),
+      t5: self.extract_temp(5),
+      t6: self.extract_temp(6),
+      t7: self.extract_temp(7),
+      t8: self.extract_temp(8),
+      t9: self.extract_temp(9),
+    }
+  }
+
+  fn extract_temp(&self, index: usize) -> f64 {
+    let key = format!("/ext_vars/temperatures/{}/value", index);
+    self
+      .extra
+      .get(&key)
+      .and_then(|v| v.as_f64())
+      .unwrap_or(0.0)
+  }
+}
+
+/// Структура для внутреннего использования ( old format )
 #[allow(dead_code)]
 #[derive(Deserialize, Debug)]
 pub struct TimeSeriesEntry {
@@ -170,7 +230,7 @@ impl TankCalcActor {
     event_rules: &Vec<FacilityEventRule>,
   ) -> Result<(), Box<dyn std::error::Error>> {
     let meta_path = format!("assets/db/calc/{}/meta.json", tank.id);
-    let time_series_path = format!("assets/db/calc/{}/time_series.json", tank.id);
+    let emulation_path = format!("assets/db/tanks/{}/emulation.json", tank.id);
     let config_vars_path = format!("assets/db/tanks/{}/config.yaml", tank.id);
     let base_vars_path = format!("assets/db/tanks/{}/base_vars.yaml", tank.id);
     let ext_vars_path = format!("assets/db/tanks/{}/ext_vars.yaml", tank.id);
@@ -239,29 +299,53 @@ impl TankCalcActor {
         return Ok(());
       }
     };
-    // Читаем time_series.json
-    let time_series_content = fs::read_to_string(&time_series_path)?;
-    let time_series: Vec<TimeSeriesEntry> = serde_json::from_str(&time_series_content)
-      .map_err(|err| format!("Cant parse time_series:{err:?}"))?;
+    // Читаем emulation.json из папки tanks/{tank_id}/
+    let emulation_content = match fs::read_to_string(&emulation_path) {
+      Ok(content) => content,
+      Err(err) if err.kind() == ErrorKind::NotFound => {
+        // Файла emulation.json нет - при включенной эмуляции ничего не делаем
+        info!(
+          "TankCalc: emulation.json для {} не найден - пропускаем",
+          tank.id
+        );
+        return Ok(());
+      }
+      Err(err) => {
+        error!(
+          "TankCalc: не удалось прочитать {}: {err:?} — пропускаем расчёт для {}",
+          emulation_path, tank.id
+        );
+        return Ok(());
+      }
+    };
 
-    if time_series.is_empty() {
+    let emulation_data: Vec<EmulationEntry> = match serde_json::from_str(&emulation_content) {
+      Ok(data) => data,
+      Err(err) => {
+        error!(
+          "TankCalc: не удалось распарсить emulation.json для {}: {err:?} — пропускаем",
+          tank.id
+        );
+        return Ok(());
+      }
+    };
+
+    if emulation_data.is_empty() {
       return Ok(());
     }
-    // Читаем config.yaml
-    let config_content = fs::read_to_string(&config_vars_path)?;
-    let config: TankConfig = serde_saphyr::from_str(&config_content)
-      .map_err(|err| format!("Cant parse config: {err:?}"))?;
-    // читаем правила эвентов
 
-    // Берем индекс из "ts" в time_series.json, с учетом того, что они могут повторяться
+    // Берем индекс из emulation_data, с учетом того, что они могут повторяться
     let current_index = state.current_indices.entry(tank.id).or_insert(0);
-    let next_index = (*current_index + 1) % time_series.len();
-    let entry = &time_series[next_index];
+    let next_index = (*current_index + 1) % emulation_data.len();
+    let entry = &emulation_data[next_index];
     *current_index = next_index;
+
+    // Конвертируем EmulationEntry в TimeSeriesEntry для совместимости с расчетом
+    let ts_entry = entry.to_time_series_entry();
 
     let prev_result = state.previous_results.get(&tank.id).cloned();
 
-    let calc = self.build_calculation(&meta, &config, entry, prev_result, &grad_rows);
+    let calc = self.build_calculation(&meta, &config, &ts_entry, prev_result, &grad_rows);
     // println!("calc : {:?}",calc);
     // Запуск расчета ядра
     let result = match calc.calculate() {
@@ -277,7 +361,7 @@ impl TankCalcActor {
 
     // Маппинг через экстеншен
     let base_vars = result.to_base_vars();
-    let ext_vars = result.to_ext_vars(&meta, &config, entry);
+    let ext_vars = result.to_ext_vars(&meta, &config, &ts_entry);
 
     let base_with_date = BaseVarsWithDate {
       date: now,
@@ -300,7 +384,7 @@ impl TankCalcActor {
     fs::write(&ext_vars_path, ext_yaml)?;
 
     // Проверяем правила событий и при необходимости генерируем FacilityEvent
-    self.check_event_rules(tank, event_rules, &result, entry.ts, state);
+    self.check_event_rules(tank, event_rules, &result, entry.time_stap, state);
 
     // Обновляем previous_result для этого танка
     state.previous_results.insert(tank.id, result);

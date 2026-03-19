@@ -361,3 +361,14 @@
       ns: FacilityEventRule
       id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
   value: 4546.0
+- id: 019d0589-f4db-72e0-9ee2-2f0409f69ea4
+  target:
+    type: Data
+    data_ns: Tank
+  severity: F
+  starts_at: 2026-03-19T13:00:20.443440+03:00
+  rule:
+    Link:
+      ns: FacilityEventRule
+      id: 41924bb1-19a8-4b25-acea-14ee2b4c39cc
+  value: 7147.0

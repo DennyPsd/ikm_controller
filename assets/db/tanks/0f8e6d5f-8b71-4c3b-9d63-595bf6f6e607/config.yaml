@@ -113,7 +113,7 @@ modbus:
   open_timeout_ms: 1500
   first_byte_timeout_ms: 20
   per_byte_timeout_ms: 5
-  emulation: false
+  emulation: true
   reg_mappings:
     /base_vars/product_avg_temp:
       slave_id: 1
