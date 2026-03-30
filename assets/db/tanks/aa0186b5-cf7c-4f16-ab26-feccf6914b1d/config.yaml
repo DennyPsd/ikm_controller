@@ -102,3 +102,37 @@ calibration_block:
     - id: T9
       index: 9
       value: -20.0
+#modbus config
+modbus:
+  port: "COM110"
+  bitrate: 9600
+  parity: "none"
+  data_bits: 8
+  stop_bits: 1
+  flow_control: "none"
+  polling_ms: 2000
+  open_timeout_ms: 1500
+  first_byte_timeout_ms: 20
+  per_byte_timeout_ms: 5
+  emulation: true
+  reg_mappings:
+    # sensor1:
+    #   slave_id: 1
+    #   start_reg: 5
+    #   regs_count: 2
+    #   reg_type: "input_register"
+    #   value_type: "f32"
+    #   word_format:
+    #     swap_words: true
+    #     swap_bytes_in_word: true
+    #   scale: 100.0
+    #   offset: 0.0
+    # sensor2:
+    #   slave_id: 1
+    #   start_reg: 18
+    #   regs_count: 2
+    #   reg_type: "input_register"
+    #   value_type: "f32"
+    #   word_format:
+    #     swap_words: true
+    #     swap_bytes_in_word: true

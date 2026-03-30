@@ -4,6 +4,7 @@ use crate::msges::data_change_list::DataChangeArgs;
 use crate::msges::event_list::EventListArgs;
 use crate::msges::event_rule_create::EventRuleCreateArgs;
 use crate::msges::event_rule_list::EventRuleListArgs;
+use crate::msges::load_emulation_table::LoadEmulationTableArgs;
 use crate::msges::load_grad_table::LoadGradTableArgs;
 use crate::msges::product_create::ProductCreateArgs;
 use crate::msges::product_list::ProductListArgs;
@@ -142,7 +143,7 @@ impl Actor for IpcHandler {
             } else {
               tanks.keys().cloned().collect()
             };
-            info!("tanks ids: {tanks:#?}");
+            //info!("tanks ids: {tanks:#?}");
             for id in ids.iter() {
               let tank = tanks.get_mut(id).unwrap();
 
@@ -1307,6 +1308,141 @@ impl Actor for IpcHandler {
               error!("load_grad_table: failed to send success reply: {e}");
             } else {
               info!("load_grad_table: success reply sent");
+            }
+            return Ok(());
+          }
+
+          // ===================== LOAD_EMULATION_TABLE =====================
+          if action.kind == IPCActionKind::SetData
+            && action.name.as_deref() == Some("load_emulation_table")
+          {
+            info!("load_emulation_table: обработка запроса");
+
+            if action.args.is_none() {
+              let err =
+                internal_error(action.name.clone()).with_message("load_emulation_table: empty args");
+
+              info!("load_emulation_table: шлём ошибку в ipc_router (empty args)");
+              let _ = state
+                .ipc_router
+                .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                .map_err(|err| {
+                  error!("load_emulation_table: to_replay_msg {}", err);
+                });
+              return Ok(());
+            }
+
+            let args =
+              match serde_json::from_value::<LoadEmulationTableArgs>(action.args.clone().unwrap()) {
+                Ok(args) => args,
+                Err(err) => {
+                  let err = internal_error(action.name.clone())
+                    .with_message(format!("load_emulation_table: bad args: {}", err));
+
+                  error!("load_emulation_table: bad args: {err:?}");
+                  let _ = state
+                    .ipc_router
+                    .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                    .map_err(|err| {
+                      error!("load_emulation_table: to_replay_msg {}", err);
+                    });
+                  return Ok(());
+                }
+              };
+
+            let device_id = args.device_id;
+            info!("load_emulation_table: device_id = {device_id}");
+
+            // Декодируем base64 данные (CSV)
+            let decoded = match general_purpose::STANDARD.decode(args.table.trim()) {
+              Ok(bytes) => bytes,
+              Err(err) => {
+                let err = internal_error(action.name.clone())
+                  .with_message(format!("load_emulation_table: base64 decode error: {}", err));
+
+                error!("load_emulation_table: base64 decode error: {err:?}");
+                let _ = state
+                  .ipc_router
+                  .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                  .map_err(|err| {
+                    error!("load_emulation_table: to_replay_msg {}", err);
+                  });
+                return Ok(());
+              }
+            };
+
+            let csv_str = match String::from_utf8(decoded) {
+              Ok(s) => s,
+              Err(err) => {
+                let err = internal_error(action.name.clone())
+                  .with_message(format!("load_emulation_table: utf8 error: {}", err));
+
+                error!("load_emulation_table: utf8 error: {err:?}");
+                let _ = state
+                  .ipc_router
+                  .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                  .map_err(|err| {
+                    error!("load_emulation_table: to_replay_msg {}", err);
+                  });
+                return Ok(());
+              }
+            };
+
+            // --------- Сохраняем CSV файл emulation.csv ---------
+            // Путь: assets/db/tanks/<device_id>/emulation.csv
+            let tank_dir = format!("assets/db/tanks/{device_id}");
+            let emulation_path = format!("{tank_dir}/emulation.csv");
+
+            info!(
+              "load_emulation_table: сохраняем emulation.csv в файл: {}",
+              emulation_path
+            );
+
+            // создаём директорию tanks/<device_id>, если её ещё нет
+            if let Err(err) = fs::create_dir_all(&tank_dir) {
+              let err = internal_error(action.name.clone()).with_message(format!(
+                "load_emulation_table: create_dir_all {tank_dir}: {err:?}"
+              ));
+
+              error!(
+                "load_emulation_table: не удалось создать директорию {}: {err:?}",
+                tank_dir
+              );
+              let _ = state
+                .ipc_router
+                .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                .map_err(|err| {
+                  error!("load_emulation_table: to_replay_msg {}", err);
+                });
+              return Ok(());
+            }
+
+            // пишем файл emulation.csv
+            if let Err(err) = fs::write(&emulation_path, csv_str) {
+              let err = internal_error(action.name.clone()).with_message(format!(
+                "load_emulation_table: write emulation.csv error: {err:?}"
+              ));
+
+              error!("load_emulation_table: ошибка записи {}: {err:?}", emulation_path);
+              let _ = state
+                .ipc_router
+                .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                .map_err(|err| {
+                  error!("load_emulation_table: to_replay_msg {}", err);
+                });
+              return Ok(());
+            }
+
+            info!(
+              "load_emulation_table: успешно записали emulation.csv в {}",
+              emulation_path
+            );
+            info!("load_emulation_table: sending success reply...");
+            let msg = ipc_msg.to_replay_msg(Some(()), None);
+            if let Err(e) = state.ipc_router.send_message(msg) {
+              error!("load_emulation_table: failed to send success reply: {e}");
+            } else {
+              info!("load_emulation_table: success reply sent");
             }
             return Ok(());
           }
