@@ -7,7 +7,9 @@ use crate::msges::kmh_report_calc::KMHReportCalc;
 use crate::msges::kmh_report_create::KMHReportCreate;
 use crate::msges::kmh_report_list::KMHReportList;
 use crate::msges::kmh_report_set::KMHReportSet;
+use crate::msges::load_emulation_table::LoadEmulationTable;
 use crate::msges::load_grad_table::LoadGradTable;
+
 use crate::msges::park_list::ParkList;
 use crate::msges::product_create::ProductCreate;
 use crate::msges::product_delete::{ProductDelete, ProductDeleteArgs};
@@ -17,14 +19,15 @@ use crate::msges::tank_config_set::TankConfigSet;
 use crate::msges::tank_list::TankList;
 use crate::msges::user_login::UserLogin;
 use crate::msges::user_logout::UserLogout;
-use taxon_core::prelude::*;
 use taxon_core::components::ipc::IPCRole;
+use taxon_core::prelude::*;
 use taxon_core::utils::asyncapi::AsyncapiBuilder;
 
 #[allow(dead_code)]
 pub fn ikm_controller_client_api() -> AsyncapiBuilder {
   AsyncapiBuilder::new(IPCRole::Router)
     .operation::<LoadGradTable, ()>()
+    .operation::<LoadEmulationTable, ()>()
     .operation::<TankList, ()>()
     .operation::<TankConfigSet, ()>()
     .operation::<DataChangeList, ()>()

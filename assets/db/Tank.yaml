@@ -5,8 +5,6 @@
       ns: Product
       id: "00000000-0000-0000-0000-000000000001" # Oil-1
       title: "Oil-1"
-#  name: "Tank-1"
-#  status: "work"
   grc: "1 1"
   trc: "1 1"
   display_params:
@@ -14,7 +12,6 @@
     max_tank_level: 18000.0
     min_level: 0.0
     max_level: 18000.05
-
 - id: "d0dfb627-a5da-4901-b45e-81c7310c5810" # r2
   group: "Группа 1"
   product:
@@ -22,8 +19,6 @@
       ns: Product
       id: "00000000-0000-0000-0000-000000000001" # Oil-1
       title: "Oil-1"
-#  name: "Tank-2"
-#  status: "work"
   grc: "1 1"
   trc: "1 2"
   display_params:
@@ -31,7 +26,6 @@
     max_tank_level: 18000.0
     min_level: 0.0
     max_level: 18000.05
-
 - id: "0f77a636-e538-4e85-bab5-00d4921674cf" # r3
   group: "Группа 1"
   product:
@@ -39,8 +33,6 @@
       ns: Product
       id: "00000000-0000-0000-0000-000000000002" # OilProduct-2
       title: "OilProduct-2"
-#  name: "Tank-3"
-#  status: "work"
   grc: "1 1"
   trc: "1 3"
   display_params:
@@ -48,7 +40,6 @@
     max_tank_level: 18000.0
     min_level: 0.0
     max_level: 18000.05
-
 - id: "0f99cd5d-6f09-4e5a-a590-386fdddd15b2" # r4
   group: "Группа 1"
   product:
@@ -56,8 +47,6 @@
       ns: Product
       id: "00000000-0000-0000-0000-000000000001" # Oil-1
       title: "Oil-1"
-#  name: "Tank-4"
-#  status: "work"
   grc: "1 1"
   trc: "2 1"
   display_params:
@@ -65,7 +54,6 @@
     max_tank_level: 18000.0
     min_level: 0.0
     max_level: 18000.05
-
 - id: "840cdcd6-fd1f-4dab-a1b7-cb2b53aaf1e8" # r5
   group: "Группа 1"
   product:
@@ -73,8 +61,6 @@
       ns: Product
       id: "00000000-0000-0000-0000-000000000002" # OilProduct-2
       title: "OilProduct-2"
-#  name: "Tank-5"
-#  status: "work"
   grc: "1 1"
   trc: "2 2"
   display_params:
@@ -82,7 +68,6 @@
     max_tank_level: 18000.0
     min_level: 0.0
     max_level: 18000.05
-
 - id: "863d039e-375d-4963-b088-01f0cda36865" # r6
   group: "Группа 1"
   product:
@@ -90,8 +75,6 @@
       ns: Product
       id: "00000000-0000-0000-0000-000000000001" # Oil-1
       title: "Oil-1"
-#  name: "Tank-6"
-#  status: "work"
   grc: "1 1"
   trc: "2 3"
   display_params:
@@ -99,7 +82,6 @@
     max_tank_level: 18000.0
     min_level: 0.0
     max_level: 18000.05
-
 - id: "0f8e6d5f-8b71-4c3b-9d63-595bf6f6e607" # r7
   group: "Группа 2"
   product:
@@ -107,8 +89,6 @@
       ns: Product
       id: "00000000-0000-0000-0000-000000000001" # Oil-1
       title: "Oil-1"
-#  name: "Tank-7"
-#  status: "work"
   grc: "1 2"
   trc: "1 1"
   display_params:
@@ -116,7 +96,6 @@
     max_tank_level: 18000.0
     min_level: 0.0
     max_level: 18000.05
-
 - id: "9c02c17b-6208-41b3-8e27-684a53f99223" # r8
   group: "Группа 2"
   product:
@@ -124,8 +103,6 @@
       ns: Product
       id: "00000000-0000-0000-0000-000000000002" # OilProduct-2
       title: "OilProduct-2"
-#  name: "Tank-8"
-#  status: "work"
   grc: "1 2"
   trc: "2 1"
   display_params:
@@ -133,7 +110,6 @@
     max_tank_level: 18000.0
     min_level: 0.0
     max_level: 18000.05
-
 - id: "aa0186b5-cf7c-4f16-ab26-feccf6914b1d" # r9
   group: "Группа 3"
   product:
@@ -141,8 +117,6 @@
       ns: Product
       id: "00000000-0000-0000-0000-000000000001" # Oil-1
       title: "Oil-1"
-#  name: "Tank-9"
-#  status: "work"
   grc: "1 3"
   trc: "1 1"
   display_params:
@@ -150,7 +124,6 @@
     max_tank_level: 18000.0
     min_level: 0.0
     max_level: 18000.05
-
 - id: "63d0d9a9-2d15-4b15-afca-cd2f444811c8" # r10
   group: "Группа 3"
   product:
@@ -158,8 +131,6 @@
       ns: Product
       id: "00000000-0000-0000-0000-000000000002" # OilProduct-2
       title: "OilProduct-2"
-#  name: "Tank-10"
-#  status: "work"
   grc: "1 3"
   trc: "2 1"
   display_params:
@@ -167,7 +138,6 @@
     max_tank_level: 18000.0
     min_level: 0.0
     max_level: 18000.05
-
 - id: "c0ac2df1-99d9-4a15-8864-1c1e3e3062ce" # r11
   group: "Группа 3"
   product:
@@ -175,8 +145,6 @@
       ns: Product
       id: "00000000-0000-0000-0000-000000000001" # Oil-1
       title: "Oil-1"
-#  name: "Tank-11"
-#  status: "work"
   grc: "1 3"
   trc: "1 2"
   display_params:
@@ -184,7 +152,6 @@
     max_tank_level: 18000.0
     min_level: 0.0
     max_level: 18000.05
-
 - id: "02393f24-b83f-4fe9-8d98-3ccd7c851fc1" # r12
   group: "Группа 3"
   product:
@@ -192,8 +159,6 @@
       ns: Product
       id: "00000000-0000-0000-0000-000000000001" # Oil-1
       title: "Oil-1"
-#  name: "Tank-12"
-#  status: "work"
   grc: "1 3"
   trc: "2 2"
   display_params:
@@ -201,7 +166,6 @@
     max_tank_level: 18000.0
     min_level: 0.0
     max_level: 18000.05
-
 - id: "a078abf1-9b71-4de8-ad84-bae93162575b" # r13
   group: "Группа 4"
   product:
@@ -209,8 +173,6 @@
       ns: Product
       id: "00000000-0000-0000-0000-000000000002" # OilProduct-2
       title: "OilProduct-2"
-#  name: "Tank-13"
-#  status: "work"
   grc: "2 2"
   trc: "1 1"
   display_params:
@@ -218,7 +180,6 @@
     max_tank_level: 18000.0
     min_level: 0.0
     max_level: 18000.05
-
 - id: "73da8844-6fa6-47d1-9ee2-d9ecef4835a4" # r14
   group: "Группа 4"
   product:
@@ -226,8 +187,6 @@
       ns: Product
       id: "00000000-0000-0000-0000-000000000001" # Oil-1
       title: "Oil-1"
-#  name: "Tank-14"
-#  status: "work"
   grc: "2 2"
   trc: "1 2"
   display_params:
@@ -235,7 +194,6 @@
     max_tank_level: 18000.0
     min_level: 0.0
     max_level: 18000.05
-
 - id: "2d16c413-7a97-4877-b6b4-2e42dc09c291" # r15
   group: "Группа 4"
   product:
@@ -243,8 +201,6 @@
       ns: Product
       id: "00000000-0000-0000-0000-000000000002" # OilProduct-2
       title: "OilProduct-2"
-#  name: "Tank-15"
-#  status: "work"
   grc: "2 2"
   trc: "1 3"
   display_params:

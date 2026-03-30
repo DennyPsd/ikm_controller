@@ -22,9 +22,7 @@ use taxon_core::components::data::{DataChange, DataLink, DataModel};
 use taxon_core::components::device::{FacilityEvent, FacilityEventRule};
 use taxon_core::ipc::errors::internal_error;
 use taxon_core::prelude::{IPCActionKind, IPCActorMsg, IPCMessageCrate};
-use tracing::debug;
-use tracing::warn;
-use tracing::{error, info};
+use tracing::{debug, error, info, warn};
 use uuid::Uuid;
 
 #[derive(Clone)]
@@ -114,7 +112,7 @@ impl Actor for IpcHandler {
                 let err =
                   internal_error(action.name.clone()).with_message(format!("tank_list: {}", err));
 
-                info!("tank_list: шлём ошибку в ipc_router (bad args)");
+                debug!("tank_list: шлём ошибку в ipc_router (bad args)");
                 let _ = state
                   .ipc_router
                   .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
@@ -140,31 +138,32 @@ impl Actor for IpcHandler {
               .collect();
 
             let ids: Vec<_> = if !args.ids.is_empty() {
-              args.ids.to_vec()
+              args.ids.clone()
             } else {
               tanks.keys().cloned().collect()
             };
-
+            info!("tanks ids: {tanks:#?}");
             for id in ids.iter() {
               let tank = tanks.get_mut(id).unwrap();
 
               match args.fields {
                 TankListFields::Minimal => {
-                  let path = format!("assets/db/tanks/{id}/base_vars.yaml");
-                  tank.base_vars = File::open(&path[..])
-                    .map_err(|err| {
-                      error!("{err:#?}");
-                      Option::<()>::None
-                    })
-                    .map_or(None, |reader| {
-                      serde_saphyr::from_reader::<File, BaseVars>(reader)
-                        .map_err(|err| {
-                          error!("{err:#?}");
-                          Option::<()>::None
-                        })
-                        .ok()
-                    });
-
+                  // Tank::ge
+                  // let path = format!("assets/db/tanks/{id}/base_vars.yaml");
+                  // tank.base_vars = File::open(&path[..])
+                  //   .map_err(|err| {
+                  //     error!("{err:#?}");
+                  //     Option::<()>::None
+                  //   })
+                  //   .map_or(None, |reader| {
+                  //     serde_saphyr::from_reader::<File, BaseVars>(reader)
+                  //       .map_err(|err| {
+                  //         error!("{err:#?}");
+                  //         Option::<()>::None
+                  //       })
+                  //       .ok()
+                  //   });
+                  // tank.base_vars = Tank::ge
                   // В Minimal product остаётся как Link (не раскрываем)
                 }
                 // All и прочие варианты — грузим всё + раскрываем product
@@ -224,10 +223,14 @@ impl Actor for IpcHandler {
               }
             }
 
-            let data = tanks
-              .into_iter()
-              .filter_map(|(id, v)| if ids.contains(&id) { Some(v) } else { None })
-              .collect::<Vec<_>>();
+            let data = if ids.len() > 0 {
+              tanks
+                .into_iter()
+                .filter_map(|(id, v)| if ids.contains(&id) { Some(v) } else { None })
+                .collect::<Vec<_>>()
+            } else {
+              tanks.into_iter().map(|(id, v)| v).collect::<Vec<_>>()
+            };
 
             if let Some(msg) = ipc_msg.to_replay_msg(Some(json!({ "data": data })), None) {
               info!("tank_list: отправляем ответ в ipc_router");

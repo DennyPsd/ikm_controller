@@ -17,3 +17,4 @@ pub mod tank_config_set;
 pub mod tank_list;
 pub mod user_login;
 pub mod user_logout;
+pub mod load_emulation_table;

@@ -9,3 +9,6 @@ tmp
 vendor
 ~$*
 **/~$*
+*.log
+*.pid
+*.lock

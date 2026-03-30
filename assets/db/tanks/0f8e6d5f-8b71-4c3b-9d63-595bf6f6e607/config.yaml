@@ -103,7 +103,7 @@ calibration_block:
       value: -20
 #modbus config
 modbus:
-  port: "COM12"
+  port: "COM4"
   bitrate: 9600
   parity: "none"
   data_bits: 8
@@ -126,7 +126,7 @@ modbus:
         swap_bytes_in_word: true
       scale: 100.0
       offset: 0.0
-    /base_vars/product_level:
+    /ext_vars/vapour_pressure:
       slave_id: 1
       start_reg: 18
       regs_count: 2

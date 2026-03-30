@@ -13,7 +13,6 @@ use crate::actors::modbus::protocol::types::{
 // port
 // register_mapping поле
 
-
 #[derive(Default, Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
 pub struct ModbusTimings {
   pub first_byte_timeout: Duration,
@@ -62,8 +61,8 @@ pub struct ModbusPortConfig {
 
   #[serde(default = "default_per_byte_timeout_ms")]
   pub per_byte_timeout_ms: u64,
-  
-  /// Режим эмуляции: true - читает данные из time_series.json, false - из реальных датчиков
+
+  /// Режим эмуляции true - читает данные из time_series.json, false - из реальных датчиков
   pub emulation: Option<bool>,
 }
 
@@ -107,7 +106,7 @@ pub struct ModbusConfig {
   /// @example  {"/base_vars/weight": {...}}
   pub reg_mappings: HashMap<SmolStr, ModbusRegisterMapping>,
 
-  /// Режим эмуляции: true - читает данные из time_series.json, false - из реальных датчиков
+  /// Режим эмуляции true - читает данные из time_series.json, false - из реальных датчиков
   #[serde(default)]
   pub emulation: Option<bool>,
 }
