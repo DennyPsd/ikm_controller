@@ -1353,6 +1353,21 @@ impl Actor for IpcHandler {
             let device_id = args.device_id;
             info!("load_emulation_table: device_id = {device_id}");
 
+            // Проверка на nil UUID
+            if device_id.is_nil() {
+              let err = internal_error(action.name.clone())
+                .with_message("load_emulation_table: device_id is nil (empty UUID)");
+
+              error!("load_emulation_table: device_id is nil");
+              let _ = state
+                .ipc_router
+                .send_message(ipc_msg.to_replay_msg(Option::<()>::None, Some(err)))
+                .map_err(|err| {
+                  error!("load_emulation_table: to_replay_msg {}", err);
+                });
+              return Ok(());
+            }
+
             // Декодируем base64 данные (CSV)
             let decoded = match general_purpose::STANDARD.decode(args.table.trim()) {
               Ok(bytes) => bytes,
