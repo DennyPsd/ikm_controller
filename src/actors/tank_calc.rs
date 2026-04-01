@@ -76,25 +76,27 @@ impl EmulationEntry {
 
 /// Парсит CSV строку в EmulationEntry
 /// Формат CSV: time_stap;hydrostatic_pressure;vapour_pressure;h_measured;water_level;product_density;t0;t1;...;t9
-/// Разделитель может быть ; или ,
+/// Разделитель - точка с запятой (;), числа могут использовать запятую или точку как десятичный разделитель
 fn parse_csv_line(line: &str) -> Option<EmulationEntry> {
-  let parts: Vec<&str> = line.split([';', ',']).map(|s| s.trim()).collect();
+  // Сначала заменяем запятую на точку (для поддержки европейского формата чисел)
+  let normalized_line = line.replace(',', ".");
+  let parts: Vec<&str> = normalized_line.split(';').map(|s| s.trim()).collect();
 
   if parts.len() < 16 {
     return None;
   }
 
   let time_stap = parts[0].parse::<i64>().ok()?;
-  let hydrostatic_pressure = parts[1].replace(',', ".").parse::<f64>().ok()?;
-  let _vapour_pressure = parts[2].replace(',', ".").parse::<f64>().ok()?;
-  let h_measured = parts[3].replace(',', ".").parse::<f64>().ok()?;
-  let water_level = parts[4].replace(',', ".").parse::<f64>().ok()?;
-  let product_density = parts[5].replace(',', ".").parse::<f64>().ok()?;
+  let hydrostatic_pressure = parts[1].parse::<f64>().ok()?;
+  let _vapour_pressure = parts[2].parse::<f64>().ok()?;
+  let h_measured = parts[3].parse::<f64>().ok()?;
+  let water_level = parts[4].parse::<f64>().ok()?;
+  let product_density = parts[5].parse::<f64>().ok()?;
 
   let mut temperatures = [0.0; 10];
   for i in 0..10 {
     if let Some(temp) = parts.get(6 + i) {
-      temperatures[i] = temp.replace(',', ".").parse::<f64>().unwrap_or(0.0);
+      temperatures[i] = temp.parse::<f64>().unwrap_or(0.0);
     }
   }
 
