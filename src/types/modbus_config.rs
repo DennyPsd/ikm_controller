@@ -61,9 +61,6 @@ pub struct ModbusPortConfig {
 
   #[serde(default = "default_per_byte_timeout_ms")]
   pub per_byte_timeout_ms: u64,
-
-  /// Режим эмуляции true - читает данные из time_series.json, false - из реальных датчиков
-  pub emulation: Option<bool>,
 }
 
 /// Конфиг **одного регистра** (одной точки измерения)
