@@ -334,7 +334,7 @@ impl Actor for ModbusFabricActor {
               let _dev_type = format!("{}:{}", slave_cfg.name, reg_cfg.start_reg);
 
               let device = FacilityDevice {
-                device_id: Uuid::now_v7(),
+                id: Uuid::now_v7(),
                 port_address: port_name.clone(),
                 meta: Some(FacilityDeviceMeta::Modbus {
                   data: ModbusDeviceMeta {
