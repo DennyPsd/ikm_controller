@@ -56,7 +56,7 @@ impl EmulationEntry {
       ts: self.time_stap,
       // hydrostatic_pressure - это p1 (давление P1)
       p1: self.hydrostatic_pressure,
-      p3: 0.0, // В emulation.csv нет отдельного p3
+      p3: self.vapour_pressure,
       h_measured: self.h_measured,
       h_v: self.water_level,
       density: self.product_density,
