@@ -37,30 +37,17 @@ pub struct Meta {
   pub constants: Constants,
 }
 
-/// Структура для десериализации данных из emulation.json
+/// Структура для парсинга данных из emulation.csv
 #[allow(dead_code)]
-#[derive(Deserialize, Debug)]
+#[derive(Debug)]
 pub struct EmulationEntry {
   pub time_stap: i64,
-
-  #[serde(rename = "/ext_vars/hydrostatic_pressure")]
   pub hydrostatic_pressure: f64,
-
-  #[serde(rename = "/ext_vars/vapour_pressure")]
   pub vapour_pressure: f64,
-
   pub h_measured: f64,
-
-  #[serde(rename = "/ext_vars/water_level")]
   pub water_level: f64,
-
-  #[serde(rename = "/ext_vars/product_density")]
   pub product_density: f64,
-
-  // Temperatures хранятся как плоские ключи: /ext_vars/temperatures/0/value, /ext_vars/temperatures/1/value и т.д.
-  // Используем serde_json::Value для парсинга и затем извлекаем нужные значения
-  #[serde(flatten)]
-  extra: std::collections::HashMap<String, serde_json::Value>,
+  pub temperatures: [f64; 10],
 }
 
 impl EmulationEntry {
@@ -69,31 +56,59 @@ impl EmulationEntry {
       ts: self.time_stap,
       // hydrostatic_pressure - это p1 (давление P1)
       p1: self.hydrostatic_pressure,
-      p3: 0.0, // В emulation.json нет отдельного p3
+      p3: self.vapour_pressure,
       h_measured: self.h_measured,
       h_v: self.water_level,
       density: self.product_density,
-      t0: self.extract_temp(0),
-      t1: self.extract_temp(1),
-      t2: self.extract_temp(2),
-      t3: self.extract_temp(3),
-      t4: self.extract_temp(4),
-      t5: self.extract_temp(5),
-      t6: self.extract_temp(6),
-      t7: self.extract_temp(7),
-      t8: self.extract_temp(8),
-      t9: self.extract_temp(9),
+      t0: self.temperatures[0],
+      t1: self.temperatures[1],
+      t2: self.temperatures[2],
+      t3: self.temperatures[3],
+      t4: self.temperatures[4],
+      t5: self.temperatures[5],
+      t6: self.temperatures[6],
+      t7: self.temperatures[7],
+      t8: self.temperatures[8],
+      t9: self.temperatures[9],
+    }
+  }
+}
+
+/// Парсит CSV строку в EmulationEntry
+/// Формат CSV: time_stap;hydrostatic_pressure;vapour_pressure;h_measured;water_level;product_density;t0;t1;...;t9
+/// Разделитель - точка с запятой (;), числа могут использовать запятую или точку как десятичный разделитель
+fn parse_csv_line(line: &str) -> Option<EmulationEntry> {
+  // Сначала заменяем запятую на точку (для поддержки европейского формата чисел)
+  let normalized_line = line.replace(',', ".");
+  let parts: Vec<&str> = normalized_line.split(';').map(|s| s.trim()).collect();
+
+  if parts.len() < 16 {
+    return None;
+  }
+
+  let time_stap = parts[0].parse::<i64>().ok()?;
+  let hydrostatic_pressure = parts[1].parse::<f64>().ok()?;
+  let _vapour_pressure = parts[2].parse::<f64>().ok()?;
+  let h_measured = parts[3].parse::<f64>().ok()?;
+  let water_level = parts[4].parse::<f64>().ok()?;
+  let product_density = parts[5].parse::<f64>().ok()?;
+
+  let mut temperatures = [0.0; 10];
+  for i in 0..10 {
+    if let Some(temp) = parts.get(6 + i) {
+      temperatures[i] = temp.parse::<f64>().unwrap_or(0.0);
     }
   }
 
-  fn extract_temp(&self, index: usize) -> f64 {
-    let key = format!("/ext_vars/temperatures/{}/value", index);
-    self
-      .extra
-      .get(&key)
-      .and_then(|v| v.as_f64())
-      .unwrap_or(0.0)
-  }
+  Some(EmulationEntry {
+    time_stap,
+    hydrostatic_pressure,
+    vapour_pressure: _vapour_pressure,
+    h_measured,
+    water_level,
+    product_density,
+    temperatures,
+  })
 }
 
 /// Структура для внутреннего использования ( old format )
@@ -230,7 +245,7 @@ impl TankCalcActor {
     event_rules: &Vec<FacilityEventRule>,
   ) -> Result<(), Box<dyn std::error::Error>> {
     let meta_path = format!("assets/db/calc/{}/meta.json", tank.id);
-    let emulation_path = format!("assets/db/tanks/{}/emulation.json", tank.id);
+    let emulation_path = format!("assets/db/tanks/{}/emulation.csv", tank.id);
     let config_vars_path = format!("assets/db/tanks/{}/config.yaml", tank.id);
     let base_vars_path = format!("assets/db/tanks/{}/base_vars.yaml", tank.id);
     let ext_vars_path = format!("assets/db/tanks/{}/ext_vars.yaml", tank.id);
@@ -303,32 +318,42 @@ impl TankCalcActor {
     let emulation_content = match fs::read_to_string(&emulation_path) {
       Ok(content) => content,
       Err(err) if err.kind() == ErrorKind::NotFound => {
-        // Файла emulation.json нет - при включенной эмуляции ничего не делаем
-        info!(
-          "TankCalc: emulation.json для {} не найден - пропускаем",
-          tank.id
-        );
+        // Файла emulation.csv нет - при включенной эмуляции ничего не делаем
+        // info!(
+        //   "TankCalc: emulation.csv для {} не найден - пропускаем",
+        //   tank.id
+        // );
         return Ok(());
       }
       Err(err) => {
         error!(
-          "TankCalc: не удалось прочитать {}: {err:?} — пропускаем расчёт для {}",
-          emulation_path, tank.id
+          "TankCalc: не удалось прочитать emulation.csv: {err:?} — пропускаем расчёт для {}",
+          tank.id
         );
         return Ok(());
       }
     };
 
-    let emulation_data: Vec<EmulationEntry> = match serde_json::from_str(&emulation_content) {
-      Ok(data) => data,
-      Err(err) => {
-        error!(
-          "TankCalc: не удалось распарсить emulation.json для {}: {err:?} — пропускаем",
-          tank.id
-        );
-        return Ok(());
-      }
-    };
+    // Парсим CSV файл emulation.csv
+    let emulation_data: Vec<EmulationEntry> = emulation_content
+      .lines()
+      .skip(1) // Пропускаем заголовок
+      .filter_map(|line| {
+        let line = line.trim();
+        if line.is_empty() {
+          return None;
+        }
+        parse_csv_line(line)
+      })
+      .collect();
+
+    if emulation_data.is_empty() {
+      error!(
+        "TankCalc: не удалось распарсить emulation.csv для {} — пропускаем",
+        tank.id
+      );
+      return Ok(());
+    }
 
     if emulation_data.is_empty() {
       return Ok(());

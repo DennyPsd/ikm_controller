@@ -201,7 +201,7 @@ impl Actor for ModbusFabricActor {
                   open_timeout_ms: line_cfg.open_timeout_ms,
                   first_byte_timeout_ms: line_cfg.first_byte_timeout_ms,
                   per_byte_timeout_ms: line_cfg.per_byte_timeout_ms,
-                  emulation: modbus_cfg.emulation.or(line_cfg.emulation),
+                  emulation: modbus_cfg.emulation,
                 },
                 slaves,
                 tank_id: Some(tank_id),
