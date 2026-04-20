@@ -14,8 +14,8 @@ use smol_str::SmolStr;
 use std::f64;
 use std::fs::{self, File};
 use std::path::Path;
-use taxon_core::ipc::errors::internal_error;
 use taxon_core::components::data::{DataLink, DataModel};
+use taxon_core::ipc::errors::internal_error;
 use taxon_core::prelude::{IPCActionKind, IPCActorMsg, IPCMessageCrate};
 use tracing::{error, info};
 use umya_spreadsheet::{reader, writer};
@@ -46,7 +46,7 @@ impl KmhIpcHandler {
       gas_layer_height_measured_points: Vec::new(),
       measured_height: 0.0,
       nominal_height: 0.0,
-      base_measured_height: 0.0,
+      base_measured_height: 0,
       delta_height: 0.0,
 
       // Плотности
@@ -457,7 +457,7 @@ impl Actor for KmhIpcHandler {
               gas_layer_height_measured_points: Vec::new(),
               measured_height: 0.0,
               nominal_height: 0.0,
-              base_measured_height: f64::NAN,
+              base_measured_height: 0,
               delta_height: 0.0,
 
               density_verified: 0.0,
@@ -648,8 +648,7 @@ impl Actor for KmhIpcHandler {
             let calculated_report = match calc.get_results() {
               Ok(calculated_report) => calculated_report,
               Err(err) => {
-                let err =
-                  internal_error(action.name.clone()).with_message(format!("${}", err));
+                let err = internal_error(action.name.clone()).with_message(format!("${}", err));
 
                 if let Some(msg) = ipc_msg.to_replay_msg(Option::<()>::None, Some(err)) {
                   let _ = state.ipc_router.send_message(Some(msg));
