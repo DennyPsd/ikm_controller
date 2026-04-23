@@ -46,7 +46,7 @@ impl KmhIpcHandler {
       gas_layer_height_measured_points: Vec::new(),
       measured_height: 0.0,
       nominal_height: 0.0,
-      base_measured_height: 0.0,
+      base_measured_height: 0,
       delta_height: 0.0,
 
       // Плотности
@@ -457,7 +457,7 @@ impl Actor for KmhIpcHandler {
               gas_layer_height_measured_points: Vec::new(),
               measured_height: 0.0,
               nominal_height: 0.0,
-              base_measured_height: 0.0,
+              base_measured_height: 0,
               delta_height: 0.0,
 
               density_verified: 0.0,
