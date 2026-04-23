@@ -120,6 +120,8 @@ pub struct ExtVars {
   pub volume_relative_error_limit: Option<f64>,
   /// Предел относительной погрешности массы брутто δM, %
   pub gross_mass_relative_error_limit: Option<f64>,
+  /// Предел относительной погрешности массы нетто δM(Н), %
+  pub net_mass_relative_error_limit: Option<f64>,
 }
 
 /// Температурная точка

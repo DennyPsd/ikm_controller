@@ -287,6 +287,7 @@ impl CalculationResultExt for CalculationResult {
       volume_coarse: Some(self.capacity_at_current_level),
       volume_relative_error_limit: Some(self.volume_relative_error_limit),
       gross_mass_relative_error_limit: Some(self.gross_mass_relative_error_limit),
+      net_mass_relative_error_limit: Some(self.net_mass_relative_error_limit),
     }
   }
 }
