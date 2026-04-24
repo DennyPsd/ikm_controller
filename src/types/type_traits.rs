@@ -239,31 +239,25 @@ impl CalculationResultExt for CalculationResult {
       .map(|v| (v.id.to_uppercase(), v.clone()))
       .collect();
 
-    let temps_src = vec![
-      ("T0", entry.t0),
-      ("T1", entry.t1),
-      ("T2", entry.t2),
-      ("T3", entry.t3),
-      ("T4", entry.t4),
-      ("T5", entry.t5),
-      ("T6", entry.t6),
-      ("T7", entry.t7),
-      ("T8", entry.t8),
-      ("T9", entry.t9),
-    ];
+    // Создаем вектор температур с индексами T0, T1, T2, ...
+    let temps_src: Vec<(String, f64)> = entry
+      .temperatures
+      .iter()
+      .enumerate()
+      .map(|(i, &value)| (format!("T{}", i), value))
+      .collect();
 
     let temperatures = temps_src
       .into_iter()
-      .map(|(name, value)| Temperature {
-        value,
-        name: name.to_string(),
-        level: temperature_levels
-          .get(name)
-          .cloned()
-          .unwrap_or_default()
-          .value
-          .round()
-          .abs() as u32,
+      .filter_map(|(name, value)| {
+        let level = temperature_levels
+          .get(&name)
+          .and_then(|p| p.value)?;
+        Some(Temperature {
+          value,
+          name: name.clone(),
+          level: level.round().abs() as u32,
+        })
       })
       .collect();
 

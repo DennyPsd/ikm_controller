@@ -47,7 +47,7 @@ pub struct EmulationEntry {
   pub h_measured: f64,
   pub water_level: f64,
   pub product_density: f64,
-  pub temperatures: [f64; 10],
+  pub temperatures: Vec<f64>,
 }
 
 impl EmulationEntry {
@@ -60,29 +60,23 @@ impl EmulationEntry {
       h_measured: self.h_measured,
       h_v: self.water_level,
       density: self.product_density,
-      t0: self.temperatures[0],
-      t1: self.temperatures[1],
-      t2: self.temperatures[2],
-      t3: self.temperatures[3],
-      t4: self.temperatures[4],
-      t5: self.temperatures[5],
-      t6: self.temperatures[6],
-      t7: self.temperatures[7],
-      t8: self.temperatures[8],
-      t9: self.temperatures[9],
+      temperatures: self.temperatures.clone(),
     }
   }
 }
 
 /// Парсит CSV строку в EmulationEntry
-/// Формат CSV: time_stap;hydrostatic_pressure;vapour_pressure;h_measured;water_level;product_density;t0;t1;...;t9
+/// Формат CSV: time_stap;hydrostatic_pressure;vapour_pressure;h_measured;water_level;product_density;t0;t1;...
 /// Разделитель - точка с запятой (;), числа могут использовать запятую или точку как десятичный разделитель
-fn parse_csv_line(line: &str) -> Option<EmulationEntry> {
+/// temperature_count - количество температурных датчиков (определяется из конфигурации)
+fn parse_csv_line(line: &str, temperature_count: usize) -> Option<EmulationEntry> {
   // Сначала заменяем запятую на точку (для поддержки европейского формата чисел)
   let normalized_line = line.replace(',', ".");
   let parts: Vec<&str> = normalized_line.split(';').map(|s| s.trim()).collect();
 
-  if parts.len() < 16 {
+  // Минимум: time_stap + 5 основных полей + хотя бы 1 температура
+  let min_parts = 6 + temperature_count;
+  if parts.len() < min_parts {
     return None;
   }
 
@@ -93,10 +87,12 @@ fn parse_csv_line(line: &str) -> Option<EmulationEntry> {
   let water_level = parts[4].parse::<f64>().ok()?;
   let product_density = parts[5].parse::<f64>().ok()?;
 
-  let mut temperatures = [0.0; 10];
-  for i in 0..10 {
+  let mut temperatures = Vec::with_capacity(temperature_count);
+  for i in 0..temperature_count {
     if let Some(temp) = parts.get(6 + i) {
-      temperatures[i] = temp.parse::<f64>().unwrap_or(0.0);
+      temperatures.push(temp.parse::<f64>().unwrap_or(0.0));
+    } else {
+      temperatures.push(0.0);
     }
   }
 
@@ -121,16 +117,7 @@ pub struct TimeSeriesEntry {
   pub h_measured: f64,
   pub h_v: f64,
   pub density: f64,
-  pub t0: f64,
-  pub t1: f64,
-  pub t2: f64,
-  pub t3: f64,
-  pub t4: f64,
-  pub t5: f64,
-  pub t6: f64,
-  pub t7: f64,
-  pub t8: f64,
-  pub t9: f64,
+  pub temperatures: Vec<f64>,
 }
 
 #[derive(Serialize, Debug)]
@@ -335,6 +322,8 @@ impl TankCalcActor {
     };
 
     // Парсим CSV файл emulation.csv
+    // Количество температурных датчиков определяется из конфигурации
+    let temperature_count = config.levels_of_point_sensors.points.len();
     let emulation_data: Vec<EmulationEntry> = emulation_content
       .lines()
       .skip(1) // Пропускаем заголовок
@@ -343,7 +332,7 @@ impl TankCalcActor {
         if line.is_empty() {
           return None;
         }
-        parse_csv_line(line)
+        parse_csv_line(line, temperature_count)
       })
       .collect();
 
@@ -616,28 +605,23 @@ impl TankCalcActor {
       .levels_of_point_sensors
       .points
       .iter()
-      .map(|p| (p.id.to_uppercase(), p.value as f64))
+      .filter_map(|p| p.value.map(|v| (p.id.to_uppercase(), v as f64)))
       .collect();
 
     let kti_by_id: HashMap<String, f64> = config
       .calibration_block
       .level_point_sensors
       .iter()
-      .map(|p| (p.id.to_uppercase(), p.value as f64))
+      .filter_map(|p| p.value.map(|v| (p.id.to_uppercase(), v as f64)))
       .collect();
 
-    let level_temps_vec = vec![
-      ("T0", entry.t0),
-      ("T1", entry.t1),
-      ("T2", entry.t2),
-      ("T3", entry.t3),
-      ("T4", entry.t4),
-      ("T5", entry.t5),
-      ("T6", entry.t6),
-      ("T7", entry.t7),
-      ("T8", entry.t8),
-      ("T9", entry.t9),
-    ];
+    // Создаем вектор температур с индексами T0, T1, T2, ...
+    let level_temps_vec: Vec<(String, f64)> = entry
+      .temperatures
+      .iter()
+      .enumerate()
+      .map(|(i, &temp)| (format!("T{}", i), temp))
+      .collect();
 
     let level_temps = level_temps_vec
       .into_iter()

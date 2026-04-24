@@ -75,8 +75,8 @@ pub struct LevelPointSensor {
   pub id: String,
   /** Индекс */
   pub index: i32,
-  /** Значение */
-  pub value: f32,
+  /** Значение (null - датчик не учитывается в расчетах) */
+  pub value: Option<f32>,
 }
 
 /** Уровни точечных датчиков */
