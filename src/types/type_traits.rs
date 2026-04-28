@@ -282,6 +282,9 @@ impl CalculationResultExt for CalculationResult {
       volume_relative_error_limit: Some(self.volume_relative_error_limit),
       gross_mass_relative_error_limit: Some(self.gross_mass_relative_error_limit),
       net_mass_relative_error_limit: Some(self.net_mass_relative_error_limit),
+      gross_product_mass: Some(self.gross_product_mass),
+      heavy_oil_net_mass: self.heavy_oil_net_mass,
+      product_volume_15: Some(self.product_volume_15),
     }
   }
 }

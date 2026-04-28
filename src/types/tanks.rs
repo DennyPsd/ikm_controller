@@ -122,6 +122,12 @@ pub struct ExtVars {
   pub gross_mass_relative_error_limit: Option<f64>,
   /// Предел относительной погрешности массы нетто δM(Н), %
   pub net_mass_relative_error_limit: Option<f64>,
+  /// Масса брутто продукта, т
+  pub gross_product_mass: Option<f64>,
+  /// Масса нетто мазута/нефти, т
+  pub heavy_oil_net_mass: Option<f64>,
+  /// Объём продукта при 15°C, м³
+  pub product_volume_15: Option<f64>,
 }
 
 /// Температурная точка
