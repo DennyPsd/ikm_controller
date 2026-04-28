@@ -4,6 +4,18 @@ use serde::{Deserialize, Serialize};
 use crate::types::{modbus_config::ModbusConfig, tanks::TankStatus};
 use serde_with::*;
 
+/** Константы для расчёта (ранее в meta.json) */
+#[derive(Default, Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
+#[skip_serializing_none]
+pub struct CalculationConstants {
+  /** Ускорение свободного падения, м/с² */
+  pub g: Option<f64>,
+  /** Плотность воздуха, кг/м³ */
+  pub air_density: Option<f64>,
+  /** Температура начала кипения продукта, °C */
+  pub product_initial_boil_temp: Option<f64>,
+}
+
 /** Конфигурация цистерны */
 #[derive(Default, Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]
 #[skip_serializing_none]
@@ -24,6 +36,8 @@ pub struct TankConfig {
   pub calibration_block: Calibration,
   /** Конфигурация modbus */
   pub modbus: Option<ModbusConfig>,
+  /** Константы для расчёта (ранее в meta.json) */
+  pub calculation_constants: Option<CalculationConstants>,
 }
 
 #[derive(Default, Deserialize, Serialize, Debug, Clone, JsonSchema, PartialEq)]

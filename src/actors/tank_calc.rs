@@ -586,6 +586,19 @@ impl TankCalcActor {
       calc_constants.hysteresis_temperature_sensor_level = hyst;
     }
 
+    // 10. Константы расчёта из config.yaml (ранее из meta.json)
+    if let Some(constants) = &config.calculation_constants {
+      if let Some(g) = constants.g {
+        calc_constants.g = g;
+      }
+      if let Some(air_density) = constants.air_density {
+        calc_constants.air_density = air_density;
+      }
+      if let Some(boil_temp) = constants.product_initial_boil_temp {
+        calc_constants.product_initial_boil_temp = boil_temp;
+      }
+    }
+
     let graduation_table: Vec<GradTableItem> = grad_rows
       .iter()
       .filter_map(|row| {

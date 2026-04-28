@@ -48,6 +48,10 @@ levels_of_point_sensors:
     - id: T9
       index: 9
       value: 15000.0
+calculation_constants:
+  g: 9.82
+  air_density: 1.21
+  product_initial_boil_temp: 0
 construction:
   linear_expansion: 0.00001249999968422344
   mass_floating_coating: 2877.0
